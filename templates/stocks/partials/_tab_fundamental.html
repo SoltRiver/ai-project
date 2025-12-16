@@ -1,0 +1,77 @@
+<div class="tab-panel">
+    <div class="panel-header">
+        <div class="title-with-icon">
+            <span class="icon">📊</span>
+            <div>
+                <div class="panel-title">ファンダメンタル分析</div>
+                <p class="muted">PER, PBR などの基本指標と初心者向けコメントを表示します。</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid four">
+        {% for item in fundamentals %}
+        <div class="stat-card">
+            <div class="label">{{ item.label }}</div>
+            <div class="value">{{ item.value }}</div>
+            {% if statuses.get(item.label) %}
+            <div class="badge status-{{ statuses[item.label].color | default('gray') }}">{{ statuses[item.label].label }}</div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="card">
+        <div class="section-title">企業スコア</div>
+        <div class="score-grid">
+            {% for label, score in scores.items() %}
+            <div class="score-card">
+                <div class="label">{{ label }}</div>
+                <div class="value">{{ score.display }}</div>
+                <div class="muted">★ {{ score.stars }}</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="section-title">イベント</div>
+        <div class="mini-table">
+            {% for label, value in events.items() %}
+            <div class="mini-row"><span>{{ label }}</span><span>{{ value }}</span></div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="section-title">売り時・買い時のタイミング</div>
+        <div class="mini-table">
+            {% for label, value in timings.items() %}
+            <div class="mini-row"><span>{{ label }}</span><span>{{ value }}</span></div>
+            {% endfor %}
+        </div>
+        <p class="muted small">※ 目安であり、必ずそう動くわけではありません。</p>
+    </div>
+
+    <div class="card">
+        <div class="section-title">リスク情報</div>
+        <ul class="risk-list">
+            {% for risk in risks %}
+            <li>{{ risk }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    <div class="card">
+        <div class="section-title">用語辞典</div>
+        <div class="pattern-grid">
+            {% for term in glossary %}
+            <div class="pattern-card tone-neutral">
+                <div class="pattern-name">{{ term.term }}</div>
+                <div class="pattern-summary">{{ term.meaning }}</div>
+                <div class="pattern-tip">{{ term.tip }}</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>

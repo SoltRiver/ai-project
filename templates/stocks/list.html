@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Watchlist</p>
+        <h1>株価リスト</h1>
+        <p class="muted">銘柄に関する情報のみを4列で表示します。</p>
+    </div>
+    <div class="action-row">
+        <button class="primary-button" type="button">追加 +</button>
+        <button class="ghost-button" type="button">一括削除</button>
+    </div>
+</section>
+
+<div class="card">
+    <table class="stock-table">
+        <thead>
+            <tr>
+                <th class="checkbox-col"><input type="checkbox" aria-label="全て選択" /></th>
+                <th>銘柄名（銘柄コード）</th>
+                <th>現在値</th>
+                <th>変動額（変動率）</th>
+                <th>最高値／最安値</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in stocks %}
+            <tr>
+                <td class="checkbox-col"><input type="checkbox" aria-label="{{ item.name }} を選択" /></td>
+                <td class="name-cell">
+                    <a href="/stocks/{{ item.code }}">{{ item.name }} <span class="code">({{ item.code }})</span></a>
+                </td>
+                <td class="price-cell">{{ item.current_price }}</td>
+                <td class="change-cell">
+                    <span class="change-badge {{ 'change-up' if item.change_direction == 'up' else 'change-down' if item.change_direction == 'down' else 'change-neutral' }}">
+                        <span class="{{ 'arrow-up' if item.change_direction == 'up' else 'arrow-down' if item.change_direction == 'down' else '' }}">{{ item.change_icon }}</span>
+                        {{ item.change_text }}
+                    </span>
+                </td>
+                <td class="hl-cell">{{ item.high_low }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="ja" data-theme="{{ theme | default('light') }}">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{ page_title or "株価チャートアシスタント" }}</title>
+    <link rel="stylesheet" href="/static/css/theme.css" />
+    <script src="/static/js/htmx.min.js"></script>
+    <script src="/static/js/app.js" defer></script>
+</head>
+<body class="app-shell">
+    <header class="top-bar">
+        <div class="brand">
+            <span class="brand-icon">💠</span>
+            <div>
+                <div class="brand-title">株価チャートアシスタント</div>
+                <div class="brand-sub">FastAPI + Jinja2 + htmx</div>
+            </div>
+        </div>
+        <nav class="nav-links">
+            <a href="/stocks">株価リスト</a>
+            <a href="/glossary">用語辞典</a>
+            <a href="/candle-patterns">ローソク足パターン</a>
+        </nav>
+        <button class="ghost-button" type="button" data-action="toggle-theme">🌓 テーマ</button>
+    </header>
+
+    <main class="page-container">
+        {% block content %}{% endblock %}
+    </main>
+</body>
+</html>

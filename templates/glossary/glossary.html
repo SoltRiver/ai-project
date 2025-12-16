@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Dictionary</p>
+        <h1>用語辞典</h1>
+        <p class="muted">一般的な投資用語を初心者向けコメント付きで掲載しています。</p>
+    </div>
+</section>
+
+<div class="card">
+    <div class="pattern-grid">
+        {% for term in terms %}
+        <div class="pattern-card tone-neutral">
+            <div class="pattern-name">{{ term.term }}</div>
+            <div class="pattern-summary">{{ term.meaning }}</div>
+            <div class="pattern-tip">{{ term.tip }}</div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

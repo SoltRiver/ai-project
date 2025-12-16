@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Patterns</p>
+        <h1>ローソク足パターン</h1>
+        <p class="muted">ローソク足パターンを独立ページで解説します。配色は上昇=緑、下落=赤で統一。</p>
+    </div>
+</section>
+
+<div class="card">
+    <div class="pattern-grid">
+        {% for p in patterns %}
+        <div class="pattern-card tone-{{ p.tone }}">
+            <div class="pattern-name">{{ p.name }}</div>
+            <div class="pattern-summary">{{ p.summary }}</div>
+            <div class="pattern-tip">{{ p.hint }}</div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

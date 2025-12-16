@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Detail</p>
+        <h1>{{ stock.name }} <span class="code">({{ stock.code }})</span></h1>
+        <p class="muted">{{ stock.exchange }} {{ stock.industry }}</p>
+    </div>
+    <div class="price-stack">
+        <div class="main-price">{{ stock.current_price }}</div>
+        <div class="muted">
+            <span class="change-badge {{ 'change-up' if stock.change_direction == 'up' else 'change-down' if stock.change_direction == 'down' else 'change-neutral' }}">
+                <span class="{{ 'arrow-up' if stock.change_direction == 'up' else 'arrow-down' if stock.change_direction == 'down' else '' }}">{{ stock.change_icon }}</span>
+                {{ stock.change_text }}
+            </span>
+        </div>
+    </div>
+</section>
+
+<div class="tab-bar">
+    {% for tab in tabs %}
+    <button class="tab-button"
+            hx-get="/stocks/{{ stock.code }}/tab/{{ tab.name }}"
+            hx-target="#tab-content"
+            hx-swap="innerHTML">
+        {{ tab.label }}
+    </button>
+    {% endfor %}
+    </div>
+
+    <div id="tab-content"
+         hx-get="/stocks/{{ stock.code }}/tab/chart"
+         hx-trigger="load"
+         hx-target="#tab-content"
+         hx-swap="innerHTML">
+        <div class="skeleton">読み込み中...</div>
+    </div>
+{% endblock %}
