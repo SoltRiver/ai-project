@@ -3,7 +3,7 @@
 <section class="page-header">
     <div>
         <p class="eyebrow">Detail</p>
-        <h1>{{ stock.name }} <span class="code">({{ stock.code }})</span></h1>
+        <h1>株価情報詳細 <span class="code">({{ stock.name }} / {{ stock.code }})</span></h1>
         <p class="muted">{{ stock.exchange }} {{ stock.industry }}</p>
     </div>
     <div class="price-stack">
@@ -19,7 +19,7 @@
 
 <div class="tab-bar">
     {% for tab in tabs %}
-    <button class="tab-button"
+    <button class="tab-button accent"
             hx-get="/stocks/{{ stock.code }}/tab/{{ tab.name }}"
             hx-target="#tab-content"
             hx-swap="innerHTML">

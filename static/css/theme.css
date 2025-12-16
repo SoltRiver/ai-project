@@ -110,11 +110,20 @@ a:hover { text-decoration: underline; }
     background: none;
     color: var(--text);
     border: 1px solid var(--border);
-    border-radius: 999px;
-    padding: 0.5rem 1rem;
+    border-radius: 12px;
+    padding: 0.55rem 1.2rem;
     cursor: pointer;
+    transition: all 0.2s ease;
 }
-.tab-button:hover { border-color: var(--accent); }
+.tab-button.accent {
+    background: rgba(37, 99, 235, 0.15);
+    border-color: var(--accent);
+    color: var(--text);
+}
+.tab-button:hover {
+    border-color: var(--accent);
+    box-shadow: 0 4px 10px -6px rgba(0,0,0,0.4);
+}
 
 .tab-panel { display: flex; flex-direction: column; gap: 1rem; }
 .panel-header { display: flex; justify-content: space-between; gap: 1rem; align-items: center; }

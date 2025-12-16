@@ -11,9 +11,10 @@ router = APIRouter()
 @router.get("/stocks", response_class=HTMLResponse)
 async def list_stocks(request: Request):
     stocks = stock_service.get_stock_list()
+    timestamp = stock_service.get_timestamp_label()
     return templates.TemplateResponse(
         "stocks/list.html",
-        {"request": request, "stocks": stocks, "page_title": "株価リスト"},
+        {"request": request, "stocks": stocks, "page_title": "株価リスト", "timestamp_label": timestamp},
     )
 
 

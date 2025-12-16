@@ -187,7 +187,8 @@ def _fmt_currency(value: Optional[float], decimals: int = 2) -> str:
         return "N/A"
     if isinstance(value, float) and math.isnan(value):
         return "N/A"
-    return f"¥{value:,.{decimals}f}"
+    fmt = f"¥{{:,.{decimals}f}}"
+    return fmt.format(value)
 
 
 def _fmt_percent(value: Optional[float], decimals: int = 2) -> str:
@@ -224,6 +225,10 @@ def get_stock_list() -> List[Dict[str, Any]]:
         symbol = format_symbol_for_yfinance(code)
         info = fetch_stock_info(symbol)
         high, low = _calc_high_low(symbol)
+        if high is not None:
+            high = math.floor(high)
+        if low is not None:
+            low = math.floor(low)
         change = _format_change(
             info.get("change") if info else None,
             info.get("change_percent") if info else None,
@@ -286,9 +291,14 @@ def _build_chart_points(history, limit: int = 20) -> List[Dict[str, str]]:
         points.append(
             {
                 "date": date_label,
+                "open": float(row["open"]),
                 "close": _fmt_currency(float(row["close"])),
                 "high": _fmt_currency(float(row["high"])),
                 "low": _fmt_currency(float(row["low"])),
+                "open_raw": float(row["open"]),
+                "close_raw": float(row["close"]),
+                "high_raw": float(row["high"]),
+                "low_raw": float(row["low"]),
             }
         )
     return points
@@ -356,6 +366,8 @@ def get_chart_tab(code: str, interval: str = "1d") -> Dict[str, Any]:
         "high": _fmt_currency(high_val),
         "low": _fmt_currency(low_val),
         "change_text": change["text"],
+        "change_direction": change["direction"],
+        "change_icon": change["icon"],
         "range": f"{_fmt_currency(high_val)} / {_fmt_currency(low_val)}",
     }
 
@@ -513,3 +525,8 @@ def get_glossary_terms() -> List[Dict[str, str]]:
 
 def get_candle_patterns_page() -> List[Dict[str, str]]:
     return CANDLE_PATTERN_CARDS
+
+
+def get_timestamp_label() -> str:
+    now = datetime.now()
+    return now.strftime("（%Y/%m/%d %H:%M 時点）")

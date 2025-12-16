@@ -26,7 +26,12 @@
         <div class="stat-card">
             <div class="label">現在値</div>
             <div class="value">{{ chart_summary.last_close }}</div>
-            <div class="muted">{{ chart_summary.change_text }}</div>
+            <div class="muted">
+                <span class="change-badge {{ 'change-up' if chart_summary.change_direction == 'up' else 'change-down' if chart_summary.change_direction == 'down' else 'change-neutral' }}">
+                    <span class="{{ 'arrow-up' if chart_summary.change_direction == 'up' else 'arrow-down' if chart_summary.change_direction == 'down' else '' }}">{{ chart_summary.change_icon }}</span>
+                    {{ chart_summary.change_text }}
+                </span>
+            </div>
         </div>
         <div class="stat-card">
             <div class="label">始値 / 高値 / 安値</div>
@@ -63,6 +68,13 @@
             <div class="mini-row"><span>レジスタンス</span><span>{{ support_resistance.resistance }}</span></div>
             <div class="mini-row"><span>説明</span><span>{{ support_resistance.description }}</span></div>
         </div>
+    </div>
+
+    <div class="card">
+        <div class="section-title">ローソク足チャート</div>
+        <canvas class="mini-candle-chart" width="720" height="260"
+                data-points='{{ chart_points | tojson }}'></canvas>
+        <p class="muted small">簡易表示です。縦軸・ポップアップは小数第2位、色は上昇=緑/下落=赤。</p>
     </div>
 
     <div class="card">
