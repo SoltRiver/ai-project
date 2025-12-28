@@ -1,0 +1,812 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ローソク足パターン（モック）</title>
+  <style>
+    :root{
+      --bg:#f6f9fc;
+      --panel:#ffffff;
+      --muted:#6b7280;
+      --text:#111827;
+      --line:#d1d5db;
+      --line2:#e5e7eb;
+      --shadow: 0 16px 30px rgba(15, 23, 42, .08);
+      --shadow-sm: 0 10px 18px rgba(15, 23, 42, .06);
+      --radius: 16px;
+      --green:#16a34a;
+      --green-bg:#e8f7ee;
+      --red:#dc2626;
+      --red-bg:#fdecec;
+      --neutral:#6b7280;
+      --neutral-bg:#f3f4f6;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: system-ui, -apple-system, "Segoe UI", "Hiragino Sans", "Noto Sans JP", sans-serif;
+      background:var(--bg);
+      color:var(--text);
+    }
+    .hero{
+      background: linear-gradient(180deg, #eef6f9 0%, #f6f9fc 100%);
+      padding:48px 64px 36px;
+      border-bottom:1px solid #eef2f7;
+    }
+    .hero h1{margin:0 0 10px; font-size:40px; letter-spacing:.02em}
+    .hero p{margin:0; color:var(--muted); font-size:16px}
+    .wrap{padding:28px 64px 120px}
+    .section-head{
+      display:flex; align-items:center; gap:10px;
+      margin:30px 0 18px;
+    }
+    .badge{
+      display:inline-flex; align-items:center; gap:8px;
+      padding:8px 12px;
+      border:1px solid var(--line2);
+      border-radius:12px;
+      font-weight:700;
+      background:var(--panel);
+    }
+    .badge--green{background:var(--green-bg); color:#166534}
+    .badge--red{background:var(--red-bg); color:#991b1b}
+    .badge--neutral{background:var(--neutral-bg); color:#374151}
+    .count{
+      display:inline-flex; align-items:center; justify-content:center;
+      padding:6px 10px;
+      border:1px solid var(--line2);
+      border-radius:999px;
+      background:var(--panel);
+      color:#374151;
+      font-weight:700;
+      font-size:12px;
+      min-width:52px;
+    }
+
+    .grid{
+      display:grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap:24px;
+    }
+
+    .card{
+      background:var(--panel);
+      border:1px solid var(--line2);
+      border-radius:var(--radius);
+      box-shadow: var(--shadow-sm);
+      height:520px; /* 高さ固定 */
+      padding:18px 18px 16px;
+      display:flex;
+      flex-direction:column;
+      transition: transform .18s ease, box-shadow .18s ease;
+    }
+    .card:hover{
+      transform: translateY(-2px);
+      box-shadow: var(--shadow);
+    }
+    .card__title{
+      font-size:20px;
+      font-weight:800;
+      margin:2px 2px 12px;
+      line-height:1.2;
+    }
+    .candle-box{
+      border:1px solid var(--line2);
+      background:#f9fafb;
+      border-radius:14px;
+      height:160px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      margin:0 2px 14px;
+    }
+    .divider-title{
+      font-weight:800;
+      margin:6px 2px 6px;
+      font-size:14px;
+    }
+    .divider-line{
+      height:1px;
+      background:var(--line);
+      margin:0 2px 10px;
+    }
+    .body-text{
+      color:#374151;
+      font-size:12.5px;
+      line-height:1.6;
+      margin:0 2px 10px;
+      min-height:38px; /* 2行程度の固定感 */
+    }
+    .btn-row{
+      margin-top:auto;
+      display:flex;
+      justify-content:center;
+      padding-top:10px;
+    }
+    .btn{
+      border:1px solid var(--line2);
+      background:var(--panel);
+      border-radius:14px;
+      padding:10px 18px;
+      font-weight:800;
+      cursor:pointer;
+    }
+    .btn:focus{outline:2px solid #93c5fd; outline-offset:2px}
+
+    /* Modal */
+    .modal.is-hidden{display:none}
+    .modal{
+      position:fixed; inset:0;
+      z-index:1000;
+    }
+    .modal__overlay{
+      position:absolute; inset:0;
+      background: rgba(15, 23, 42, .38);
+    }
+    .modal__dialog{
+      position:relative;
+      max-width: 900px;
+      width: calc(100% - 48px);
+      margin: 80px auto;
+      background:var(--panel);
+      border-radius: 18px;
+      border:1px solid var(--line2);
+      box-shadow: var(--shadow);
+      padding: 22px 22px 26px;
+    }
+    .modal__close{
+      position:absolute;
+      top:14px; right:14px;
+      width:34px; height:34px;
+      border-radius:999px;
+      border:1px solid var(--line2);
+      background:#f3f4f6;
+      cursor:pointer;
+      font-weight:900;
+    }
+    .modal__close:focus{outline:2px solid #93c5fd; outline-offset:2px}
+    .modal-grid{
+      display:grid;
+      grid-template-columns: 280px 1fr;
+      gap:22px;
+      margin-top:14px;
+    }
+    .modal-figure{
+      border:1px solid var(--line2);
+      background:#f9fafb;
+      border-radius:14px;
+      padding:14px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      min-height:220px;
+    }
+    .modal-title{
+      margin:0;
+      font-size:22px;
+      font-weight:900;
+    }
+    .modal-catch{
+      margin:6px 0 0;
+      color:var(--muted);
+      font-weight:800;
+      font-size:13px;
+    }
+    .modal-sec{margin-top:14px}
+    .modal-sec h3{
+      margin:0 0 6px;
+      font-size:14px;
+      font-weight:900;
+    }
+    .modal-sec p, .modal-sec li{
+      margin:0;
+      color:#374151;
+      font-size:13px;
+      line-height:1.7;
+    }
+    .modal-sec ul{margin:6px 0 0 18px; padding:0}
+
+    /* Responsive */
+    @media (max-width: 1100px){
+      .grid{grid-template-columns: repeat(2, minmax(0, 1fr));}
+      .wrap{padding:20px 24px 120px}
+      .hero{padding:34px 24px 28px}
+    }
+    @media (max-width: 720px){
+      .grid{grid-template-columns: 1fr;}
+      .modal-grid{grid-template-columns: 1fr;}
+      .modal__dialog{margin: 40px auto;}
+    }
+  </style>
+</head>
+
+<body>
+  <header class="hero">
+    <h1>ローソク足パターン</h1>
+    <p>初心者向けに、形（図）→ 名前 → 見所の順で整理しています。</p>
+  </header>
+
+  <main class="wrap">
+    <!-- 陽線 -->
+    <div class="section-head">
+      <span class="badge badge--green">陽線（上向き）</span>
+      <span class="count">3件</span>
+    </div>
+    <div class="grid">
+      <!-- card 1 -->
+      <article class="card">
+        <div class="card__title">大陽線</div>
+        <div class="candle-box">
+          <svg width="96" height="140" viewBox="0 0 96 140" aria-label="大陽線の図" role="img">
+            <line x1="48" y1="10" x2="48" y2="130" stroke="#16a34a" stroke-width="6"/>
+            <rect x="34" y="48" width="28" height="56" rx="6" fill="#16a34a"/>
+          </svg>
+        </div>
+
+        <div class="divider-title">説明</div>
+        <div class="divider-line"></div>
+        <p class="body-text">買いが優勢で大きく上昇した足です。</p>
+
+        <div class="divider-title">一言キャッチ</div>
+        <div class="divider-line"></div>
+        <p class="body-text">買いが強い</p>
+
+        <div class="btn-row">
+          <button type="button" class="btn"
+            hx-get="/candle-patterns/001/modal"
+            hx-target="#patternModalContent"
+            hx-swap="innerHTML"
+            data-modal-open="true"
+            data-pattern-id="001">
+            詳細を見る
+          </button>
+        </div>
+      </article>
+
+      <!-- card 2 -->
+      <article class="card">
+        <div class="card__title">カラカサ（ハンマー）</div>
+        <div class="candle-box">
+          <svg width="96" height="140" viewBox="0 0 96 140" aria-label="カラカサの図" role="img">
+            <line x1="48" y1="10" x2="48" y2="130" stroke="#16a34a" stroke-width="6"/>
+            <rect x="34" y="62" width="28" height="34" rx="6" fill="#16a34a"/>
+          </svg>
+        </div>
+
+        <div class="divider-title">説明</div>
+        <div class="divider-line"></div>
+        <p class="body-text">下ヒゲが長く、下で支えられた形です。</p>
+
+        <div class="divider-title">一言キャッチ</div>
+        <div class="divider-line"></div>
+        <p class="body-text">下で支えられた</p>
+
+        <div class="btn-row">
+          <button type="button" class="btn"
+            hx-get="/candle-patterns/002/modal"
+            hx-target="#patternModalContent"
+            hx-swap="innerHTML"
+            data-modal-open="true"
+            data-pattern-id="002">
+            詳細を見る
+          </button>
+        </div>
+      </article>
+
+      <!-- card 3 -->
+      <article class="card">
+        <div class="card__title">長い下ヒゲ</div>
+        <div class="candle-box">
+          <svg width="96" height="140" viewBox="0 0 96 140" aria-label="長い下ヒゲの図" role="img">
+            <line x1="48" y1="10" x2="48" y2="130" stroke="#16a34a" stroke-width="6"/>
+            <rect x="34" y="52" width="28" height="34" rx="6" fill="#16a34a"/>
+            <line x1="48" y1="86" x2="48" y2="130" stroke="#16a34a" stroke-width="8"/>
+          </svg>
+        </div>
+
+        <div class="divider-title">説明</div>
+        <div class="divider-line"></div>
+        <p class="body-text">安値から買い戻された形です。</p>
+
+        <div class="divider-title">一言キャッチ</div>
+        <div class="divider-line"></div>
+        <p class="body-text">下値を試した</p>
+
+        <div class="btn-row">
+          <button type="button" class="btn"
+            hx-get="/candle-patterns/003/modal"
+            hx-target="#patternModalContent"
+            hx-swap="innerHTML"
+            data-modal-open="true"
+            data-pattern-id="003">
+            詳細を見る
+          </button>
+        </div>
+      </article>
+    </div>
+
+    <!-- 陰線 -->
+    <div class="section-head" style="margin-top:44px;">
+      <span class="badge badge--red">陰線（下向き）</span>
+      <span class="count">3件</span>
+    </div>
+    <div class="grid">
+      <article class="card">
+        <div class="card__title">大陰線</div>
+        <div class="candle-box">
+          <svg width="96" height="140" viewBox="0 0 96 140" aria-label="大陰線の図" role="img">
+            <line x1="48" y1="10" x2="48" y2="130" stroke="#dc2626" stroke-width="6"/>
+            <rect x="34" y="48" width="28" height="56" rx="6" fill="#dc2626"/>
+          </svg>
+        </div>
+
+        <div class="divider-title">説明</div>
+        <div class="divider-line"></div>
+        <p class="body-text">売りが優勢で大きく下落した足です。</p>
+
+        <div class="divider-title">一言キャッチ</div>
+        <div class="divider-line"></div>
+        <p class="body-text">売りが強い</p>
+
+        <div class="btn-row">
+          <button type="button" class="btn"
+            hx-get="/candle-patterns/004/modal"
+            hx-target="#patternModalContent"
+            hx-swap="innerHTML"
+            data-modal-open="true"
+            data-pattern-id="004">
+            詳細を見る
+          </button>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card__title">トンボ</div>
+        <div class="candle-box">
+          <svg width="96" height="140" viewBox="0 0 96 140" aria-label="トンボの図" role="img">
+            <line x1="48" y1="10" x2="48" y2="130" stroke="#dc2626" stroke-width="6"/>
+            <rect x="34" y="66" width="28" height="26" rx="6" fill="#dc2626"/>
+            <line x1="48" y1="10" x2="48" y2="66" stroke="#dc2626" stroke-width="8"/>
+          </svg>
+        </div>
+
+        <div class="divider-title">説明</div>
+        <div class="divider-line"></div>
+        <p class="body-text">上で押し戻された形です。</p>
+
+        <div class="divider-title">一言キャッチ</div>
+        <div class="divider-line"></div>
+        <p class="body-text">上値が重い</p>
+
+        <div class="btn-row">
+          <button type="button" class="btn"
+            hx-get="/candle-patterns/005/modal"
+            hx-target="#patternModalContent"
+            hx-swap="innerHTML"
+            data-modal-open="true"
+            data-pattern-id="005">
+            詳細を見る
+          </button>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card__title">長い上ヒゲ</div>
+        <div class="candle-box">
+          <svg width="96" height="140" viewBox="0 0 96 140" aria-label="長い上ヒゲの図" role="img">
+            <line x1="48" y1="10" x2="48" y2="130" stroke="#dc2626" stroke-width="6"/>
+            <rect x="34" y="58" width="28" height="34" rx="6" fill="#dc2626"/>
+            <line x1="48" y1="10" x2="48" y2="58" stroke="#dc2626" stroke-width="8"/>
+          </svg>
+        </div>
+
+        <div class="divider-title">説明</div>
+        <div class="divider-line"></div>
+        <p class="body-text">高値で売られた形です。</p>
+
+        <div class="divider-title">一言キャッチ</div>
+        <div class="divider-line"></div>
+        <p class="body-text">上値が重い</p>
+
+        <div class="btn-row">
+          <button type="button" class="btn"
+            hx-get="/candle-patterns/006/modal"
+            hx-target="#patternModalContent"
+            hx-swap="innerHTML"
+            data-modal-open="true"
+            data-pattern-id="006">
+            詳細を見る
+          </button>
+        </div>
+      </article>
+    </div>
+
+    <!-- 迷い -->
+    <div class="section-head" style="margin-top:44px;">
+      <span class="badge badge--neutral">迷い（様子見）</span>
+      <span class="count">1件</span>
+    </div>
+    <div class="grid">
+      <article class="card">
+        <div class="card__title">十字線</div>
+        <div class="candle-box">
+          <svg width="120" height="140" viewBox="0 0 120 140" aria-label="十字線の図" role="img">
+            <line x1="60" y1="10" x2="60" y2="130" stroke="#6b7280" stroke-width="6"/>
+            <line x1="18" y1="70" x2="102" y2="70" stroke="#6b7280" stroke-width="6"/>
+          </svg>
+        </div>
+
+        <div class="divider-title">説明</div>
+        <div class="divider-line"></div>
+        <p class="body-text">買いと売りが拮抗した状態です。</p>
+
+        <div class="divider-title">一言キャッチ</div>
+        <div class="divider-line"></div>
+        <p class="body-text">方向が定まらない</p>
+
+        <div class="btn-row">
+          <button type="button" class="btn"
+            hx-get="/candle-patterns/007/modal"
+            hx-target="#patternModalContent"
+            hx-swap="innerHTML"
+            data-modal-open="true"
+            data-pattern-id="007">
+            詳細を見る
+          </button>
+        </div>
+      </article>
+    </div>
+  </main>
+
+  <!-- Modal shell（常駐） -->
+  <div id="patternModal"
+       class="modal is-hidden"
+       aria-hidden="true"
+       role="dialog"
+       aria-modal="true"
+       aria-labelledby="patternModalTitle">
+    <div class="modal__overlay" data-modal-close="true" aria-label="閉じる（背景）"></div>
+
+    <div class="modal__dialog" role="document" tabindex="-1">
+      <button type="button" class="modal__close" aria-label="閉じる" data-modal-close="true">×</button>
+      <div id="patternModalContent"></div>
+    </div>
+  </div>
+
+  <!-- モック用：サーバーが返す partial を template で同梱 -->
+  <template id="modal-001">
+    <article>
+      <h2 id="patternModalTitle" class="modal-title">大陽線</h2>
+      <p class="modal-catch">買いが強い日</p>
+
+      <div class="modal-grid">
+        <div class="modal-figure">
+          <svg width="140" height="220" viewBox="0 0 96 140" role="img" aria-label="大陽線の図（拡大）">
+            <line x1="48" y1="10" x2="48" y2="130" stroke="#16a34a" stroke-width="6"/>
+            <rect x="34" y="48" width="28" height="56" rx="6" fill="#16a34a"/>
+          </svg>
+        </div>
+
+        <div>
+          <section class="modal-sec">
+            <h3>図の見方（どこを見るか）</h3>
+            <p>実体の大きさとヒゲの短さに注目します。</p>
+          </section>
+
+          <section class="modal-sec">
+            <h3>出現しやすい場面</h3>
+            <p>下落が続いたあとや、上昇の初期段階。</p>
+          </section>
+
+          <section class="modal-sec">
+            <h3>詳細</h3>
+            <p>その日の取引で買いが強く、勢いが出たサインとして見られます。</p>
+          </section>
+
+          <section class="modal-sec">
+            <h3>注意点</h3>
+            <ul>
+              <li>高値圏では勢いが弱まることがあります。</li>
+              <li>次の足で上向き継続か確認します。</li>
+            </ul>
+          </section>
+        </div>
+      </div>
+    </article>
+  </template>
+
+  <template id="modal-002">
+    <article>
+      <h2 id="patternModalTitle" class="modal-title">カラカサ（ハンマー）</h2>
+      <p class="modal-catch">下で支えられた形</p>
+
+      <div class="modal-grid">
+        <div class="modal-figure">
+          <svg width="140" height="220" viewBox="0 0 96 140" role="img" aria-label="カラカサの図（拡大）">
+            <line x1="48" y1="10" x2="48" y2="130" stroke="#16a34a" stroke-width="6"/>
+            <rect x="34" y="62" width="28" height="34" rx="6" fill="#16a34a"/>
+          </svg>
+        </div>
+
+        <div>
+          <section class="modal-sec">
+            <h3>図の見方（どこを見るか）</h3>
+            <p>下ヒゲが長いか、実体が小さいかを見ます。</p>
+          </section>
+
+          <section class="modal-sec">
+            <h3>出現しやすい場面</h3>
+            <p>下落の下げ止まり付近で出やすい形です。</p>
+          </section>
+
+          <section class="modal-sec">
+            <h3>詳細</h3>
+            <p>一度売られたあと、買い戻しが入って支えられた状態を示します。</p>
+          </section>
+
+          <section class="modal-sec">
+            <h3>注意点</h3>
+            <ul>
+              <li>単体では決めつけず、次の足で反発確認します。</li>
+              <li>出来高やサポートラインも合わせて見ると安心です。</li>
+            </ul>
+          </section>
+        </div>
+      </div>
+    </article>
+  </template>
+
+  <template id="modal-003">
+    <article>
+      <h2 id="patternModalTitle" class="modal-title">長い下ヒゲ</h2>
+      <p class="modal-catch">下値を試した</p>
+
+      <div class="modal-grid">
+        <div class="modal-figure">
+          <svg width="140" height="220" viewBox="0 0 96 140" role="img" aria-label="長い下ヒゲの図（拡大）">
+            <line x1="48" y1="10" x2="48" y2="130" stroke="#16a34a" stroke-width="6"/>
+            <rect x="34" y="52" width="28" height="34" rx="6" fill="#16a34a"/>
+            <line x1="48" y1="86" x2="48" y2="130" stroke="#16a34a" stroke-width="8"/>
+          </svg>
+        </div>
+
+        <div>
+          <section class="modal-sec">
+            <h3>図の見方（どこを見るか）</h3>
+            <p>下ヒゲの長さと、終値がどこに戻ったかを見ます。</p>
+          </section>
+
+          <section class="modal-sec">
+            <h3>出現しやすい場面</h3>
+            <p>急落のあとや、サポート付近で出やすい形です。</p>
+          </section>
+
+          <section class="modal-sec">
+            <h3>詳細</h3>
+            <p>安値で買いが入り、引けに向けて戻した状態を示します。</p>
+          </section>
+
+          <section class="modal-sec">
+            <h3>注意点</h3>
+            <ul>
+              <li>戻しが弱いと再下落のこともあります。</li>
+              <li>次の足で切り返しが続くか確認します。</li>
+            </ul>
+          </section>
+        </div>
+      </div>
+    </article>
+  </template>
+
+  <template id="modal-004">
+    <article>
+      <h2 id="patternModalTitle" class="modal-title">大陰線</h2>
+      <p class="modal-catch">売りが強い日</p>
+
+      <div class="modal-grid">
+        <div class="modal-figure">
+          <svg width="140" height="220" viewBox="0 0 96 140" role="img" aria-label="大陰線の図（拡大）">
+            <line x1="48" y1="10" x2="48" y2="130" stroke="#dc2626" stroke-width="6"/>
+            <rect x="34" y="48" width="28" height="56" rx="6" fill="#dc2626"/>
+          </svg>
+        </div>
+
+        <div>
+          <section class="modal-sec">
+            <h3>図の見方（どこを見るか）</h3>
+            <p>実体が大きいか、ヒゲが短いかを見ます。</p>
+          </section>
+
+          <section class="modal-sec">
+            <h3>出現しやすい場面</h3>
+            <p>上昇の終盤や、悪材料が出た直後で出やすい形です。</p>
+          </section>
+
+          <section class="modal-sec">
+            <h3>詳細</h3>
+            <p>売りが強く、勢いよく下げた状態を示します。</p>
+          </section>
+
+          <section class="modal-sec">
+            <h3>注意点</h3>
+            <ul>
+              <li>下げ過ぎの反発もあるため、翌日の戻りも確認します。</li>
+              <li>支持線までの距離も意識します。</li>
+            </ul>
+          </section>
+        </div>
+      </div>
+    </article>
+  </template>
+
+  <template id="modal-005">
+    <article>
+      <h2 id="patternModalTitle" class="modal-title">トンボ</h2>
+      <p class="modal-catch">上値が重い</p>
+
+      <div class="modal-grid">
+        <div class="modal-figure">
+          <svg width="140" height="220" viewBox="0 0 96 140" role="img" aria-label="トンボの図（拡大）">
+            <line x1="48" y1="10" x2="48" y2="130" stroke="#dc2626" stroke-width="6"/>
+            <rect x="34" y="66" width="28" height="26" rx="6" fill="#dc2626"/>
+            <line x1="48" y1="10" x2="48" y2="66" stroke="#dc2626" stroke-width="8"/>
+          </svg>
+        </div>
+
+        <div>
+          <section class="modal-sec">
+            <h3>図の見方（どこを見るか）</h3>
+            <p>上ヒゲが長いか、実体が小さいかを見ます。</p>
+          </section>
+
+          <section class="modal-sec">
+            <h3>出現しやすい場面</h3>
+            <p>上昇の終盤や、抵抗線（レジスタンス）付近。</p>
+          </section>
+
+          <section class="modal-sec">
+            <h3>詳細</h3>
+            <p>一度高値を試したものの、売りで押し戻された状態を示します。</p>
+          </section>
+
+          <section class="modal-sec">
+            <h3>注意点</h3>
+            <ul>
+              <li>次の足で下向きが続くか確認します。</li>
+              <li>強い上昇トレンド中はダマシもあります。</li>
+            </ul>
+          </section>
+        </div>
+      </div>
+    </article>
+  </template>
+
+  <template id="modal-006">
+    <article>
+      <h2 id="patternModalTitle" class="modal-title">長い上ヒゲ</h2>
+      <p class="modal-catch">高値で売られた</p>
+
+      <div class="modal-grid">
+        <div class="modal-figure">
+          <svg width="140" height="220" viewBox="0 0 96 140" role="img" aria-label="長い上ヒゲの図（拡大）">
+            <line x1="48" y1="10" x2="48" y2="130" stroke="#dc2626" stroke-width="6"/>
+            <rect x="34" y="58" width="28" height="34" rx="6" fill="#dc2626"/>
+            <line x1="48" y1="10" x2="48" y2="58" stroke="#dc2626" stroke-width="8"/>
+          </svg>
+        </div>
+
+        <div>
+          <section class="modal-sec">
+            <h3>図の見方（どこを見るか）</h3>
+            <p>上ヒゲの長さと、終値がどこまで戻ったかを見ます。</p>
+          </section>
+
+          <section class="modal-sec">
+            <h3>出現しやすい場面</h3>
+            <p>高値圏や、抵抗線付近で出やすい形です。</p>
+          </section>
+
+          <section class="modal-sec">
+            <h3>詳細</h3>
+            <p>高値で売りが入り、押し戻された状態を示します。</p>
+          </section>
+
+          <section class="modal-sec">
+            <h3>注意点</h3>
+            <ul>
+              <li>下落確定ではないため、翌日の動きも確認します。</li>
+              <li>出来高と合わせると判断しやすくなります。</li>
+            </ul>
+          </section>
+        </div>
+      </div>
+    </article>
+  </template>
+
+  <template id="modal-007">
+    <article>
+      <h2 id="patternModalTitle" class="modal-title">十字線</h2>
+      <p class="modal-catch">方向が定まらない</p>
+
+      <div class="modal-grid">
+        <div class="modal-figure">
+          <svg width="160" height="220" viewBox="0 0 120 140" role="img" aria-label="十字線の図（拡大）">
+            <line x1="60" y1="10" x2="60" y2="130" stroke="#6b7280" stroke-width="6"/>
+            <line x1="18" y1="70" x2="102" y2="70" stroke="#6b7280" stroke-width="6"/>
+          </svg>
+        </div>
+
+        <div>
+          <section class="modal-sec">
+            <h3>図の見方（どこを見るか）</h3>
+            <p>実体がほぼ無いことと、ヒゲの向きを見ます。</p>
+          </section>
+
+          <section class="modal-sec">
+            <h3>出現しやすい場面</h3>
+            <p>上昇・下落の節目で出やすい形です。</p>
+          </section>
+
+          <section class="modal-sec">
+            <h3>詳細</h3>
+            <p>買いと売りが拮抗し、次の動き待ちの状態を示します。</p>
+          </section>
+
+          <section class="modal-sec">
+            <h3>注意点</h3>
+            <ul>
+              <li>単体では方向が決まらないため、次の足で判断します。</li>
+              <li>重要な価格帯で出るほど意味が強くなる傾向があります。</li>
+            </ul>
+          </section>
+        </div>
+      </div>
+    </article>
+  </template>
+
+  <script>
+    // これは「ブラウザで確認するためのモック用JS」です。
+    // 本番は hx-get で FastAPI が /modal partial を返し、#patternModalContent に差し込みます。
+    (() => {
+      const modal = document.getElementById("patternModal");
+      const dialog = modal?.querySelector(".modal__dialog");
+      const content = document.getElementById("patternModalContent");
+      let lastTrigger = null;
+
+      function openModal() {
+        modal.classList.remove("is-hidden");
+        modal.setAttribute("aria-hidden", "false");
+        document.documentElement.style.overflow = "hidden";
+        dialog?.focus();
+      }
+      function closeModal() {
+        modal.classList.add("is-hidden");
+        modal.setAttribute("aria-hidden", "true");
+        document.documentElement.style.overflow = "";
+        lastTrigger?.focus();
+      }
+
+      document.addEventListener("click", (e) => {
+        const openBtn = e.target.closest("[data-modal-open='true']");
+        if (openBtn) {
+          lastTrigger = openBtn;
+          const id = openBtn.getAttribute("data-pattern-id");
+          const tpl = document.getElementById("modal-" + id);
+          content.innerHTML = tpl ? tpl.innerHTML : "<p>モーダル内容が見つかりません。</p>";
+          openModal();
+        }
+
+        const closeEl = e.target.closest("[data-modal-close='true']");
+        if (closeEl) closeModal();
+      });
+
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && !modal.classList.contains("is-hidden")) {
+          closeModal();
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

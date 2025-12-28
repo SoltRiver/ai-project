@@ -1,7 +1,7 @@
 """
-Legacy Streamlit版は廃止しました。
-FastAPI + htmx 版を uvicorn で起動してください:
+FastAPI + htmx アプリ起動補助スクリプト。
 
+開発サーバー例:
     uvicorn fastapi_app:app --reload --port 8000
 """
 
@@ -9,10 +9,7 @@ import sys
 
 
 def main() -> None:
-    print(
-        "このプロジェクトは FastAPI + htmx 版に移行しました。"
-        "実行する場合は `uvicorn fastapi_app:app --reload` を使用してください。"
-    )
+    print("FastAPI + htmx アプリを起動するには `uvicorn fastapi_app:app --reload --port 8000` を実行してください。")
 
 
 if __name__ == "__main__":

@@ -1,38 +1,41 @@
 {% extends "base.html" %}
 {% block content %}
-<section class="page-header">
+<section class="page-header detail-header">
     <div>
-        <p class="eyebrow">Detail</p>
-        <h1>株価情報詳細 <span class="code">({{ stock.name }} / {{ stock.code }})</span></h1>
-        <p class="muted">{{ stock.exchange }} {{ stock.industry }}</p>
-    </div>
-    <div class="price-stack">
-        <div class="main-price">{{ stock.current_price }}</div>
-        <div class="muted">
-            <span class="change-badge {{ 'change-up' if stock.change_direction == 'up' else 'change-down' if stock.change_direction == 'down' else 'change-neutral' }}">
-                <span class="{{ 'arrow-up' if stock.change_direction == 'up' else 'arrow-down' if stock.change_direction == 'down' else '' }}">{{ stock.change_icon }}</span>
-                {{ stock.change_text }}
-            </span>
+        <p class="eyebrow">株価情報詳細</p>
+        <h1 class="stock-title">{{ stock.display_name }}</h1>
+        <div class="price-stack detail-price">
+            <div class="main-price">{{ stock.price_text }}</div>
+            <div class="muted change-line">
+                <span class="change-badge change-{{ stock.change_direction }}">
+                    <span class="{{ 'arrow-up' if stock.change_direction == 'up' else 'arrow-down' if stock.change_direction == 'down' else '' }}">{{ stock.change_icon }}</span>
+                    {{ stock.change_text }}
+                </span>
+            </div>
         </div>
     </div>
 </section>
 
-<div class="tab-bar">
+<div class="tab-bar" role="tablist" aria-label="タブ切り替え">
     {% for tab in tabs %}
-    <button class="tab-button accent"
+    <button class="tab-button {% if loop.first %}is-active{% endif %}"
+            type="button"
+            data-tab-name="{{ tab.name }}"
+            aria-pressed="{{ 'true' if loop.first else 'false' }}"
             hx-get="/stocks/{{ stock.code }}/tab/{{ tab.name }}"
             hx-target="#tab-content"
             hx-swap="innerHTML">
-        {{ tab.label }}
+        <span class="tab-icon">{{ tab.icon }}</span>
+        <span>{{ tab.label }}</span>
     </button>
     {% endfor %}
-    </div>
+</div>
 
-    <div id="tab-content"
-         hx-get="/stocks/{{ stock.code }}/tab/chart"
-         hx-trigger="load"
-         hx-target="#tab-content"
-         hx-swap="innerHTML">
-        <div class="skeleton">読み込み中...</div>
-    </div>
+<div id="tab-content"
+     hx-get="/stocks/{{ stock.code }}/tab/chart"
+     hx-trigger="load"
+     hx-target="#tab-content"
+     hx-swap="innerHTML">
+    <div class="skeleton">読み込み中...</div>
+</div>
 {% endblock %}

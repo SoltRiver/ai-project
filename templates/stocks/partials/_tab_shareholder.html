@@ -4,7 +4,7 @@
             <span class="icon">🎁</span>
             <div>
                 <div class="panel-title">株主優待</div>
-                <p class="muted">優待内容、必要株数、権利確定月を表示します。</p>
+                <p class="muted small">優待内容と権利確定の目安を表示します。</p>
             </div>
         </div>
     </div>
@@ -13,10 +13,10 @@
     <div class="mini-table">
         <div class="mini-row"><span>必要株数</span><span>{{ benefit.min_shares }} 株</span></div>
         <div class="mini-row"><span>優待内容</span><span>{{ benefit.content }}</span></div>
-        <div class="mini-row"><span>権利確定月</span><span>{{ benefit.months }}</span></div>
-        <div class="mini-row"><span>注意事項</span><span>{{ benefit.note }}</span></div>
+        <div class="mini-row"><span>贈呈時期</span><span>{{ benefit.months }}</span></div>
+        <div class="mini-row"><span>備考</span><span>{{ benefit.note }}</span></div>
     </div>
     {% else %}
-    <p class="muted">優待情報はありません。</p>
+    <p class="muted">株主優待情報はありません。</p>
     {% endif %}
 </div>

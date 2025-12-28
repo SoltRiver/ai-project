@@ -25,10 +25,10 @@ async def stock_detail(code: str, request: Request):
         raise HTTPException(status_code=404, detail="銘柄が見つかりません")
 
     tabs = [
-        {"name": "chart", "label": "チャート"},
-        {"name": "fundamental", "label": "ファンダメンタル分析"},
-        {"name": "dividend", "label": "配当"},
-        {"name": "shareholder", "label": "株主優待"},
+        {"name": "chart", "label": "チャート", "icon": "📈"},
+        {"name": "fundamental", "label": "ファンダメンタル", "icon": "📊"},
+        {"name": "dividend", "label": "配当", "icon": "💰"},
+        {"name": "shareholder", "label": "株主優待", "icon": "🎁"},
     ]
 
     return templates.TemplateResponse(
@@ -37,7 +37,7 @@ async def stock_detail(code: str, request: Request):
             "request": request,
             "stock": header,
             "tabs": tabs,
-            "page_title": f"{header['name']}({header['code']})",
+            "page_title": "株価情報詳細",
         },
     )
 
@@ -63,7 +63,7 @@ async def stock_tab(code: str, tab_name: str, request: Request):
         data = stock_service.get_shareholder_tab(code)
         template = "stocks/partials/_tab_shareholder.html"
     else:
-        raise HTTPException(status_code=404, detail="タブが存在しません")
+        raise HTTPException(status_code=404, detail="タブが見つかりません")
 
     return templates.TemplateResponse(template, {"request": request, "stock": header, **data})
 
@@ -73,7 +73,7 @@ async def glossary(request: Request):
     terms = stock_service.get_glossary_terms()
     return templates.TemplateResponse(
         "glossary/glossary.html",
-        {"request": request, "page_title": "用語辞典", "terms": terms},
+        {"request": request, "page_title": "用語集", "terms": terms},
     )
 
 
@@ -82,5 +82,5 @@ async def candle_patterns(request: Request):
     patterns = stock_service.get_candle_patterns_page()
     return templates.TemplateResponse(
         "candle_patterns/index.html",
-        {"request": request, "page_title": "ローソク足パターン", "patterns": patterns},
+        {"request": request, "page_title": "ローソク足パターン", **patterns},
     )

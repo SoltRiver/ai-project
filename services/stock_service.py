@@ -4,9 +4,18 @@ import math
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
+import pandas as pd
+
+from analyzer import (
+    add_technical_indicators,
+    detect_dead_cross,
+    detect_golden_cross,
+    get_direction_label,
+)
 from candle_classify import get_candle_info
 from data_fetcher import (
     fetch_dividends,
+    fetch_realtime_data,
     fetch_stock_data,
     fetch_stock_info,
     format_symbol_for_yfinance,
@@ -20,231 +29,428 @@ from fundamental_fetcher import (
     get_key_fundamentals,
 )
 from stock_name_mapper import STOCK_NAME_MAP
-
+from terms_data import TERMS_DATA
 
 # ウォッチリストのサンプル銘柄
 WATCHLIST_CODES = ["7203", "6758", "9984", "8306", "8035"]
+
 # interval に対応する取得期間
-PERIOD_BY_INTERVAL = {"1d": "6mo", "1wk": "5y", "1mo": "10y"}
-# 表示用ラベル
-INTERVAL_LABELS = {"1d": "日足", "1wk": "週足", "1mo": "月足"}
-
-# チャートタブで使う簡易ローソク足パターン
-CANDLE_PATTERNS = [
-    {
-        "name": "包み足 (Bullish Engulfing)",
-        "tone": "bullish",
-        "summary": "大陽線が前日の実体を包み、流れの転換を示唆。",
-        "tip": "出来高増と組み合わせて信頼度を評価。",
-    },
-    {
-        "name": "はらみ線 (Harami)",
-        "tone": "neutral",
-        "summary": "2本目の実体が1本目に収まる迷いの形。転換の予兆。",
-        "tip": "ローソク足単体ではなくサポート/レジスタンスと併せて確認。",
-    },
-    {
-        "name": "たくり線 (Hammer)",
-        "tone": "bullish",
-        "summary": "下ヒゲの長い小陽線。下落後の反発サインとして注目。",
-        "tip": "安値更新後の反発で出来高が伴うか確認する。",
-    },
-    {
-        "name": "首吊り線 (Hanging Man)",
-        "tone": "bearish",
-        "summary": "上昇局面での下ヒゲ長い小陰陽線。警戒サイン。",
-        "tip": "翌日の陰線/出来高増で弱気転換の信頼度が上がる。",
-    },
-    {
-        "name": "三空叩き込み",
-        "tone": "bullish",
-        "summary": "窓を3連続で開けた下落後の反転シグナル。",
-        "tip": "売られ過ぎのサイン。戻り売りラインも合わせて設定。",
-    },
-]
-
-# 一般用語の用語辞典（用語ページとファンダメンタルタブで利用）
-GLOSSARY_TERMS = [
-    {
-        "term": "PER",
-        "meaning": "株価が利益に対して割高か割安かを測る指標。",
-        "tip": "業種平均や成長率と合わせて相対評価する。",
-    },
-    {
-        "term": "PBR",
-        "meaning": "株価が純資産に対して割高か割安かを測る指標。",
-        "tip": "1倍割れは解散価値を下回る目安とされる。",
-    },
-    {
-        "term": "配当利回り",
-        "meaning": "投資額に対する配当収入の割合。",
-        "tip": "減配リスクや配当性向もセットで確認する。",
-    },
-    {
-        "term": "トレンド",
-        "meaning": "価格の方向性（上昇/下降/横ばい）。",
-        "tip": "トレンド方向に沿った売買で逆張りリスクを抑える。",
-    },
-    {
-        "term": "サポートライン",
-        "meaning": "下げ止まりやすい価格帯。",
-        "tip": "割れた場合の損切り基準も事前に決めておく。",
-    },
-    {
-        "term": "レジスタンスライン",
-        "meaning": "上げ止まりやすい価格帯。",
-        "tip": "ブレイク時は出来高増で信頼度アップ。",
-    },
-    {
-        "term": "ボラティリティ",
-        "meaning": "価格変動の大きさを示す度合い。",
-        "tip": "高いほど値動きが荒くなるのでポジションサイズに注意。",
-    },
-]
-
-# ローソク足パターンページ用のカードデータ
-CANDLE_PATTERN_CARDS = [
-    {
-        "name": "大陽線",
-        "tone": "bullish",
-        "summary": "始値より大きく上昇して終える強い陽線。",
-        "hint": "上昇トレンド初動で出ると勢いを示すことが多い。",
-    },
-    {
-        "name": "大陰線",
-        "tone": "bearish",
-        "summary": "始値より大きく下落して終える強い陰線。",
-        "hint": "下落トレンド継続や戻り売りのシグナルになることも。",
-    },
-    {
-        "name": "カラカサ（ハンマー）",
-        "tone": "bullish",
-        "summary": "下ヒゲが長く実体が短い形。底打ちのサインとして注目。",
-        "hint": "安値圏で出来高を伴うと反発期待が高まる。",
-    },
-    {
-        "name": "トンボ（上ヒゲ）",
-        "tone": "bearish",
-        "summary": "上ヒゲが長く実体が短い形。上値の重さを示しやすい。",
-        "hint": "上昇局面で出ると利確売りを意識する場面。",
-    },
-    {
-        "name": "包み足",
-        "tone": "bullish",
-        "summary": "2本目の実体が1本目を包み込む転換サイン。",
-        "hint": "陽線で包み込むと反発、陰線で包み込むと下落の示唆。",
-    },
-    {
-        "name": "はらみ足",
-        "tone": "neutral",
-        "summary": "2本目の実体が1本目の中に収まる迷いの形。",
-        "hint": "レンジ抜けと合わせて方向を見極める。",
-    },
-    {
-        "name": "三空叩き込み",
-        "tone": "bullish",
-        "summary": "3つ続けて窓を開けて下落後に出る反転シグナル。",
-        "hint": "売られ過ぎを示すことが多く、戻り売りラインも設定。",
-    },
-]
-
-# 株主優待のサンプル
-SHAREHOLDER_BENEFITS = {
-    "7203": {
-        "min_shares": 100,
-        "content": "株主優待割引券 / クオカード",
-        "months": "3月・9月",
-        "note": "長期保有枠で内容が拡充。",
-    },
-    "6758": {
-        "min_shares": 100,
-        "content": "ソニー製品の特別販売サイト招待",
-        "months": "6月",
-        "note": "抽選枠あり。長期保有優遇なし。",
-    },
-    "9984": {
-        "min_shares": 100,
-        "content": "通信料割引クーポン（例）",
-        "months": "3月",
-        "note": "制度上の例示。実際の優待は要確認。",
-    },
+PERIOD_BY_INTERVAL = {
+    "1m": "7d",
+    "5m": "60d",
+    "10m": "60d",
+    "1d": "6mo",
+    "1wk": "5y",
+    "1mo": "10y",
 }
 
+INTERVAL_LABELS = {
+    "1m": "1分足",
+    "5m": "5分足",
+    "10m": "10分足",
+    "1d": "日足",
+    "1wk": "週足",
+    "1mo": "月足",
+}
 
-def _display_name(code: str, info_name: Optional[str]) -> str:
-    if info_name:
-        return info_name
-    if code in STOCK_NAME_MAP:
-        return STOCK_NAME_MAP[code]
-    if code.endswith(".T") and code[:-2] in STOCK_NAME_MAP:
-        return STOCK_NAME_MAP[code[:-2]]
-    symbol = format_symbol_for_yfinance(code)
-    return STOCK_NAME_MAP.get(symbol, code)
+INTRADAY_INTERVALS = {"1m", "5m", "10m"}
 
 
-def _fmt_currency(value: Optional[float], decimals: int = 2) -> str:
+def _build_glossary_terms() -> List[Dict[str, str]]:
+    terms: List[Dict[str, str]] = []
+    for category, items in TERMS_DATA.items():
+        for key, term in items.items():
+            terms.append(
+                {
+                    "term": term.get("japanese") or key,
+                    "meaning": term.get("meaning") or "",
+                    "tip": term.get("usage") or "",
+                    "category": category,
+                }
+            )
+    return terms
+
+
+GLOSSARY_TERMS = _build_glossary_terms()
+
+# ローソク足パターンのカードデータ
+CANDLE_PATTERN_CARDS = [
+    {
+        "id": "big_bull",
+        "name": "大陽線",
+        "group": "basic",
+        "category": "陽線",
+        "tone": "bullish",
+        "svg": "images/big_bull.svg",
+        "catch": "強い買い圧力が続くサイン",
+        "desc_lead": "流れを変える長い陽線",
+        "desc_body": "始値から大きく上昇し、実体が長くなる形です。",
+        "detail_desc": "材料が出た直後やトレンド転換の初動で現れやすい長い陽線です。出来高が伴えば信頼度が上がります。",
+        "scene": "好材料発表直後や強い反発場面",
+        "howto": "実体の長さと出来高の増加を確認する",
+        "notes": ["出来高が増えているか確認", "翌日の反落に注意"],
+    },
+    {
+        "id": "hammer",
+        "name": "下ヒゲ陽線（ハンマー）",
+        "group": "basic",
+        "category": "陽線",
+        "tone": "bullish",
+        "svg": "images/hammer.svg",
+        "catch": "下げ止まりの兆し",
+        "desc_lead": "押し目で出やすい形",
+        "desc_body": "長い下ヒゲと小さい実体が特徴。買い戻しが強いときに出ます。",
+        "detail_desc": "一時大きく売られたものの、引けにかけて買い戻されたサインです。サポート付近で出ると反発候補になります。",
+        "scene": "下落トレンドの終盤やサポート付近",
+        "howto": "下ヒゲの長さと直近安値との位置関係を見る",
+        "notes": ["出来高増加なら信頼度アップ"],
+    },
+    {
+        "id": "doji",
+        "name": "十字線",
+        "group": "basic",
+        "category": "迷い",
+        "tone": "neutral",
+        "svg": "images/doji.svg",
+        "catch": "方向感が定まらない",
+        "desc_lead": "売り買い拮抗",
+        "desc_body": "始値と終値がほぼ同じで、迷いの局面で出やすい形です。",
+        "detail_desc": "上昇・下落どちらかの勢いが弱まったサイン。直後の足の方向で次の流れを判断します。",
+        "scene": "トレンド転換の手前や重要イベント前",
+        "howto": "前後のローソク足の形と並べて確認する",
+        "notes": ["出来高が減少しているかも確認"],
+    },
+    {
+        "id": "bull_engulfing",
+        "name": "包み足（陽）",
+        "group": "advanced",
+        "category": "陽線",
+        "tone": "bullish",
+        "svg": "images/bull_engulfing.svg",
+        "catch": "前日の陰線を包む強い買い",
+        "desc_lead": "反転の候補",
+        "desc_body": "小さな陰線を大きな陽線が実体で包み込む形。",
+        "detail_desc": "連続陰線のあとに出ると転換サインとして扱われます。出来高が伴うと信頼度が上がります。",
+        "scene": "下落トレンド終盤の押し目",
+        "howto": "実体の大きさと出来高を確認",
+        "notes": ["直近安値の更新有無を確認"],
+    },
+    {
+        "id": "three_white_soldiers",
+        "name": "赤三兵",
+        "group": "advanced",
+        "category": "陽線",
+        "tone": "bullish",
+        "svg": "images/three_white_soldiers.svg",
+        "catch": "3本続く強気",
+        "desc_lead": "力強い上昇",
+        "desc_body": "陽線が3本連続し、始値が前日の実体内から始まる形。",
+        "detail_desc": "安値圏で出ると転換サイン。高値圏では過熱感にも注意。",
+        "scene": "下落後の反発局面",
+        "howto": "3本の実体が揃って長いか確認",
+        "notes": ["過熱感と出来高の伸びに注意"],
+    },
+    {
+        "id": "rising_three_methods",
+        "name": "切り上げ三法",
+        "group": "advanced",
+        "category": "陽線",
+        "tone": "bullish",
+        "svg": "images/rising_three_methods.svg",
+        "catch": "上昇中の一服",
+        "desc_lead": "押し目で再上昇",
+        "desc_body": "大陽線のあと小さな陰線が続き、再度陽線で上抜ける形。",
+        "detail_desc": "上昇トレンドの途中に出る継続パターン。押し目買いの好機。",
+        "scene": "上昇トレンド中の調整局面",
+        "howto": "陰線群が大陽線の実体内に収まっているか確認",
+        "notes": ["上抜けの出来高が増えていると◎"],
+    },
+    {
+        "id": "bear_engulfing",
+        "name": "包み足（陰）",
+        "group": "advanced",
+        "category": "陰線",
+        "tone": "bearish",
+        "svg": "images/bear_engulfing.svg",
+        "catch": "前日の陽線を包む強い売り",
+        "desc_lead": "天井圏で警戒",
+        "desc_body": "陽線を大きな陰線が実体で包み込む形。",
+        "detail_desc": "高値圏で出ると反落サイン。出来高を伴うと下落継続に注意。",
+        "scene": "高値圏での反落局面",
+        "howto": "実体の長さと前日の高値更新有無を確認",
+        "notes": ["直近サポートとの距離を確認"],
+    },
+    {
+        "id": "three_black_crows",
+        "name": "黒三兵",
+        "group": "advanced",
+        "category": "陰線",
+        "tone": "bearish",
+        "svg": "images/three_black_crows.svg",
+        "catch": "3本続く弱気",
+        "desc_lead": "下落圧力が強い",
+        "desc_body": "陰線が3本連続し、始値が前日の実体内から始まる形。",
+        "detail_desc": "天井圏での出現はトレンド転換の警戒シグナル。安値圏では行き過ぎにも注意。",
+        "scene": "上昇後の失速局面",
+        "howto": "3本とも実体が長いかを確認",
+        "notes": ["出来高増なら強い下落圧力"],
+    },
+    {
+        "id": "falling_three_methods",
+        "name": "切り下げ三法",
+        "group": "advanced",
+        "category": "陰線",
+        "tone": "bearish",
+        "svg": "images/falling_three_methods.svg",
+        "catch": "下落中の戻り売り",
+        "desc_lead": "戻りで再下落",
+        "desc_body": "大陰線のあと小さな陽線が続き、再度陰線で下抜ける形。",
+        "detail_desc": "下落トレンド継続のサイン。戻り売りが優勢なときに出ます。",
+        "scene": "下落トレンド中の戻り局面",
+        "howto": "陽線群が大陰線の実体内に収まるか確認",
+        "notes": ["出来高が減れば弱気継続に警戒"],
+    },
+    {
+        "id": "harami",
+        "name": "はらみ足",
+        "group": "advanced",
+        "category": "迷い",
+        "tone": "neutral",
+        "svg": "images/harami.svg",
+        "catch": "値動きが一旦収縮",
+        "desc_lead": "方向感が出にくい",
+        "desc_body": "2本目の足が1本目の実体内に収まる形。",
+        "detail_desc": "動きが小休止しているサイン。次の足で方向を確認。",
+        "scene": "トレンド転換前後",
+        "howto": "ブレイク方向と出来高を確認",
+        "notes": ["直近のサポレジを併せて見る"],
+    },
+    {
+        "id": "inside_range",
+        "name": "インサイドレンジ",
+        "group": "advanced",
+        "category": "迷い",
+        "tone": "neutral",
+        "svg": "images/inside_range.svg",
+        "catch": "レンジが続く",
+        "desc_lead": "様子見ムード",
+        "desc_body": "複数本の足が同じ価格帯に収まるレンジ状態。",
+        "detail_desc": "ブレイク方向で次の流れが決まるため、サポート・レジスタンス付近を注視。",
+        "scene": "イベント前の持ち合い",
+        "howto": "レンジ上限下限を引いておく",
+        "notes": ["出来高が減っていれば持ち合い継続の可能性"],
+    },
+    {
+        "id": "multiple_doji",
+        "name": "連続十字線",
+        "group": "advanced",
+        "category": "迷い",
+        "tone": "neutral",
+        "svg": "images/multiple_doji.svg",
+        "catch": "迷いが続く",
+        "desc_lead": "方向感なし",
+        "desc_body": "十字線が連続し、売り買いが拮抗している形。",
+        "detail_desc": "イベント待ちや材料待ちで出やすい。ブレイク方向に一気に動くことも。",
+        "scene": "重要指標や決算前",
+        "howto": "ブレイク時の出来高と方向を重視",
+        "notes": ["上下のヒゲが伸びる場合はボラティリティ注意"],
+    },
+]
+
+
+def _jp_name(code: str, fetched_name: Optional[str]) -> str:
+    base = STOCK_NAME_MAP.get(code) or fetched_name or code
+    return f"{base}（{code}）"
+
+
+def _fmt_price(value: Optional[float], decimals: int = 1, floor: bool = False) -> str:
     if value is None:
         return "N/A"
-    if isinstance(value, float) and math.isnan(value):
-        return "N/A"
-    fmt = f"¥{{:,.{decimals}f}}"
-    return fmt.format(value)
+    if floor:
+        return f"¥{math.floor(value):,}"
+    return f"¥{value:,.{decimals}f}"
 
 
-def _fmt_percent(value: Optional[float], decimals: int = 2) -> str:
-    if value is None:
-        return "N/A"
-    if isinstance(value, float) and math.isnan(value):
-        return "N/A"
-    return f"{value * 100:.{decimals}f}%"
+def _format_change(current: Optional[float], previous: Optional[float]) -> Dict[str, Any]:
+    if current is None or previous is None:
+        return {"text": "N/A", "direction": "flat", "icon": "→"}
+    diff = current - previous
+    pct = (diff / previous) * 100 if previous else 0
+    sign = "+" if diff > 0 else "-" if diff < 0 else "±"
+    direction = "up" if diff > 0 else "down" if diff < 0 else "flat"
+    icon = "↑" if diff > 0 else "↓" if diff < 0 else "→"
+    text = f"{sign}¥{abs(diff):,.0f}（{sign}{abs(pct):.2f}%）"
+    return {"text": text, "direction": direction, "icon": icon, "diff": diff, "pct": pct}
 
 
-def _format_change(change: Optional[float], change_percent: Optional[float]) -> Dict[str, str]:
-    if change is None or change_percent is None:
-        return {"text": "N/A", "direction": "neutral", "icon": "→"}
-    sign = "+" if change > 0 else "-" if change < 0 else "±"
-    direction = "up" if change > 0 else "down" if change < 0 else "flat"
-    icon = "↑" if change > 0 else "↓" if change < 0 else "→"
-    text = f"{sign}{_fmt_currency(abs(change))} ({sign}{abs(change_percent):.2f}%)"
-    return {"text": text, "direction": direction, "icon": icon}
+def _build_points(df: pd.DataFrame, interval: str) -> List[Dict[str, Any]]:
+    if df is None or df.empty:
+        return []
+    points: List[Dict[str, Any]] = []
+    date_col = "date" if "date" in df.columns else df.columns[0]
+    label_fmt = "%H:%M" if interval in INTRADAY_INTERVALS else "%Y/%m/%d"
+    for _, row in df.iterrows():
+        date_val = row[date_col]
+        label = date_val.strftime(label_fmt) if hasattr(date_val, "strftime") else str(date_val)
+        point = {
+            "label": label,
+            "open": round(float(row["open"]), 1),
+            "high": round(float(row["high"]), 1),
+            "low": round(float(row["low"]), 1),
+            "close": round(float(row["close"]), 1),
+            "volume": int(row["volume"]) if not pd.isna(row.get("volume", None)) else 0,
+        }
+        try:
+            candle = get_candle_info(point["open"], point["high"], point["low"], point["close"])
+            point["pattern"] = candle.get("type")
+        except Exception:
+            point["pattern"] = None
+        points.append(point)
+    return points
 
 
-def _calc_high_low(symbol: str) -> tuple[Optional[float], Optional[float]]:
-    history = fetch_stock_data(symbol, period="6mo", interval="1d")
-    if history is None or getattr(history, "empty", True):
-        return None, None
-    return (
-        float(history["high"].max(skipna=True)),
-        float(history["low"].min(skipna=True)),
-    )
+def _support_levels(points: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    if not points:
+        return []
+    closes = [p["close"] for p in points]
+    min_close = min(closes)
+    max_close = max(closes)
+    mid = (min_close + max_close) / 2
+    return [
+        {"value": round(min_close, 1), "type": "support", "label": "サポート", "note": "過去に下げ止まった価格帯"},
+        {"value": round(mid, 1), "type": "neutral", "label": "注目価格", "note": "出来高が集まりやすい水準"},
+        {"value": round(max_close, 1), "type": "resistance", "label": "レジスタンス", "note": "過去に売られやすかった価格帯"},
+    ]
+
+
+def _trend_label(points: List[Dict[str, Any]]) -> str:
+    if not points:
+        return "トレンド不明"
+    closes = pd.Series([p["close"] for p in points])
+    return get_direction_label(closes, positive_label="上昇傾向", negative_label="下落傾向", neutral_label="もみ合い")
+
+
+def _build_signals(points: List[Dict[str, Any]]) -> List[Dict[str, str]]:
+    if len(points) < 5:
+        return [
+            {"title": "ゴールデンクロス", "detail": "データが不足しています", "tone": "neutral"},
+            {"title": "RSI", "detail": "データが不足しています", "tone": "neutral"},
+            {"title": "MACD", "detail": "データが不足しています", "tone": "neutral"},
+            {"title": "支持線・抵抗線", "detail": "サポート・レジスタンスを確認してください", "tone": "neutral"},
+        ]
+
+    closes = pd.Series([p["close"] for p in points])
+    tech_df = add_technical_indicators(pd.DataFrame({"close": closes}))
+    golden = detect_golden_cross(tech_df["SMA25"], tech_df["SMA75"])
+    dead = detect_dead_cross(tech_df["SMA25"], tech_df["SMA75"])
+    rsi_val = tech_df["RSI"].iloc[-1] if "RSI" in tech_df else None
+    rsi_label = "買われすぎ" if rsi_val is not None and rsi_val >= 70 else "売られすぎ" if rsi_val is not None and rsi_val <= 30 else "中立"
+    signals = [
+        {
+            "title": "ゴールデンクロス／デッドクロス",
+            "detail": "短期線が長期線を上抜けると上昇、下抜けると下落のサインです。",
+            "tone": "positive" if golden else "negative" if dead else "neutral",
+        },
+        {
+            "title": "RSIの買われすぎ／売られすぎ",
+            "detail": f"RSI {rsi_val:.1f} で {rsi_label} 判定です。" if rsi_val is not None else "RSIは計算中です。",
+            "tone": "negative" if rsi_val is not None and rsi_val >= 70 else "positive" if rsi_val is not None and rsi_val <= 30 else "neutral",
+        },
+        {
+            "title": "MACDの方向性",
+            "detail": "MACDラインとシグナルの方向で勢いを確認しましょう。",
+            "tone": "neutral",
+        },
+        {
+            "title": "支持線／抵抗線の位置",
+            "detail": "サポート・レジスタンス近辺では反発や反落に注意してください。",
+            "tone": "neutral",
+        },
+    ]
+    return signals
+
+
+def _build_risks(points: List[Dict[str, Any]], info: Optional[Dict[str, Any]]) -> List[str]:
+    if not points:
+        return ["データ不足のためリスク評価ができません。"]
+    closes = pd.Series([p["close"] for p in points])
+    returns = closes.pct_change().dropna()
+    if returns.empty:
+        vol_level = "データ不足"
+        vol_warn = False
+    else:
+        vol = float(returns.std() * 100)
+        if vol >= 3.0:
+            vol_level = "ボラティリティが高い"
+            vol_warn = True
+        elif vol >= 1.5:
+            vol_level = "ボラティリティは普通"
+            vol_warn = False
+        else:
+            vol_level = "ボラティリティは落ち着き"
+            vol_warn = False
+
+    volume_basis = None
+    if info:
+        volume_basis = info.get("average_volume") or info.get("volume")
+    if volume_basis is None:
+        liquidity_level = "出来高データ不足"
+        liquidity_warn = False
+    elif volume_basis < 50000:
+        liquidity_level = "流動性が低い"
+        liquidity_warn = True
+    else:
+        liquidity_level = "流動性は良好"
+        liquidity_warn = False
+
+    risks = [
+        f"{vol_level}（値動きの大きさを確認）",
+        f"{liquidity_level}（急減・急増に注意）",
+        "悪材料ニュースがないか最新の見出しを確認",
+        "決算発表前後は値動きが荒くなる可能性",
+        "権利付き最終日付近は配当・優待目的の売買が増えます",
+    ]
+    return risks
+
+
+def _build_positives(points: List[Dict[str, Any]]) -> List[str]:
+    if not points:
+        return ["データ不足のためプラス要素を表示できません。"]
+    return [
+        "好材料ニュースが出ていないか確認し、追い風ならエントリー検討",
+        "業績が改善傾向なら中長期での上昇余地あり",
+        "増配や優待改善は長期保有の追い風",
+        "同業他社も強ければセクター全体が支えになる",
+        "為替や金利など外部環境が追い風の場合は上昇が続きやすい",
+    ]
 
 
 def get_stock_list() -> List[Dict[str, Any]]:
-    rows: List[Dict[str, Any]] = []
+    stocks: List[Dict[str, Any]] = []
     for code in WATCHLIST_CODES:
         symbol = format_symbol_for_yfinance(code)
-        info = fetch_stock_info(symbol)
-        high, low = _calc_high_low(symbol)
-        if high is not None:
-            high = math.floor(high)
-        if low is not None:
-            low = math.floor(low)
-        change = _format_change(
-            info.get("change") if info else None,
-            info.get("change_percent") if info else None,
-        )
-        rows.append(
+        info = fetch_stock_info(symbol) or {}
+        display_name = _jp_name(code, info.get("name"))
+        history = fetch_stock_data(symbol, period="1mo", interval="1d")
+        high_low_text = "N/A"
+        if history is not None and not history.empty:
+            high_val = float(history["high"].max())
+            low_val = float(history["low"].min())
+            high_low_text = f"高値 {math.floor(high_val):,} / 安値 {math.floor(low_val):,}"
+
+        change = _format_change(info.get("current_price"), info.get("previous_close"))
+        stocks.append(
             {
                 "code": code,
-                "name": _display_name(code, info.get("name") if info else None),
-                "current_price": _fmt_currency(info.get("current_price") if info else None),
-                "change_text": change["text"],
+                "name": display_name,
+                "current_price": _fmt_price(info.get("current_price"), decimals=1),
                 "change_direction": change["direction"],
                 "change_icon": change["icon"],
-                "high_low": f"{_fmt_currency(high)} / {_fmt_currency(low)}",
+                "change_text": change["text"],
+                "high_low": high_low_text,
             }
         )
-    return rows
+    return stocks
 
 
 def get_stock_header(code: str) -> Optional[Dict[str, Any]]:
@@ -252,281 +458,186 @@ def get_stock_header(code: str) -> Optional[Dict[str, Any]]:
     info = fetch_stock_info(symbol)
     if info is None:
         return None
-    change = _format_change(info.get("change"), info.get("change_percent"))
+    display_name = _jp_name(code, info.get("name"))
+    change = _format_change(info.get("current_price"), info.get("previous_close"))
     return {
         "code": code,
-        "symbol": symbol,
-        "name": _display_name(code, info.get("name")),
-        "current_price": _fmt_currency(info.get("current_price")),
+        "display_name": display_name,
+        "price_text": _fmt_price(info.get("current_price"), decimals=1),
         "change_text": change["text"],
         "change_direction": change["direction"],
         "change_icon": change["icon"],
-        "exchange": info.get("exchange") or "",
-        "industry": info.get("industry") or "",
-        "currency": info.get("currency") or "JPY",
+        "previous_close": info.get("previous_close"),
+        "open": info.get("open") or "",
+        "high": info.get("dayHigh") or "",
+        "low": info.get("dayLow") or "",
     }
-
-
-def _trend_label(first: Optional[float], last: Optional[float]) -> str:
-    if first is None or last is None:
-        return "データ未取得"
-    if last > first:
-        return "上昇基調"
-    if last < first:
-        return "下降基調"
-    return "横ばい"
-
-
-def _build_chart_points(history, limit: int = 20) -> List[Dict[str, str]]:
-    points: List[Dict[str, str]] = []
-    if history is None or getattr(history, "empty", True):
-        return points
-    trimmed = history.tail(limit)
-    for _, row in trimmed.iterrows():
-        date_value = row["date"]
-        if isinstance(date_value, datetime):
-            date_label = date_value.strftime("%Y-%m-%d")
-        else:
-            date_label = str(date_value)[:10]
-        points.append(
-            {
-                "date": date_label,
-                "open": float(row["open"]),
-                "close": _fmt_currency(float(row["close"])),
-                "high": _fmt_currency(float(row["high"])),
-                "low": _fmt_currency(float(row["low"])),
-                "open_raw": float(row["open"]),
-                "close_raw": float(row["close"]),
-                "high_raw": float(row["high"]),
-                "low_raw": float(row["low"]),
-            }
-        )
-    return points
 
 
 def get_chart_tab(code: str, interval: str = "1d") -> Dict[str, Any]:
-    normalized_interval = interval if interval in PERIOD_BY_INTERVAL else "1d"
     symbol = format_symbol_for_yfinance(code)
-    history = fetch_stock_data(
-        symbol,
-        period=PERIOD_BY_INTERVAL[normalized_interval],
-        interval=normalized_interval,
-    )
+    df = fetch_stock_data(symbol, period=PERIOD_BY_INTERVAL.get(interval, "1mo"), interval=interval)
+    points = _build_points(df if df is not None else pd.DataFrame(), interval)
+    support_levels = _support_levels(points)
+    trend_label = _trend_label(points)
+    signals = _build_signals(points)
 
-    if history is None or getattr(history, "empty", True):
-        return {
-            "interval": normalized_interval,
-            "interval_label": INTERVAL_LABELS[normalized_interval],
-            "interval_options": [{"label": INTERVAL_LABELS[k], "value": k} for k in ("1d", "1wk", "1mo")],
-            "chart_summary": {},
-            "chart_points": [],
-            "candle_popup": [],
-            "candle_type": "N/A",
-            "patterns": CANDLE_PATTERNS,
-            "trend_label": "データ未取得",
-            "support_resistance": {},
-            "signals": [],
-            "risks": [],
+    if df is not None and not df.empty:
+        last_row = df.iloc[-1]
+        prev_close = df.iloc[-2]["close"] if len(df) >= 2 else last_row["close"]
+        change = _format_change(last_row["close"], prev_close)
+        chart_summary = {
+            "last_close": _fmt_price(last_row["close"], decimals=1),
+            "open": _fmt_price(last_row["open"], decimals=1),
+            "high": _fmt_price(last_row["high"], decimals=1),
+            "low": _fmt_price(last_row["low"], decimals=1),
+            "change_text": change["text"],
+            "change_direction": change["direction"],
+            "change_icon": change["icon"],
+            "timestamp": last_row["date"].strftime("%Y/%m/%d %H:%M") if hasattr(last_row["date"], "strftime") else "",
+        }
+    else:
+        chart_summary = {
+            "last_close": "N/A",
+            "open": "N/A",
+            "high": "N/A",
+            "low": "N/A",
+            "change_text": "N/A",
+            "change_direction": "flat",
+            "change_icon": "→",
+            "timestamp": "",
         }
 
-    latest = history.iloc[-1]
-    previous = history.iloc[-2] if len(history) > 1 else None
-    change_val = None
-    change_pct = None
-    if previous is not None:
-        change_val = float(latest["close"]) - float(previous["close"])
-        if previous["close"]:
-            change_pct = (change_val / float(previous["close"])) * 100
+    axis_note = "縦軸：価格（小数第1位） / 横軸：時間（HH:mm）" if interval in INTRADAY_INTERVALS else "縦軸：価格（小数第1位） / 横軸：時間（yyyy/mm/dd）"
 
-    change = _format_change(change_val, change_pct)
-    high_val = float(history["high"].max(skipna=True))
-    low_val = float(history["low"].min(skipna=True))
+    info = fetch_realtime_data(symbol) or {}
+    risks = _build_risks(points, info)
+    positives = _build_positives(points)
 
-    candle_info = get_candle_info(
-        float(latest["open"]),
-        float(latest["high"]),
-        float(latest["low"]),
-        float(latest["close"]),
-    )
-
-    candle_popup = [
-        {"label": "始値", "value": _fmt_currency(candle_info.get("open"))},
-        {"label": "高値", "value": _fmt_currency(candle_info.get("high"))},
-        {"label": "安値", "value": _fmt_currency(candle_info.get("low"))},
-        {"label": "終値", "value": _fmt_currency(candle_info.get("close"))},
-        {"label": "値幅", "value": _fmt_currency(candle_info.get("total_range"))},
-    ]
-
-    first_close = float(history["close"].iloc[0]) if len(history) else None
-    chart_points = _build_chart_points(history)
-
-    chart_summary = {
-        "last_close": _fmt_currency(float(latest["close"])),
-        "open": _fmt_currency(float(latest["open"])),
-        "high": _fmt_currency(high_val),
-        "low": _fmt_currency(low_val),
-        "change_text": change["text"],
-        "change_direction": change["direction"],
-        "change_icon": change["icon"],
-        "range": f"{_fmt_currency(high_val)} / {_fmt_currency(low_val)}",
-    }
-
-    support_resistance = {
-        "support": _fmt_currency(low_val),
-        "resistance": _fmt_currency(high_val),
-        "description": "直近の安値・高値を目安にサポート/レジスタンスを表示しています。",
-    }
-
-    signals = [
-        {
-            "label": "ゴールデンクロス",
-            "status": "参考",
-            "note": "短期線が長期線を上抜けると上昇トレンド転換の参考になります。",
-        },
-        {
-            "label": "RSI",
-            "status": "中立",
-            "note": "RSIが50付近で推移。売られすぎ/買われすぎの極端な状態ではありません。",
-        },
-    ]
-
-    risks = [
-        "価格変動が大きめの銘柄です。",
-        "売買が成立しにくい場合があります。",
-    ]
+    interval_options = [{"value": key, "label": label} for key, label in INTERVAL_LABELS.items()]
 
     return {
-        "interval": normalized_interval,
-        "interval_label": INTERVAL_LABELS[normalized_interval],
-        "interval_options": [{"label": INTERVAL_LABELS[k], "value": k} for k in ("1d", "1wk", "1mo")],
+        "interval": interval,
+        "interval_options": interval_options,
         "chart_summary": chart_summary,
-        "chart_points": chart_points,
-        "candle_popup": candle_popup,
-        "candle_type": candle_info.get("type"),
-        "patterns": CANDLE_PATTERNS,
-        "trend_label": _trend_label(first_close, float(latest["close"])),
-        "support_resistance": support_resistance,
+        "trend_label": trend_label,
+        "chart_payload": {"points": points, "support_levels": support_levels},
+        "support_levels": support_levels,
         "signals": signals,
         "risks": risks,
+        "positives": positives,
+        "axis_note": axis_note,
     }
-
-
-def _format_fundamentals(fundamental_data: Dict[str, Any]) -> List[Dict[str, str]]:
-    format_map = {
-        "PER": "float",
-        "PBR": "float",
-        "配当利回り": "percent",
-        "自己資本比率": "float",
-        "ROE": "percent",
-        "ROA": "percent",
-        "利益率": "percent",
-        "beta": "float",
-    }
-    items: List[Dict[str, str]] = []
-    for key, value in fundamental_data.items():
-        if key in ("earnings_date", "ex_dividend_date"):
-            continue
-        fmt_type = format_map.get(key, "float")
-        items.append(
-            {
-                "label": key,
-                "value": format_fundamental_value(value, fmt_type),
-            }
-        )
-    return items
 
 
 def get_fundamental_tab(code: str) -> Dict[str, Any]:
     symbol = format_symbol_for_yfinance(code)
-    fundamentals_raw = get_key_fundamentals(symbol)
-    if fundamentals_raw is None:
-        return {
-            "fundamentals": [],
-            "statuses": {},
-            "scores": {},
-            "events": {},
-            "glossary": GLOSSARY_TERMS,
-            "timings": {},
-            "risks": [],
-        }
-    statuses = get_fundamental_statuses(fundamentals_raw)
-    scores = build_company_scores(fundamentals_raw)
-    events = get_event_info(symbol, fundamental_data=fundamentals_raw) or {}
-
-    fundamental_items = _format_fundamentals(fundamentals_raw)
-    events_display = {
-        "決算発表": format_date(events.get("earnings_date")),
-        "配当権利落ち": format_date(events.get("ex_dividend_date")),
-        "配当利回り": format_fundamental_value(events.get("dividend_yield"), "percent"),
-        "配当額": format_fundamental_value(events.get("dividend_rate"), "float"),
-    }
-
-    timings = {
-        "短期": "押し目買いは直近サポート付近を目安に、損切りラインを明確に設定。",
-        "中期": "業績トレンドとセクター動向を見つつ、レジスタンス突破で買い増し検討。",
-        "長期": "長期保有前提なら配当利回りと成長性をチェックし、割安圏でコツコツ分散。",
-        "注意": "あくまで参考情報であり、実際の値動きを保証するものではありません。",
-    }
-
-    risks = [
-        "価格変動が大きめの銘柄です。",
-        "売買が成立しにくい場合があります。",
+    fundamental = get_key_fundamentals(symbol) or {}
+    fundamentals = [
+        {"label": "PER", "value": format_fundamental_value(fundamental.get("PER"), "float")},
+        {"label": "PBR", "value": format_fundamental_value(fundamental.get("PBR"), "float")},
+        {"label": "配当利回り", "value": format_fundamental_value(fundamental.get("驟榊ｽ灘茜蝗槭ｊ") or fundamental.get("dividend_yield"), "percent")},
+        {"label": "ROE", "value": format_fundamental_value(fundamental.get("ROE"), "percent")},
+        {"label": "自己資本比率", "value": format_fundamental_value(fundamental.get("閾ｪ蟾ｱ雉・悽豈皮紫") or fundamental.get("equity_ratio"), "percent")},
     ]
-
+    statuses = get_fundamental_statuses(fundamental)
+    scores = build_company_scores(fundamental)
+    events = get_event_info(symbol, fundamental) or {}
+    timings = {
+        "決算発表日": format_date(events.get("earnings_date")),
+        "配当基準日": format_date(events.get("ex_dividend_date")),
+        "権利付き最終日": "要確認",
+    }
+    risks = [
+        "ボラティリティ（値動きの大きさ）を確認",
+        "出来高の急変はトレンド転換のサインになることがあります",
+        "悪材料ニュースが出た場合は反応を確認",
+        "決算発表前後は一時的な乱高下に注意",
+        "優待や配当の権利付き最終日は売買が増えます",
+    ]
+    glossary = GLOSSARY_TERMS[:6]
     return {
-        "fundamentals": fundamental_items,
+        "fundamentals": fundamentals,
         "statuses": statuses,
         "scores": scores,
-        "events": events_display,
-        "glossary": GLOSSARY_TERMS,
+        "events": {
+            "決算発表": format_date(events.get("earnings_date")),
+            "配当権利落ち": format_date(events.get("ex_dividend_date")),
+        },
         "timings": timings,
         "risks": risks,
+        "glossary": glossary,
     }
 
 
 def get_dividend_tab(code: str) -> Dict[str, Any]:
     symbol = format_symbol_for_yfinance(code)
-    dividends = fetch_dividends(symbol, limit=8)
-    records: List[Dict[str, str]] = []
-    for record in dividends:
-        date_val = record.get("date")
-        if isinstance(date_val, datetime):
-            date_display = date_val.strftime("%Y-%m-%d")
+    dividends = fetch_dividends(symbol, limit=5)
+    rows = []
+    for item in dividends:
+        date_val = item.get("date")
+        if hasattr(date_val, "strftime"):
+            date_str = date_val.strftime("%Y/%m/%d")
         else:
-            date_display = str(date_val)
-        records.append(
-            {
-                "date": date_display,
-                "amount": _fmt_currency(record.get("amount"), decimals=2),
-            }
-        )
-
-    fundamentals_raw = get_key_fundamentals(symbol)
-    current_yield = None
-    if fundamentals_raw is not None:
-        current_yield = fundamentals_raw.get("配当利回り")
+            date_str = str(date_val)
+        rows.append({"date": date_str, "amount": _fmt_price(item.get("amount"), decimals=1)})
 
     yield_info = {
-        "yield": format_fundamental_value(current_yield, "percent") if current_yield is not None else "N/A",
-        "policy": "安定配当を目指します（参考情報）。",
+        "yield": "データなし",
+        "policy": "安定配当を目標（参考値）",
     }
-
-    return {"dividends": records, "yield_info": yield_info}
+    return {"dividends": rows, "yield_info": yield_info}
 
 
 def get_shareholder_tab(code: str) -> Dict[str, Any]:
-    benefit = SHAREHOLDER_BENEFITS.get(code) or SHAREHOLDER_BENEFITS.get(code.replace(".T", ""))
+    # 実データがないため、サンプルを返す
+    benefit = {
+        "min_shares": 100,
+        "content": "自社製品クーポンまたはギフトカード",
+        "months": "年2回（3月 / 9月）",
+        "note": "内容はIRでご確認ください",
+    }
     return {"benefit": benefit}
+
+
+def get_candle_patterns_page() -> Dict[str, Any]:
+    categories = [
+        {"key": "陽線", "tone": "bullish"},
+        {"key": "陰線", "tone": "bearish"},
+        {"key": "迷い", "tone": "neutral"},
+    ]
+    group_labels = {
+        "basic": "単体ローソク足（基本編）",
+        "advanced": "複合ローソク足（応用編）",
+    }
+    group_by_category: Dict[str, Dict[str, List[Dict[str, Any]]]] = {
+        g: {c["key"]: [] for c in categories} for g in group_labels
+    }
+    for item in CANDLE_PATTERN_CARDS:
+        group = item.get("group", "basic")
+        category = item.get("category")
+        if group in group_by_category and category in group_by_category[group]:
+            group_by_category[group][category].append(item)
+
+    category_counts = {
+        c["key"]: sum(len(group_by_category[g][c["key"]]) for g in group_by_category) for c in categories
+    }
+    group_counts = {g: sum(len(lst) for lst in cat_map.values()) for g, cat_map in group_by_category.items()}
+
+    return {
+        "patterns": CANDLE_PATTERN_CARDS,
+        "categories": categories,
+        "group_by_category": group_by_category,
+        "group_labels": group_labels,
+        "group_counts": group_counts,
+        "category_counts": category_counts,
+    }
 
 
 def get_glossary_terms() -> List[Dict[str, str]]:
     return GLOSSARY_TERMS
 
 
-def get_candle_patterns_page() -> List[Dict[str, str]]:
-    return CANDLE_PATTERN_CARDS
-
-
 def get_timestamp_label() -> str:
     now = datetime.now()
-    return now.strftime("（%Y/%m/%d %H:%M 時点）")
+    return now.strftime("(%Y/%m/%d %H:%M 時点)")

@@ -4,7 +4,7 @@
             <span class="icon">📊</span>
             <div>
                 <div class="panel-title">ファンダメンタル分析</div>
-                <p class="muted">PER, PBR などの基本指標と初心者向けコメントを表示します。</p>
+                <p class="muted small">PER / PBR / 配当利回りなどの主要指標をまとめています。</p>
             </div>
         </div>
     </div>
@@ -22,13 +22,13 @@
     </div>
 
     <div class="card">
-        <div class="section-title">企業スコア</div>
+        <div class="section-title">スコア</div>
         <div class="score-grid">
             {% for label, score in scores.items() %}
             <div class="score-card">
                 <div class="label">{{ label }}</div>
                 <div class="value">{{ score.display }}</div>
-                <div class="muted">★ {{ score.stars }}</div>
+                <div class="muted">{{ score.stars }}★</div>
             </div>
             {% endfor %}
         </div>
@@ -44,13 +44,13 @@
     </div>
 
     <div class="card">
-        <div class="section-title">売り時・買い時のタイミング</div>
+        <div class="section-title">タイミングの目安</div>
         <div class="mini-table">
             {% for label, value in timings.items() %}
             <div class="mini-row"><span>{{ label }}</span><span>{{ value }}</span></div>
             {% endfor %}
         </div>
-        <p class="muted small">※ 目安であり、必ずそう動くわけではありません。</p>
+        <p class="muted small">※ 最新情報はIRなど公式発表をご確認ください。</p>
     </div>
 
     <div class="card">
@@ -63,7 +63,7 @@
     </div>
 
     <div class="card">
-        <div class="section-title">用語辞典</div>
+        <div class="section-title">用語集</div>
         <div class="pattern-grid">
             {% for term in glossary %}
             <div class="pattern-card tone-neutral">

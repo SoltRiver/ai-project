@@ -4,12 +4,11 @@
     <div>
         <p class="eyebrow">Watchlist</p>
         <h1>株価リスト</h1>
-        <p class="muted">銘柄に関する情報のみを4列で表示します。</p>
     </div>
     <div class="action-row">
-        <button class="primary-button" type="button">追加 +</button>
-        <button class="ghost-button" type="button">一括削除</button>
-        <span class="timestamp">{{ timestamp_label }}</span>
+        <button class="primary-button" type="button">追加</button>
+        <button class="danger-button" type="button">削除</button>
+        <span class="timestamp small">{{ timestamp_label }}</span>
     </div>
 </section>
 
@@ -18,22 +17,22 @@
         <thead>
             <tr>
                 <th class="checkbox-col">削除フラグ</th>
-                <th>銘柄名（銘柄コード）</th>
+                <th>銘柄名（コード）</th>
                 <th>現在値</th>
-                <th>変動額（変動率）</th>
-                <th>最高値／最安値</th>
+                <th>変動額</th>
+                <th>最高値 / 最低値</th>
             </tr>
         </thead>
         <tbody>
             {% for item in stocks %}
             <tr>
-                <td class="checkbox-col"><input type="checkbox" aria-label="{{ item.name }} を選択" /></td>
+                <td class="checkbox-col"><input type="checkbox" aria-label="{{ item.name }} を削除対象にする" /></td>
                 <td class="name-cell">
-                    <a href="/stocks/{{ item.code }}">{{ item.name }} <span class="code">({{ item.code }})</span></a>
+                    <a href="/stocks/{{ item.code }}">{{ item.name }}</a>
                 </td>
                 <td class="price-cell">{{ item.current_price }}</td>
                 <td class="change-cell">
-                    <span class="change-badge {{ 'change-up' if item.change_direction == 'up' else 'change-down' if item.change_direction == 'down' else 'change-neutral' }}">
+                    <span class="change-badge change-{{ item.change_direction }}">
                         <span class="{{ 'arrow-up' if item.change_direction == 'up' else 'arrow-down' if item.change_direction == 'down' else '' }}">{{ item.change_icon }}</span>
                         {{ item.change_text }}
                     </span>

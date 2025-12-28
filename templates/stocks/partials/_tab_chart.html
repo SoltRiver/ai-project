@@ -1,128 +1,80 @@
-<div class="tab-panel">
+<div class="tab-panel chart-panel"
+     hx-get="/stocks/{{ stock.code }}/tab/chart?interval={{ interval }}"
+     hx-trigger="every 20s"
+     hx-target="#tab-content"
+     hx-swap="innerHTML">
     <div class="panel-header">
         <div class="title-with-icon">
             <span class="icon">📈</span>
             <div>
                 <div class="panel-title">チャート</div>
-                <p class="muted">縦軸・ポップアップは小数第2位まで。移動平均は別UIで選択。</p>
+                <p class="muted small">ローソク足は小数第1位表示、20秒ごとに自動更新します。</p>
             </div>
         </div>
-        <div class="toggle-wrap">
-            <div class="toggle-label">足種</div>
-            <div class="toggle-group" role="group" aria-label="時間軸切替">
+        <label class="select-wrap">
+            <span class="toggle-label">足種</span>
+            <select name="interval"
+                    hx-get="/stocks/{{ stock.code }}/tab/chart"
+                    hx-target="#tab-content"
+                    hx-trigger="change"
+                    hx-swap="innerHTML">
                 {% for option in interval_options %}
-                <button class="pill {% if interval == option.value %}is-active{% endif %}"
-                        hx-get="/stocks/{{ stock.code }}/tab/chart?interval={{ option.value }}"
-                        hx-target="#tab-content"
-                        hx-swap="innerHTML">
-                    {{ option.label }}
-                </button>
+                <option value="{{ option.value }}" {% if interval == option.value %}selected{% endif %}>{{ option.label }}</option>
+                {% endfor %}
+            </select>
+        </label>
+    </div>
+
+    <div class="card chart-card">
+        <div class="chart-headline">
+            <div>
+                <div class="chart-title">{{ stock.display_name }}</div>
+                <div class="chart-price-line">
+                    <span class="chart-price">{{ chart_summary.last_close }}</span>
+                    <span class="change-badge change-{{ chart_summary.change_direction }}">
+                        <span class="{{ 'arrow-up' if chart_summary.change_direction == 'up' else 'arrow-down' if chart_summary.change_direction == 'down' else '' }}">{{ chart_summary.change_icon }}</span>
+                        {{ chart_summary.change_text }}
+                    </span>
+                </div>
+                <div class="chart-sub muted">
+                    始値 {{ chart_summary.open }} / 高値 {{ chart_summary.high }} / 安値 {{ chart_summary.low }} / {{ chart_summary.timestamp }}
+                </div>
+            </div>
+            <div class="trend-pill">{{ trend_label }}</div>
+        </div>
+
+        <div class="chart-wrapper" data-chart-payload='{{ chart_payload | tojson }}'>
+            <canvas class="candle-canvas" width="960" height="420" aria-label="ローソク足チャート"></canvas>
+            <div class="chart-tooltip" role="tooltip"></div>
+            <div class="axis-note">{{ axis_note }}</div>
+        </div>
+    </div>
+
+    <div class="grid two">
+        <div class="card">
+            <div class="section-title">売買シグナル（初心者向け）</div>
+            <div class="signal-grid">
+                {% for sig in signals %}
+                <div class="signal-card tone-{{ sig.tone | default('neutral') }}">
+                    <div class="signal-title">{{ sig.title }}</div>
+                    <p class="signal-detail">{{ sig.detail }}</p>
+                </div>
                 {% endfor %}
             </div>
         </div>
-    </div>
-
-    <div class="grid three">
-        <div class="stat-card">
-            <div class="label">現在値</div>
-            <div class="value">{{ chart_summary.last_close }}</div>
-            <div class="muted">
-                <span class="change-badge {{ 'change-up' if chart_summary.change_direction == 'up' else 'change-down' if chart_summary.change_direction == 'down' else 'change-neutral' }}">
-                    <span class="{{ 'arrow-up' if chart_summary.change_direction == 'up' else 'arrow-down' if chart_summary.change_direction == 'down' else '' }}">{{ chart_summary.change_icon }}</span>
-                    {{ chart_summary.change_text }}
-                </span>
-            </div>
+        <div class="card">
+            <div class="section-title">リスク情報</div>
+            <ul class="risk-list">
+                {% for risk in risks %}
+                <li>{{ risk }}</li>
+                {% endfor %}
+            </ul>
+            <div class="section-title">プラス要素</div>
+            <ul class="risk-list positives">
+                {% for item in positives %}
+                <li>{{ item }}</li>
+                {% endfor %}
+            </ul>
         </div>
-        <div class="stat-card">
-            <div class="label">始値 / 高値 / 安値</div>
-            <div class="value">{{ chart_summary.open }}</div>
-            <div class="muted">{{ chart_summary.range }}</div>
-        </div>
-        <div class="stat-card">
-            <div class="label">傾向</div>
-            <div class="value">{{ trend_label }}</div>
-            <div class="muted">{{ interval_label }}</div>
-        </div>
-    </div>
-
-    <div class="card">
-        <div class="section-title">ローソク足ポップアップ</div>
-        <div class="popup-grid">
-            {% for row in candle_popup %}
-            <div class="popup-row">
-                <span>{{ row.label }}</span>
-                <span>{{ row.value }}</span>
-            </div>
-            {% endfor %}
-            <div class="popup-row">
-                <span>ローソク足パターン</span>
-                <span>{{ candle_type }}</span>
-            </div>
-        </div>
-    </div>
-
-    <div class="card">
-        <div class="section-title">サポート / レジスタンス</div>
-        <div class="mini-table">
-            <div class="mini-row"><span>サポート</span><span>{{ support_resistance.support }}</span></div>
-            <div class="mini-row"><span>レジスタンス</span><span>{{ support_resistance.resistance }}</span></div>
-            <div class="mini-row"><span>説明</span><span>{{ support_resistance.description }}</span></div>
-        </div>
-    </div>
-
-    <div class="card">
-        <div class="section-title">ローソク足チャート</div>
-        <canvas class="mini-candle-chart" width="720" height="260"
-                data-points='{{ chart_points | tojson }}'></canvas>
-        <p class="muted small">簡易表示です。縦軸・ポップアップは小数第2位、色は上昇=緑/下落=赤。</p>
-    </div>
-
-    <div class="card">
-        <div class="section-title">ローソク足パターン</div>
-        <div class="pattern-grid">
-            {% for item in patterns %}
-            <div class="pattern-card tone-{{ item.tone }}">
-                <div class="pattern-name">{{ item.name }}</div>
-                <div class="pattern-summary">{{ item.summary }}</div>
-                <div class="pattern-tip">{{ item.tip }}</div>
-            </div>
-            {% endfor %}
-        </div>
-    </div>
-
-    <div class="card">
-        <div class="section-title">最新足サマリー</div>
-        {% if chart_points %}
-        <div class="mini-table">
-            <div class="mini-row mini-head"><span>日付</span><span>終値</span><span>高値</span><span>安値</span></div>
-            {% for row in chart_points %}
-            <div class="mini-row"><span>{{ row.date }}</span><span>{{ row.close }}</span><span>{{ row.high }}</span><span>{{ row.low }}</span></div>
-            {% endfor %}
-        </div>
-        {% else %}
-        <p class="muted">チャートデータが取得できませんでした。</p>
-        {% endif %}
-    </div>
-
-    <div class="card">
-        <div class="section-title">売買シグナル（参考）</div>
-        <div class="mini-table">
-            {% for sig in signals %}
-            <div class="mini-row">
-                <span>{{ sig.label }}</span>
-                <span>{{ sig.status }} / {{ sig.note }}</span>
-            </div>
-            {% endfor %}
-        </div>
-        <p class="muted small">※ 投資判断はご自身の責任でお願いします。</p>
-    </div>
-
-    <div class="card">
-        <div class="section-title">リスク情報</div>
-        <ul class="risk-list">
-            {% for risk in risks %}
-            <li>{{ risk }}</li>
-            {% endfor %}
-        </ul>
     </div>
 </div>

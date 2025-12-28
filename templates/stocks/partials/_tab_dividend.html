@@ -4,25 +4,25 @@
             <span class="icon">💰</span>
             <div>
                 <div class="panel-title">配当</div>
-                <p class="muted">配当履歴と現在の配当利回り・方針を表示します。</p>
+                <p class="muted small">直近の配当履歴と配当方針の概要です。</p>
             </div>
         </div>
     </div>
     {% if dividends %}
     <div class="mini-table">
-        <div class="mini-row mini-head"><span>配当年月日</span><span>配当金</span></div>
+        <div class="mini-row mini-head"><span>支払日</span><span>配当額</span></div>
         {% for row in dividends %}
         <div class="mini-row"><span>{{ row.date }}</span><span>{{ row.amount }}</span></div>
         {% endfor %}
     </div>
     {% else %}
-    <p class="muted">配当履歴が見つかりません。</p>
+    <p class="muted">配当履歴がありません。</p>
     {% endif %}
 
     <div class="card">
-        <div class="section-title">配当利回り / 方針</div>
+        <div class="section-title">配当利回り / 配当方針</div>
         <div class="mini-table">
-            <div class="mini-row"><span>現在の配当利回り</span><span>{{ yield_info.yield }}</span></div>
+            <div class="mini-row"><span>現在の利回り</span><span>{{ yield_info.yield }}</span></div>
             <div class="mini-row"><span>配当方針</span><span>{{ yield_info.policy }}</span></div>
         </div>
     </div>

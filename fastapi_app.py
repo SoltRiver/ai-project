@@ -5,7 +5,7 @@ from fastapi.staticfiles import StaticFiles
 from routers import stocks
 
 app = FastAPI(
-    title="株価チャートアシスタント (FastAPI + htmx)",
+    title="株価分析アプリ (FastAPI + htmx)",
     description="Server-rendered stock views with FastAPI, Jinja2, and htmx.",
 )
 
