@@ -18,9 +18,13 @@
     }
 
     function bindTabButtons() {
-        document.querySelectorAll('.tab-button').forEach((btn) => {
+        const tabs = document.querySelectorAll('.tab-button[data-tab-name]');
+        if (!tabs.length) return;
+        tabs.forEach((btn) => {
+            if (btn.dataset.bound === 'true') return;
+            btn.dataset.bound = 'true';
             btn.addEventListener('click', () => {
-                document.querySelectorAll('.tab-button').forEach((b) => {
+                tabs.forEach((b) => {
                     b.classList.remove('is-active');
                     b.setAttribute('aria-pressed', 'false');
                 });
@@ -245,24 +249,48 @@ function initPatternPage() {
     initPatternModal();
 }
 
+function animateCountBadges(scope = document) {
+    const badges = scope.querySelectorAll('.count-badge[data-count-target]');
+    badges.forEach((badge) => {
+        const target = Number.parseInt(badge.dataset.countTarget || '0', 10);
+        if (Number.isNaN(target)) return;
+        const duration = 450;
+        const start = performance.now();
+        badge.textContent = '0';
+        const tick = (now) => {
+            const progress = Math.min((now - start) / duration, 1);
+            const value = Math.floor(target * progress);
+            badge.textContent = String(value);
+            if (progress < 1) {
+                requestAnimationFrame(tick);
+            } else {
+                badge.textContent = String(target);
+            }
+        };
+        requestAnimationFrame(tick);
+    });
+}
+
 function initPatternTabs() {
-    const tabs = document.querySelectorAll('[data-pattern-tab]');
-    const panes = document.querySelectorAll('[data-tab-pane]');
-    if (!tabs.length || !panes.length) return;
+    const tabs = document.querySelectorAll('.pattern-tab');
+    if (!tabs.length) return;
+    const setActive = (active) => {
+        tabs.forEach((tab) => {
+            const isActive = tab === active;
+            tab.classList.toggle('is-active', isActive);
+            tab.setAttribute('aria-selected', isActive ? 'true' : 'false');
+            tab.setAttribute('tabindex', isActive ? '0' : '-1');
+        });
+    };
     tabs.forEach((tab) => {
+        if (tab.dataset.bound === 'true') return;
+        tab.dataset.bound = 'true';
         tab.addEventListener('click', () => {
-            const target = tab.dataset.patternTab;
-            tabs.forEach((t) => {
-                t.classList.remove('is-active');
-                t.setAttribute('aria-pressed', 'false');
-            });
-            tab.classList.add('is-active');
-            tab.setAttribute('aria-pressed', 'true');
-            panes.forEach((pane) => {
-                pane.hidden = pane.dataset.tabPane !== target;
-            });
+            setActive(tab);
+            animateCountBadges();
         });
     });
+    animateCountBadges();
 }
 
 function initPatternModal() {

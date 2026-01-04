@@ -80,7 +80,10 @@ async def glossary(request: Request):
 @router.get("/candle-patterns", response_class=HTMLResponse)
 async def candle_patterns(request: Request):
     patterns = stock_service.get_candle_patterns_page()
-    return templates.TemplateResponse(
-        "candle_patterns/index.html",
-        {"request": request, "page_title": "ローソク足パターン", **patterns},
-    )
+    tab = request.query_params.get("tab", "basic")
+    if tab not in patterns.get("group_labels", {}):
+        tab = "basic"
+    context = {"request": request, "page_title": "ローソク足パターン", "active_tab": tab, **patterns}
+    if request.headers.get("HX-Request") == "true":
+        return templates.TemplateResponse("candle_patterns/partials/_list_area.html", context)
+    return templates.TemplateResponse("candle_patterns/index.html", context)

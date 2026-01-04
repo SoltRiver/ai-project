@@ -121,6 +121,36 @@ CANDLE_PATTERN_CARDS = [
         "notes": ["出来高が減少しているかも確認"],
     },
     {
+        "id": "big_bear",
+        "name": "大陰線",
+        "group": "basic",
+        "category": "陰線",
+        "tone": "bearish",
+        "svg": "images/big_bear.svg",
+        "catch": "売りが強く下落が続くサイン",
+        "desc_lead": "流れを変える長い陰線",
+        "desc_body": "始値から大きく下落し、実体が長くなる形です。",
+        "detail_desc": "悪材料直後やトレンド転換の初動で現れやすい陰線です。出来高が伴えば信頼度が上がります。",
+        "scene": "悪材料発表直後や急落局面",
+        "howto": "実体の長さと出来高の増加を確認する",
+        "notes": ["出来高が増えているか確認", "翌日の自律反発に注意"],
+    },
+    {
+        "id": "shooting_star",
+        "name": "上ヒゲ陰線（流れ弱まり）",
+        "group": "basic",
+        "category": "陰線",
+        "tone": "bearish",
+        "svg": "images/shooting_star.svg",
+        "catch": "上値で売りが強いサイン",
+        "desc_lead": "天井圏での失速",
+        "desc_body": "長い上ヒゲと小さな実体が特徴。高値で売りが優勢になった形です。",
+        "detail_desc": "上昇トレンドの高値圏で出ると反落サインとして見られます。出来高が増加していると注意。",
+        "scene": "上昇トレンドの高値圏",
+        "howto": "上ヒゲの長さと直近高値との位置関係を見る",
+        "notes": ["翌日の陰線確認で信頼度アップ"],
+    },
+    {
         "id": "bull_engulfing",
         "name": "包み足（陽）",
         "group": "advanced",
@@ -600,6 +630,13 @@ def get_shareholder_tab(code: str) -> Dict[str, Any]:
     return {"benefit": benefit}
 
 
+CANDLE_PATTERN_GROUP_COUNTS = {
+    # Keep in sync with CANDLE_PATTERN_CARDS.
+    "basic": 5,
+    "advanced": 9,
+}
+
+
 def get_candle_patterns_page() -> Dict[str, Any]:
     categories = [
         {"key": "陽線", "tone": "bullish"},
@@ -607,8 +644,8 @@ def get_candle_patterns_page() -> Dict[str, Any]:
         {"key": "迷い", "tone": "neutral"},
     ]
     group_labels = {
-        "basic": "単体ローソク足（基本編）",
-        "advanced": "複合ローソク足（応用編）",
+        "basic": "単体ローソク（基本編）",
+        "advanced": "複数ローソク（応用編）",
     }
     group_by_category: Dict[str, Dict[str, List[Dict[str, Any]]]] = {
         g: {c["key"]: [] for c in categories} for g in group_labels
@@ -622,14 +659,12 @@ def get_candle_patterns_page() -> Dict[str, Any]:
     category_counts = {
         c["key"]: sum(len(group_by_category[g][c["key"]]) for g in group_by_category) for c in categories
     }
-    group_counts = {g: sum(len(lst) for lst in cat_map.values()) for g, cat_map in group_by_category.items()}
-
     return {
         "patterns": CANDLE_PATTERN_CARDS,
         "categories": categories,
         "group_by_category": group_by_category,
         "group_labels": group_labels,
-        "group_counts": group_counts,
+        "group_counts": CANDLE_PATTERN_GROUP_COUNTS,
         "category_counts": category_counts,
     }
 

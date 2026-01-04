@@ -4,79 +4,17 @@
     <section class="pattern-hero">
         <div class="pattern-hero__top">
             <div>
-                <p class="eyebrow">Patterns</p>
                 <h1>ローソク足パターン</h1>
                 <p class="hero-desc">トレンドの転換や継続を示すパターンをカードとモーダルで直感的に把握できます。</p>
             </div>
         </div>
     </section>
+    {% include "candle_patterns/partials/_tabs.html" %}
 
-    <div class="tab-strip pattern-tabs pattern-tabs--pill">
-        {% for key, label in group_labels.items() %}
-        <button class="tab-button {% if loop.first %}is-active{% endif %}" type="button"
-                data-pattern-tab="{{ key }}" aria-pressed="{{ 'true' if loop.first else 'false' }}">
-            {{ label }} <span class="count-badge">{{ group_counts[key] }}</span>
-        </button>
-        {% endfor %}
+    <div id="listLoading" class="list-loading htmx-indicator" aria-live="polite">読み込み中...</div>
+    <div id="listArea">
+        {% include "candle_patterns/partials/_list_area.html" %}
     </div>
-
-    {% for gkey, label in group_labels.items() %}
-    <section class="pattern-section" data-tab-pane="{{ gkey }}" {% if not loop.first %}hidden{% endif %}>
-        {% for cat in categories %}
-        {% set tone_label = '（上向き）' if cat.tone == 'bullish' else '（下向き）' if cat.tone == 'bearish' else '（様子見）' %}
-        {% set cat_label = cat.key ~ tone_label %}
-        {% set items = group_by_category[gkey][cat.key] %}
-        {% if items %}
-        <div class="section-head">
-            <span class="section-pill section-pill--{{ cat.tone }}">{{ cat_label }}</span>
-            <span class="section-count">{{ items | length }}件</span>
-        </div>
-
-        <div class="pattern-card-grid">
-            {% for p in items %}
-            <article class="pattern-card tone-{{ p.tone }}">
-                <header class="pattern-card__head">
-                    <div class="pattern-card__title">{{ p.name }}</div>
-                </header>
-
-                <div class="pattern-visual-box">
-                    <img src="/static/{{ p.svg }}" alt="{{ p.name }}" loading="lazy" />
-                </div>
-
-                <div class="pattern-info">
-                    <div class="pattern-info-block">
-                        <div class="pattern-info-title">特徴</div>
-                        <div class="pattern-info-text"><strong>{{ p.desc_lead }}</strong> {{ p.desc_body }}</div>
-                    </div>
-                    <div class="pattern-info-block">
-                        <div class="pattern-info-title">ひと言メモ</div>
-                        <div class="pattern-info-text">{{ p.catch }}</div>
-                    </div>
-                </div>
-
-                <div class="pattern-card__actions">
-                    <button class="pattern-button pattern-detail-trigger"
-                            type="button"
-                            data-pattern-id="{{ p.id }}"
-                            data-name="{{ p.name }}"
-                            data-catch="{{ p.catch }}"
-                            data-desc-lead="{{ p.desc_lead }}"
-                            data-desc-body="{{ p.desc_body }}"
-                            data-detail="{{ p.detail_desc }}"
-                            data-scene="{{ p.scene }}"
-                            data-howto="{{ p.howto }}"
-                            data-notes="{{ p.notes | join('||') }}"
-                            data-svg="/static/{{ p.svg }}">
-                        詳細を見る
-                    </button>
-                </div>
-            </article>
-            {% endfor %}
-        </div>
-        {% endif %}
-        {% endfor %}
-    </section>
-    {% endfor %}
 
     <div class="pattern-modal-overlay" data-modal-overlay hidden>
         <div class="pattern-modal" role="dialog" aria-modal="true" aria-label="ローソク足パターン詳細">
@@ -90,7 +28,10 @@
                     <p class="modal-catch" data-modal-catch></p>
                     <div class="modal-sec">
                         <h3>特徴</h3>
-                        <p class="modal-desc"><strong data-modal-desc-lead></strong> <span data-modal-desc-body></span></p>
+                        <p class="modal-desc">
+                            <strong data-modal-desc-lead></strong>
+                            <span class="modal-desc-body" data-modal-desc-body></span>
+                        </p>
                     </div>
                     <div class="modal-sec">
                         <h3>詳細</h3>

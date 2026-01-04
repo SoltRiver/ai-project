@@ -1,0 +1,58 @@
+{% for cat in categories %}
+{% set tone_label = '（上向き）' if cat.tone == 'bullish' else '（下向き）' if cat.tone == 'bearish' else '（様子見）' %}
+{% set cat_label = cat.key ~ tone_label %}
+{% set items = group_by_category[active_tab][cat.key] %}
+{% if items %}
+<section class="pattern-section" data-category="{{ cat.key }}">
+    <div class="section-head">
+        <span class="section-pill section-pill--{{ cat.tone }}">{{ cat_label }}</span>
+        <span class="section-count">{{ items | length }}件</span>
+    </div>
+
+    <div class="pattern-card-grid">
+        {% for p in items %}
+        <article class="pattern-card tone-{{ p.tone }}">
+            <header class="pattern-card__head">
+                <div class="pattern-card__title">{{ p.name }}</div>
+            </header>
+
+            <div class="pattern-visual-box">
+                <img src="/static/{{ p.svg }}" alt="{{ p.name }}" loading="lazy" />
+            </div>
+
+            <div class="pattern-info">
+                <div class="pattern-info-block">
+                    <div class="pattern-info-title">特徴</div>
+                    <div class="pattern-info-text">
+                        <strong>{{ p.desc_lead }}</strong>
+                        <span class="desc-body">{{ p.desc_body }}</span>
+                    </div>
+                </div>
+                <div class="pattern-info-block">
+                    <div class="pattern-info-title">ひと言メモ</div>
+                    <div class="pattern-info-text">{{ p.catch }}</div>
+                </div>
+            </div>
+
+            <div class="pattern-card__actions">
+                <button class="pattern-button pattern-detail-trigger"
+                        type="button"
+                        data-pattern-id="{{ p.id }}"
+                        data-name="{{ p.name }}"
+                        data-catch="{{ p.catch }}"
+                        data-desc-lead="{{ p.desc_lead }}"
+                        data-desc-body="{{ p.desc_body }}"
+                        data-detail="{{ p.detail_desc }}"
+                        data-scene="{{ p.scene }}"
+                        data-howto="{{ p.howto }}"
+                        data-notes="{{ p.notes | join('||') }}"
+                        data-svg="/static/{{ p.svg }}">
+                    詳細を見る
+                </button>
+            </div>
+        </article>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+{% endfor %}
