@@ -1,0 +1,262 @@
+{
+  "tabs": [
+    {
+      "key": "basic",
+      "label": "単体ローソク（基本編）",
+      "note": "単体の形から、買い/売りの強さをざっくり掴みます。"
+    },
+    {
+      "key": "advanced",
+      "label": "複数ローソク（応用編）",
+      "note": "複数本の並びで、転換や継続のサインを確認します。"
+    }
+  ],
+  "categories": [
+    {
+      "key": "bull",
+      "label": "陽線",
+      "description": "陽線＝終値が始値より上。買いが優勢になりやすい形です。"
+    },
+    {
+      "key": "bear",
+      "label": "陰線",
+      "description": "陰線＝終値が始値より下。売りが優勢になりやすい形です。"
+    },
+    {
+      "key": "neutral",
+      "label": "迷い",
+      "description": "方向感が出にくい形。次の足で流れを確認します。"
+    }
+  ],
+  "patterns": [
+    {
+      "id": "basic-big_bull",
+      "tab_key": "basic",
+      "category_key": "bull",
+      "name": "大陽線",
+      "count": 0,
+      "svg_inline": "<svg class=\"candle-svg\" viewBox=\"0 0 120 120\" role=\"img\" aria-label=\"大陽線\">\n  <line x1=\"60\" y1=\"12\" x2=\"60\" y2=\"108\" stroke=\"#111827\" stroke-width=\"4\"/>\n  <rect x=\"42\" y=\"30\" width=\"36\" height=\"60\" rx=\"6\" fill=\"#22c55e\"/>\n  \n</svg>",
+      "desc_lead": "買いが優勢",
+      "desc_text": "実体が大きい陽線です。",
+      "catch_text": "買いが強い日",
+      "modal_how_to_read": "実体の大きさとヒゲの短さを見る",
+      "modal_detail": "買いが優勢：実体が大きい陽線です。\n\n出現しやすい場面：下落が続いたあと、上昇初期",
+      "modal_cautions": [
+        "高値圏では勢いが弱まることがあります",
+        "直前の流れと合わせて判断します"
+      ],
+      "order_in_category": 10,
+      "source_image": "images/big_bull.svg",
+      "source_id": "big_bull"
+    },
+    {
+      "id": "basic-hammer",
+      "tab_key": "basic",
+      "category_key": "bull",
+      "name": "カラカサ（ハンマー）",
+      "count": 0,
+      "svg_inline": "<svg class=\"candle-svg\" viewBox=\"0 0 120 120\" role=\"img\" aria-label=\"カラカサ（ハンマー）\">\n  <line x1=\"60\" y1=\"12\" x2=\"60\" y2=\"108\" stroke=\"#111827\" stroke-width=\"4\"/>\n  <rect x=\"46\" y=\"44\" width=\"28\" height=\"22\" rx=\"6\" fill=\"#22c55e\"/>\n  <line x1=\"60\" y1=\"66\" x2=\"60\" y2=\"108\" stroke=\"#111827\" stroke-width=\"6\"/>\n</svg>",
+      "desc_lead": "下値の支持",
+      "desc_text": "下ヒゲが長い足です。",
+      "catch_text": "下で支えられた形",
+      "modal_how_to_read": "下ヒゲの長さと実体の位置を見る",
+      "modal_detail": "下値の支持：下ヒゲが長い足です。\n\n出現しやすい場面：下落後の下げ止まり付近",
+      "modal_cautions": [
+        "次の足での確認が重要です"
+      ],
+      "order_in_category": 20,
+      "source_image": "images/hammer.svg",
+      "source_id": "hammer"
+    },
+    {
+      "id": "basic-doji",
+      "tab_key": "basic",
+      "category_key": "neutral",
+      "name": "十字線",
+      "count": 0,
+      "svg_inline": "<svg class=\"candle-svg\" viewBox=\"0 0 120 120\" role=\"img\" aria-label=\"十字線\">\n  <line x1=\"60\" y1=\"12\" x2=\"60\" y2=\"108\" stroke=\"#111827\" stroke-width=\"4\"/>\n  <rect x=\"40\" y=\"58\" width=\"40\" height=\"6\" rx=\"6\" fill=\"#9ca3af\"/>\n  \n</svg>",
+      "desc_lead": "迷いが強い",
+      "desc_text": "始値と終値がほぼ同じです。",
+      "catch_text": "方向が決まらない",
+      "modal_how_to_read": "実体の小ささと前後の流れを見る",
+      "modal_detail": "迷いが強い：始値と終値がほぼ同じです。\n\n出現しやすい場面：上昇・下落の節目",
+      "modal_cautions": [
+        "単体では方向判断はできません"
+      ],
+      "order_in_category": 10,
+      "source_image": "images/doji.svg",
+      "source_id": "doji"
+    },
+    {
+      "id": "advanced-bull_engulfing",
+      "tab_key": "advanced",
+      "category_key": "bull",
+      "name": "bull_engulfing",
+      "count": 0,
+      "svg_inline": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 240 120\">\n  <line x1=\"90\" y1=\"30\" x2=\"90\" y2=\"90\" stroke=\"#dc2626\" stroke-width=\"4\" stroke-linecap=\"round\"/>\n  <rect x=\"82\" y=\"50\" width=\"16\" height=\"20\" rx=\"3\" fill=\"#dc2626\"/>\n  <line x1=\"140\" y1=\"20\" x2=\"140\" y2=\"100\" stroke=\"#16a34a\" stroke-width=\"4\" stroke-linecap=\"round\"/>\n  <rect x=\"132\" y=\"40\" width=\"16\" height=\"40\" rx=\"3\" fill=\"#16a34a\"/>\n</svg>",
+      "desc_lead": "反転の候補",
+      "desc_text": "陽線が前日の足を包みます。",
+      "catch_text": "流れが上向きに変わる",
+      "modal_how_to_read": "包み方と実体の大きさを見る",
+      "modal_detail": "反転の候補：陽線が前日の足を包みます。\n\n出現しやすい場面：下落が続いたあと",
+      "modal_cautions": [
+        "上昇途中では反転にならないことがあります"
+      ],
+      "order_in_category": 10,
+      "source_image": "images/bull_engulfing.svg",
+      "source_id": "bull_engulfing"
+    },
+    {
+      "id": "advanced-three_white_soldiers",
+      "tab_key": "advanced",
+      "category_key": "bull",
+      "name": "three_white_soldiers",
+      "count": 0,
+      "svg_inline": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 240 120\">\n  <line x1=\"80\" y1=\"40\" x2=\"80\" y2=\"95\" stroke=\"#16a34a\" stroke-width=\"4\" stroke-linecap=\"round\"/>\n  <rect x=\"72\" y=\"55\" width=\"16\" height=\"30\" rx=\"3\" fill=\"#16a34a\"/>\n  <line x1=\"120\" y1=\"30\" x2=\"120\" y2=\"90\" stroke=\"#16a34a\" stroke-width=\"4\" stroke-linecap=\"round\"/>\n  <rect x=\"112\" y=\"45\" width=\"16\" height=\"30\" rx=\"3\" fill=\"#16a34a\"/>\n  <line x1=\"160\" y1=\"20\" x2=\"160\" y2=\"85\" stroke=\"#16a34a\" stroke-width=\"4\" stroke-linecap=\"round\"/>\n  <rect x=\"152\" y=\"35\" width=\"16\" height=\"30\" rx=\"3\" fill=\"#16a34a\"/>\n</svg>",
+      "desc_lead": "買いが連続",
+      "desc_text": "陽線が3本続きます。",
+      "catch_text": "上昇が続く",
+      "modal_how_to_read": "3本の実体サイズと並びを見る",
+      "modal_detail": "買いが連続：陽線が3本続きます。\n\n出現しやすい場面：底打ち後の上昇初期",
+      "modal_cautions": [
+        "高値圏では注意が必要です"
+      ],
+      "order_in_category": 20,
+      "source_image": "images/three_white_soldiers.svg",
+      "source_id": "three_white_soldiers"
+    },
+    {
+      "id": "advanced-rising_three_methods",
+      "tab_key": "advanced",
+      "category_key": "bull",
+      "name": "rising_three_methods",
+      "count": 0,
+      "svg_inline": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 240 120\">\n  <line x1=\"70\" y1=\"25\" x2=\"70\" y2=\"95\" stroke=\"#16a34a\" stroke-width=\"4\" stroke-linecap=\"round\"/>\n  <rect x=\"62\" y=\"45\" width=\"16\" height=\"40\" rx=\"3\" fill=\"#16a34a\"/>\n  <line x1=\"110\" y1=\"45\" x2=\"110\" y2=\"85\" stroke=\"#6b7280\" stroke-width=\"4\" stroke-linecap=\"round\"/>\n  <rect x=\"102\" y=\"60\" width=\"16\" height=\"10\" rx=\"3\" fill=\"#6b7280\"/>\n  <line x1=\"150\" y1=\"20\" x2=\"150\" y2=\"90\" stroke=\"#16a34a\" stroke-width=\"4\" stroke-linecap=\"round\"/>\n  <rect x=\"142\" y=\"40\" width=\"16\" height=\"40\" rx=\"3\" fill=\"#16a34a\"/>\n</svg>",
+      "desc_lead": "トレンド継続",
+      "desc_text": "調整後に再上昇します。",
+      "catch_text": "上昇が一服して再開",
+      "modal_how_to_read": "最初と最後の陽線を見る",
+      "modal_detail": "トレンド継続：調整後に再上昇します。\n\n出現しやすい場面：上昇トレンド中",
+      "modal_cautions": [
+        "レンジ相場では意味が弱まります"
+      ],
+      "order_in_category": 30,
+      "source_image": "images/rising_three_methods.svg",
+      "source_id": "rising_three_methods"
+    },
+    {
+      "id": "advanced-bear_engulfing",
+      "tab_key": "advanced",
+      "category_key": "bear",
+      "name": "bear_engulfing",
+      "count": 0,
+      "svg_inline": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 240 120\">\n  <line x1=\"90\" y1=\"30\" x2=\"90\" y2=\"90\" stroke=\"#16a34a\" stroke-width=\"4\" stroke-linecap=\"round\"/>\n  <rect x=\"82\" y=\"50\" width=\"16\" height=\"20\" rx=\"3\" fill=\"#16a34a\"/>\n  <line x1=\"140\" y1=\"20\" x2=\"140\" y2=\"100\" stroke=\"#dc2626\" stroke-width=\"4\" stroke-linecap=\"round\"/>\n  <rect x=\"132\" y=\"40\" width=\"16\" height=\"40\" rx=\"3\" fill=\"#dc2626\"/>\n</svg>",
+      "desc_lead": "反転の候補",
+      "desc_text": "陰線が前日の足を包みます。",
+      "catch_text": "流れが下向きに変わる",
+      "modal_how_to_read": "包み方と陰線の強さを見る",
+      "modal_detail": "反転の候補：陰線が前日の足を包みます。\n\n出現しやすい場面：上昇が続いたあと",
+      "modal_cautions": [
+        "下落途中では加速になる場合があります"
+      ],
+      "order_in_category": 10,
+      "source_image": "images/bear_engulfing.svg",
+      "source_id": "bear_engulfing"
+    },
+    {
+      "id": "advanced-three_black_crows",
+      "tab_key": "advanced",
+      "category_key": "bear",
+      "name": "three_black_crows",
+      "count": 0,
+      "svg_inline": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 240 120\">\n  <line x1=\"80\" y1=\"25\" x2=\"80\" y2=\"95\" stroke=\"#dc2626\" stroke-width=\"4\" stroke-linecap=\"round\"/>\n  <rect x=\"72\" y=\"45\" width=\"16\" height=\"35\" rx=\"3\" fill=\"#dc2626\"/>\n  <line x1=\"120\" y1=\"30\" x2=\"120\" y2=\"100\" stroke=\"#dc2626\" stroke-width=\"4\" stroke-linecap=\"round\"/>\n  <rect x=\"112\" y=\"50\" width=\"16\" height=\"35\" rx=\"3\" fill=\"#dc2626\"/>\n  <line x1=\"160\" y1=\"35\" x2=\"160\" y2=\"105\" stroke=\"#dc2626\" stroke-width=\"4\" stroke-linecap=\"round\"/>\n  <rect x=\"152\" y=\"55\" width=\"16\" height=\"35\" rx=\"3\" fill=\"#dc2626\"/>\n</svg>",
+      "desc_lead": "売りが連続",
+      "desc_text": "陰線が3本続きます。",
+      "catch_text": "下落が続く",
+      "modal_how_to_read": "3本の並びと実体サイズを見る",
+      "modal_detail": "売りが連続：陰線が3本続きます。\n\n出現しやすい場面：高値圏",
+      "modal_cautions": [
+        "安値圏では反発に注意します"
+      ],
+      "order_in_category": 20,
+      "source_image": "images/three_black_crows.svg",
+      "source_id": "three_black_crows"
+    },
+    {
+      "id": "advanced-falling_three_methods",
+      "tab_key": "advanced",
+      "category_key": "bear",
+      "name": "falling_three_methods",
+      "count": 0,
+      "svg_inline": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 240 120\">\n  <line x1=\"70\" y1=\"20\" x2=\"70\" y2=\"95\" stroke=\"#dc2626\" stroke-width=\"4\" stroke-linecap=\"round\"/>\n  <rect x=\"62\" y=\"40\" width=\"16\" height=\"40\" rx=\"3\" fill=\"#dc2626\"/>\n  <line x1=\"110\" y1=\"45\" x2=\"110\" y2=\"85\" stroke=\"#6b7280\" stroke-width=\"4\" stroke-linecap=\"round\"/>\n  <rect x=\"102\" y=\"60\" width=\"16\" height=\"10\" rx=\"3\" fill=\"#6b7280\"/>\n  <line x1=\"150\" y1=\"30\" x2=\"150\" y2=\"105\" stroke=\"#dc2626\" stroke-width=\"4\" stroke-linecap=\"round\"/>\n  <rect x=\"142\" y=\"50\" width=\"16\" height=\"40\" rx=\"3\" fill=\"#dc2626\"/>\n</svg>",
+      "desc_lead": "トレンド継続",
+      "desc_text": "調整後に再下落します。",
+      "catch_text": "下落が一服して再開",
+      "modal_how_to_read": "最初と最後の陰線を見る",
+      "modal_detail": "トレンド継続：調整後に再下落します。\n\n出現しやすい場面：下落トレンド中",
+      "modal_cautions": [
+        "上昇相場では機能しにくいです"
+      ],
+      "order_in_category": 30,
+      "source_image": "images/falling_three_methods.svg",
+      "source_id": "falling_three_methods"
+    },
+    {
+      "id": "advanced-harami",
+      "tab_key": "advanced",
+      "category_key": "neutral",
+      "name": "harami",
+      "count": 0,
+      "svg_inline": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 240 120\">\n  <line x1=\"100\" y1=\"20\" x2=\"100\" y2=\"100\" stroke=\"#16a34a\" stroke-width=\"4\" stroke-linecap=\"round\"/>\n  <rect x=\"92\" y=\"40\" width=\"16\" height=\"40\" rx=\"3\" fill=\"#16a34a\"/>\n  <line x1=\"140\" y1=\"45\" x2=\"140\" y2=\"85\" stroke=\"#6b7280\" stroke-width=\"4\" stroke-linecap=\"round\"/>\n  <rect x=\"132\" y=\"60\" width=\"16\" height=\"10\" rx=\"3\" fill=\"#6b7280\"/>\n</svg>",
+      "desc_lead": "迷いが増えた",
+      "desc_text": "実体が内側に収まります。",
+      "catch_text": "様子見",
+      "modal_how_to_read": "前日の範囲に収まっているかを見る",
+      "modal_detail": "迷いが増えた：実体が内側に収まります。\n\n出現しやすい場面：強い動きのあと",
+      "modal_cautions": [
+        "次の足で方向を判断します"
+      ],
+      "order_in_category": 10,
+      "source_image": "images/harami.svg",
+      "source_id": "harami"
+    },
+    {
+      "id": "advanced-inside_range",
+      "tab_key": "advanced",
+      "category_key": "neutral",
+      "name": "inside_range",
+      "count": 0,
+      "svg_inline": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 240 120\">\n  <line x1=\"110\" y1=\"20\" x2=\"110\" y2=\"100\" stroke=\"#6b7280\" stroke-width=\"4\" stroke-linecap=\"round\"/>\n  <line x1=\"150\" y1=\"45\" x2=\"150\" y2=\"85\" stroke=\"#6b7280\" stroke-width=\"4\" stroke-linecap=\"round\"/>\n</svg>",
+      "desc_lead": "方向感なし",
+      "desc_text": "値幅が縮小します。",
+      "catch_text": "動きが小さい",
+      "modal_how_to_read": "値幅の縮小に注目します",
+      "modal_detail": "方向感なし：値幅が縮小します。\n\n出現しやすい場面：相場が落ち着いている場面",
+      "modal_cautions": [
+        "頻繁に出るため過信は禁物です"
+      ],
+      "order_in_category": 20,
+      "source_image": "images/inside_range.svg",
+      "source_id": "inside_range"
+    },
+    {
+      "id": "advanced-multiple_doji",
+      "tab_key": "advanced",
+      "category_key": "neutral",
+      "name": "multiple_doji",
+      "count": 0,
+      "svg_inline": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 240 120\">\n  <line x1=\"90\" y1=\"30\" x2=\"90\" y2=\"90\" stroke=\"#6b7280\" stroke-width=\"4\" stroke-linecap=\"round\"/>\n  <rect x=\"82\" y=\"58\" width=\"16\" height=\"4\" rx=\"2\" fill=\"#6b7280\"/>\n  <line x1=\"140\" y1=\"30\" x2=\"140\" y2=\"90\" stroke=\"#6b7280\" stroke-width=\"4\" stroke-linecap=\"round\"/>\n  <rect x=\"132\" y=\"58\" width=\"16\" height=\"4\" rx=\"2\" fill=\"#6b7280\"/>\n</svg>",
+      "desc_lead": "判断待ち",
+      "desc_text": "十字線が続きます。",
+      "catch_text": "迷いが続く",
+      "modal_how_to_read": "連続性と直前の流れを見る",
+      "modal_detail": "判断待ち：十字線が続きます。\n\n出現しやすい場面：重要な価格帯付近",
+      "modal_cautions": [
+        "必ず動くわけではありません"
+      ],
+      "order_in_category": 30,
+      "source_image": "images/multiple_doji.svg",
+      "source_id": "multiple_doji"
+    }
+  ]
+}
