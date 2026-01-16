@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
-from routers import stocks
+from routers import stocks, fundamental
 
 app = FastAPI(
     title="株価分析アプリ (FastAPI + htmx)",
@@ -11,6 +11,7 @@ app = FastAPI(
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 app.include_router(stocks.router)
+app.include_router(fundamental.router)
 
 
 @app.get("/", include_in_schema=False)

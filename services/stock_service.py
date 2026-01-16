@@ -30,6 +30,10 @@ from fundamental_fetcher import (
 )
 from stock_name_mapper import STOCK_NAME_MAP
 from terms_data import TERMS_DATA
+from services.financial_analyzer import FinancialAnalyzer
+
+# Initialize analyzer
+analyzer = FinancialAnalyzer()
 
 # ウォッチリストのサンプル銘柄
 WATCHLIST_CODES = ["7203", "6758", "9984", "8306", "8035"]
@@ -40,7 +44,7 @@ PERIOD_BY_INTERVAL = {
     "5m": "60d",
     "10m": "60d",
     "1d": "6mo",
-    "1wk": "5y",
+    "1wk": "2y",
     "1mo": "10y",
 }
 
@@ -561,6 +565,7 @@ def get_chart_tab(code: str, interval: str = "1d") -> Dict[str, Any]:
 
 
 def get_fundamental_tab(code: str) -> Dict[str, Any]:
+    # 1. Fetch original data (Yahoo Finance based) for existing UI components
     symbol = format_symbol_for_yfinance(code)
     fundamental = get_key_fundamentals(symbol) or {}
     fundamentals = [
@@ -585,7 +590,16 @@ def get_fundamental_tab(code: str) -> Dict[str, Any]:
         "決算発表前後は一時的な乱高下に注意",
         "優待や配当の権利付き最終日は売買が増えます",
     ]
+    
+    # 2. Fetch new EDINET Analysis data
+    try:
+        analysis = analyzer.analyze_stock(code)
+    except Exception as e:
+        print(f"Error fetching fundamental data for {code}: {e}")
+        analysis = {"error": str(e)}
+
     glossary = GLOSSARY_TERMS[:6]
+    
     return {
         "fundamentals": fundamentals,
         "statuses": statuses,
@@ -597,6 +611,7 @@ def get_fundamental_tab(code: str) -> Dict[str, Any]:
         "timings": timings,
         "risks": risks,
         "glossary": glossary,
+        "analysis": analysis  # Added new data
     }
 
 

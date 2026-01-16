@@ -4,7 +4,22 @@ from fastapi.templating import Jinja2Templates
 
 from services import stock_service
 
+
+def format_currency(value):
+    if value is None:
+        value = 0
+    if isinstance(value, str):
+        value = value.replace(",", "").strip()
+    try:
+        amount = int(float(value))
+    except (TypeError, ValueError):
+        amount = 0
+    return f"{amount:,} 円"
+
+
+
 templates = Jinja2Templates(directory="templates")
+templates.env.filters["format_currency"] = format_currency
 router = APIRouter()
 
 

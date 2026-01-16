@@ -44,6 +44,10 @@
             neutral: styles.getPropertyValue('--neutral').trim() || '#94a3b8',
             border: styles.getPropertyValue('--border').trim() || '#1f2937',
             panel: styles.getPropertyValue('--panel').trim() || '#111827',
+            chartGrid: styles.getPropertyValue('--chart-grid').trim() || 'rgba(255, 255, 255, 0.08)',
+            chartCrosshair: styles.getPropertyValue('--chart-crosshair').trim() || 'rgba(255, 255, 255, 0.3)',
+            gradientFrom: styles.getPropertyValue('--chart-gradient-from').trim() || 'rgba(14, 165, 233, 0.15)',
+            gradientTo: styles.getPropertyValue('--chart-gradient-to').trim() || 'rgba(14, 165, 233, 0.0)',
         };
     };
 
@@ -122,27 +126,51 @@
             ctx.fillStyle = colors.text;
 
             // Y axis ticks
+            // Grid & Ticks
             const ticks = 5;
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'middle';
+            
             for (let i = 0; i <= ticks; i++) {
                 const value = yMin + ((yMax - yMin) * i) / ticks;
                 const y = priceBottom - ((priceAreaHeight - 16) * i) / ticks;
-                ctx.fillStyle = colors.muted;
-                ctx.fillText(value.toFixed(1), 4, y + 4);
-                ctx.strokeStyle = colors.border;
+
+                // Grid line
+                ctx.strokeStyle = colors.chartGrid;
+                ctx.setLineDash([4, 4]);
                 ctx.beginPath();
                 ctx.moveTo(chartLeft, y);
                 ctx.lineTo(chartRight, y);
                 ctx.stroke();
+                ctx.setLineDash([]);
+
+                // Tick label
+                ctx.fillStyle = colors.muted;
+                ctx.fillText(value.toFixed(1), 4, y);
             }
 
             // X axis ticks
+            // X axis ticks
             const xTicks = Math.min(6, barCount);
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'top';
+
             for (let i = 0; i < xTicks; i++) {
                 const idx = Math.floor((barCount - 1) * (i / (xTicks - 1 || 1)));
                 const point = points[idx];
                 const x = chartLeft + idx * step + step / 2;
+                
+                // Grid line
+                ctx.strokeStyle = colors.chartGrid;
+                ctx.setLineDash([4, 4]);
+                ctx.beginPath();
+                ctx.moveTo(x, priceTop);
+                ctx.lineTo(x, priceBottom);
+                ctx.stroke();
+                ctx.setLineDash([]);
+
                 ctx.fillStyle = colors.muted;
-                ctx.fillText(point.label, x - 20, height - 6);
+                ctx.fillText(point.label, x, height - 20);
             }
 
             // Support / resistance lines
@@ -181,45 +209,76 @@
             });
 
             // Volume bars
+            // Volume bars
             const maxVolume = Math.max(...volumes) || 1;
+            
+            // Gradient for volume
+            const vGradient = ctx.createLinearGradient(0, volumeTop, 0, volumeTop + volumeAreaHeight);
+            vGradient.addColorStop(0, colors.gradientFrom);
+            vGradient.addColorStop(1, colors.gradientTo);
+            
             points.forEach((p, idx) => {
                 const xCenter = chartLeft + idx * step + step / 2;
                 const barHeight = ((p.volume || 0) / maxVolume) * volumeAreaHeight;
                 const isUp = p.close >= p.open;
+                
                 ctx.fillStyle = isUp ? colors.positive : colors.negative;
-                ctx.globalAlpha = 0.35;
+                ctx.globalAlpha = 0.2; // base opacity
                 ctx.fillRect(xCenter - candleWidth / 2, volumeTop + (volumeAreaHeight - barHeight), candleWidth, Math.max(2, barHeight));
+                
+                // Gradient overlay
+                ctx.fillStyle = vGradient;
+                ctx.globalAlpha = 0.3;
+                ctx.fillRect(xCenter - candleWidth / 2, volumeTop + (volumeAreaHeight - barHeight), candleWidth, Math.max(2, barHeight));
+                
                 ctx.globalAlpha = 1;
             });
 
             function showTooltip(evt) {
                 const rect = canvas.getBoundingClientRect();
                 const x = (evt.clientX - rect.left) * (width / rect.width);
+                const y = (evt.clientY - rect.top) * (height / rect.height);
+                
                 const idx = Math.min(points.length - 1, Math.max(0, Math.floor((x - chartLeft) / step)));
                 const point = points[idx];
                 if (!point) return;
+                
+                // ... Tooltip Content Generation ...
                 const nearLevels = (levels || []).filter((lvl) => Math.abs(point.close - lvl.value) <= (yMax - yMin) * 0.01);
                 let html = '';
                 html += `<div class="row"><span>譎る俣</span><span>${point.label}</span></div>`;
-                html += `<div class="row"><span>蟋句､</span><span>${fmtPrice(point.open)}</span></div>`;
-                html += `<div class="row"><span>鬮伜､</span><span>${fmtPrice(point.high)}</span></div>`;
-                html += `<div class="row"><span>螳牙､</span><span>${fmtPrice(point.low)}</span></div>`;
-                html += `<div class="row"><span>邨ょ､</span><span>${fmtPrice(point.close)}</span></div>`;
+                html += `<div class="row"><span>蟋句€､</span><span>${fmtPrice(point.open)}</span></div>`;
+                html += `<div class="row"><span>鬮伜€､</span><span>${fmtPrice(point.high)}</span></div>`;
+                html += `<div class="row"><span>螳牙€､</span><span>${fmtPrice(point.low)}</span></div>`;
+                html += `<div class="row"><span>邨ょ€､</span><span>${fmtPrice(point.close)}</span></div>`;
                 html += `<div class="row"><span>蜃ｺ譚･鬮・/span><span>${fmtVolume(point.volume)}</span></div>`;
-                html += `<div class="row"><span>雜ｳ繝代ち繝ｼ繝ｳ</span><span>${point.pattern || '-'}</span></div>`;
-                nearLevels.forEach((lvl) => {
+                if (point.pattern) html += `<div class="row"><span>雜ｳ繝代ち繝ｼ繝ｳ</span><span>${point.pattern}</span></div>`;
+                
+                 nearLevels.forEach((lvl) => {
                     html += `<div class="row"><span>${lvl.label}</span><span>¥${Number(lvl.value).toLocaleString('ja-JP', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} / ${lvl.note}</span></div>`;
                 });
 
                 tooltip.innerHTML = html;
                 tooltip.style.display = 'block';
+                
+                // Smart Positioning
                 const wrapRect = wrapper.getBoundingClientRect();
-                let left = evt.clientX - wrapRect.left + 12;
-                let top = evt.clientY - wrapRect.top + 12;
-                const tWidth = tooltip.offsetWidth || 260;
+                const tWidth = tooltip.offsetWidth || 220;
                 const tHeight = tooltip.offsetHeight || 160;
-                if (left + tWidth > wrapRect.width) left = wrapRect.width - tWidth - 8;
-                if (top + tHeight > wrapRect.height) top = wrapRect.height - tHeight - 8;
+                
+                // Default: Top Left fixed if not obscuring
+                // Or follow mouse but flip if too close to edge
+                
+                let left = evt.clientX - wrapRect.left + 20;
+                let top = evt.clientY - wrapRect.top + 20;
+                
+                if (left + tWidth > wrapRect.width) left = evt.clientX - wrapRect.left - tWidth - 20;
+                if (top + tHeight > wrapRect.height) top = evt.clientY - wrapRect.top - tHeight - 20;
+                
+                // Clamp
+                left = Math.max(10, Math.min(left, wrapRect.width - tWidth - 10));
+                top = Math.max(10, Math.min(top, wrapRect.height - tHeight - 10));
+                
                 tooltip.style.transform = `translate(${left}px, ${top}px)`;
             }
 

@@ -7,34 +7,30 @@
             <div class="main-price">{{ stock.price_text }}</div>
             <div class="muted change-line">
                 <span class="change-badge change-{{ stock.change_direction }}">
-                    <span class="{{ 'arrow-up' if stock.change_direction == 'up' else 'arrow-down' if stock.change_direction == 'down' else '' }}">{{ stock.change_icon }}</span>
+                    <span
+                        class="{{ 'arrow-up' if stock.change_direction == 'up' else 'arrow-down' if stock.change_direction == 'down' else '' }}">{{
+                        stock.change_icon }}</span>
                     {{ stock.change_text }}
                 </span>
             </div>
+            <!-- Link removed: Fundamental analysis is now embedded in the tab -->
         </div>
     </div>
 </section>
 
 <div class="tab-bar" role="tablist" aria-label="タブ切り替え">
     {% for tab in tabs %}
-    <button class="tab-button {% if loop.first %}is-active{% endif %}"
-            type="button"
-            data-tab-name="{{ tab.name }}"
-            aria-pressed="{{ 'true' if loop.first else 'false' }}"
-            hx-get="/stocks/{{ stock.code }}/tab/{{ tab.name }}"
-            hx-target="#tab-content"
-            hx-swap="innerHTML">
+    <button class="tab-button {% if loop.first %}is-active{% endif %}" type="button" data-tab-name="{{ tab.name }}"
+        aria-pressed="{{ 'true' if loop.first else 'false' }}" hx-get="/stocks/{{ stock.code }}/tab/{{ tab.name }}"
+        hx-target="#tab-content" hx-swap="innerHTML">
         <span class="tab-icon">{{ tab.icon }}</span>
         <span>{{ tab.label }}</span>
     </button>
     {% endfor %}
 </div>
 
-<div id="tab-content"
-     hx-get="/stocks/{{ stock.code }}/tab/chart"
-     hx-trigger="load"
-     hx-target="#tab-content"
-     hx-swap="innerHTML">
+<div id="tab-content" hx-get="/stocks/{{ stock.code }}/tab/chart" hx-trigger="load" hx-target="#tab-content"
+    hx-swap="innerHTML">
     <div class="skeleton">読み込み中...</div>
 </div>
 {% endblock %}

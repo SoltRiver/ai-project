@@ -9,18 +9,21 @@
         </div>
     </div>
 
+    <!-- Original Key Indicators -->
     <div class="grid four">
         {% for item in fundamentals %}
         <div class="stat-card">
             <div class="label">{{ item.label }}</div>
             <div class="value">{{ item.value }}</div>
             {% if statuses.get(item.label) %}
-            <div class="badge status-{{ statuses[item.label].color | default('gray') }}">{{ statuses[item.label].label }}</div>
+            <div class="badge status-{{ statuses[item.label].color | default('gray') }}">{{ statuses[item.label].label
+                }}</div>
             {% endif %}
         </div>
         {% endfor %}
     </div>
 
+    <!-- Original Scores -->
     <div class="card">
         <div class="section-title">スコア</div>
         <div class="score-grid">
@@ -34,6 +37,7 @@
         </div>
     </div>
 
+    <!-- Original Events & Timings -->
     <div class="card">
         <div class="section-title">イベント</div>
         <div class="mini-table">
@@ -53,6 +57,7 @@
         <p class="muted small">※ 最新情報はIRなど公式発表をご確認ください。</p>
     </div>
 
+    <!-- Original Risks -->
     <div class="card">
         <div class="section-title">リスク情報</div>
         <ul class="risk-list">
@@ -62,7 +67,141 @@
         </ul>
     </div>
 
-    <div class="card">
+    <!-- NEW EDINET Analysis Section -->
+    {% if analysis and not analysis.error %}
+    <div class="panel-header" style="margin-top: 3rem; border-top: 1px solid #eee; padding-top: 2rem;">
+        <div class="title-with-icon">
+            <span class="icon">📑</span>
+            <div>
+                <div class="panel-title">詳細分析 (EDINET連携)</div>
+                <p class="muted small">有価証券報告書(XBRL)から抽出した公式データです。</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Key Indicators (EDINET) -->
+    <div class="grid-section" style="margin-bottom: 2rem;">
+        <h4>EDINET指標</h4>
+        <div class="grid four">
+            {% set indicators = analysis.indicators %}
+            <div class="stat-card">
+                <div class="label">ROE (実績)</div>
+                <div class="value" style="color: {{ 'green' if (indicators.ROE or 0) > 8 else 'inherit' }};">
+                    {{ indicators.ROE | round(2) if indicators.ROE else '-' }}%
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="label">ROA (実績)</div>
+                <div class="value">
+                    {{ indicators.ROA | round(2) if indicators.ROA else '-' }}%
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="label">EPS</div>
+                <div class="value">
+                    {{ indicators.EPS | round(1) if indicators.EPS else '-' }}円
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="label">BPS</div>
+                <div class="value">
+                    {{ indicators.BPS | round(0) if indicators.BPS else '-' }}円
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts and Tables -->
+    <div class="grid two" style="gap: 2rem; align-items: start;">
+
+        <!-- Financial Statements Table -->
+        <div class="card">
+            <div class="section-title">財務数値 (単位: 百万円)</div>
+            {% set fin = analysis.financials %}
+            <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                <tr style="border-bottom: 1px solid #ddd;">
+                    <th style="text-align: left; padding: 8px;">項目</th>
+                    <th style="text-align: right; padding: 8px;">金額</th>
+                </tr>
+                <tr>
+                    <td style="padding: 8px;">売上高</td>
+                    <td style="text-align: right;">{{ (fin.sales / 1000000) | int | format_currency if fin.sales else
+                        '-' }}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px;">営業利益</td>
+                    <td style="text-align: right;">{{ (fin.operating_profit / 1000000) | int | format_currency if
+                        fin.operating_profit else '-' }}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px;">当期純利益</td>
+                    <td style="text-align: right;">{{ (fin.net_profit / 1000000) | int | format_currency if
+                        fin.net_profit else '-' }}</td>
+                </tr>
+                <tr style="border-top: 2px solid #eee;">
+                    <td style="padding: 8px;">総資産</td>
+                    <td style="text-align: right;">{{ (fin.total_assets / 1000000) | int | format_currency if
+                        fin.total_assets else '-' }}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px;">純資産</td>
+                    <td style="text-align: right;">{{ (fin.net_assets / 1000000) | int | format_currency if
+                        fin.net_assets else '-' }}</td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- Composition Chart -->
+        <div class="card">
+            <div class="section-title">資産構成</div>
+            <div id="assetsChartTab" style="width: 100%; height: 250px;"></div>
+        </div>
+    </div>
+
+    <script>
+        (function () {
+            var equity = {{ analysis.financials.equity or 0 }};
+            var total = {{ analysis.financials.total_assets or 0 }};
+            var liabilities = total - equity;
+            if (liabilities < 0) liabilities = 0;
+
+            var data = [{
+            values: [equity, liabilities],
+            labels: ['純資産', '負債'],
+            type: 'pie',
+            marker: {
+                colors: ['#4caf50', '#ff9800']
+            },
+            textinfo: 'label+percent',
+            automargin: true
+        }];
+
+            var layout = {
+            height: 250,
+            margin: { t: 10, b: 10, l: 10, r: 10 },
+            showlegend: false
+        };
+
+            if (typeof Plotly !== 'undefined') {
+                Plotly.newPlot('assetsChartTab', data, layout);
+            } else {
+                var script = document.createElement('script');
+                script.src = 'https://cdn.plot.ly/plotly-latest.min.js';
+                script.onload = function () {
+                    Plotly.newPlot('assetsChartTab', data, layout);
+                };
+                document.head.appendChild(script);
+            }
+        })();
+    </script>
+    {% elif analysis and analysis.error %}
+    <div class="alert alert-error" style="color: red; border: 1px solid red; padding: 10px; margin-top: 2rem;">
+        <p>EDINETデータ取得エラー: {{ analysis.error }}</p>
+    </div>
+    {% endif %}
+
+    <!-- Glossary -->
+    <div class="card" style="margin-top: 2rem;">
         <div class="section-title">用語集</div>
         <div class="pattern-grid">
             {% for term in glossary %}
