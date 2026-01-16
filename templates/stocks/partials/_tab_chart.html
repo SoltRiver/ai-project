@@ -1,8 +1,5 @@
-<div class="tab-panel chart-panel"
-     hx-get="/stocks/{{ stock.code }}/tab/chart?interval={{ interval }}"
-     hx-trigger="every 20s"
-     hx-target="#tab-content"
-     hx-swap="innerHTML">
+<div class="tab-panel chart-panel" hx-get="/stocks/{{ stock.code }}/tab/chart?interval={{ interval }}"
+    hx-trigger="every 20s" hx-target="#tab-content" hx-swap="innerHTML">
     <div class="panel-header">
         <div class="title-with-icon">
             <span class="icon">📈</span>
@@ -13,13 +10,11 @@
         </div>
         <label class="select-wrap">
             <span class="toggle-label">足種</span>
-            <select name="interval"
-                    hx-get="/stocks/{{ stock.code }}/tab/chart"
-                    hx-target="#tab-content"
-                    hx-trigger="change"
-                    hx-swap="innerHTML">
+            <select name="interval" hx-get="/stocks/{{ stock.code }}/tab/chart" hx-target="#tab-content"
+                hx-trigger="change" hx-swap="innerHTML">
                 {% for option in interval_options %}
-                <option value="{{ option.value }}" {% if interval == option.value %}selected{% endif %}>{{ option.label }}</option>
+                <option value="{{ option.value }}" {% if interval==option.value %}selected{% endif %}>{{ option.label }}
+                </option>
                 {% endfor %}
             </select>
         </label>
@@ -32,12 +27,15 @@
                 <div class="chart-price-line">
                     <span class="chart-price">{{ chart_summary.last_close }}</span>
                     <span class="change-badge change-{{ chart_summary.change_direction }}">
-                        <span class="{{ 'arrow-up' if chart_summary.change_direction == 'up' else 'arrow-down' if chart_summary.change_direction == 'down' else '' }}">{{ chart_summary.change_icon }}</span>
+                        <span
+                            class="{{ 'arrow-up' if chart_summary.change_direction == 'up' else 'arrow-down' if chart_summary.change_direction == 'down' else '' }}">{{
+                            chart_summary.change_icon }}</span>
                         {{ chart_summary.change_text }}
                     </span>
                 </div>
                 <div class="chart-sub muted">
-                    始値 {{ chart_summary.open }} / 高値 {{ chart_summary.high }} / 安値 {{ chart_summary.low }} / {{ chart_summary.timestamp }}
+                    始値 {{ chart_summary.open }} / 高値 {{ chart_summary.high }} / 安値 {{ chart_summary.low }} / {{
+                    chart_summary.timestamp }}
                 </div>
             </div>
             <div class="trend-pill">{{ trend_label }}</div>
@@ -50,31 +48,59 @@
         </div>
     </div>
 
-    <div class="grid two">
-        <div class="card">
-            <div class="section-title">売買シグナル（初心者向け）</div>
-            <div class="signal-grid">
+    <!-- Modernized Info Sections -->
+    <div class="info-stack">
+        <!-- Trading Signals -->
+        <div class="card signal-section">
+            <div class="section-header">
+                <div class="section-title">売買シグナル（初心者向け）</div>
+                <span class="badge neutral">AI分析</span>
+            </div>
+            <div class="signal-grid-modern">
                 {% for sig in signals %}
-                <div class="signal-card tone-{{ sig.tone | default('neutral') }}">
-                    <div class="signal-title">{{ sig.title }}</div>
-                    <p class="signal-detail">{{ sig.detail }}</p>
+                <div class="signal-card-modern tone-{{ sig.tone | default('neutral') }}">
+                    <div class="signal-icon">
+                        {% if sig.tone == 'positive' or sig.tone == 'bullish' %}
+                        <span class="icon-bull">🐂</span>
+                        {% elif sig.tone == 'negative' or sig.tone == 'bearish' %}
+                        <span class="icon-bear">🐻</span>
+                        {% else %}
+                        <span class="icon-neutral">⚖️</span>
+                        {% endif %}
+                    </div>
+                    <div class="signal-content">
+                        <div class="signal-title">{{ sig.title }}</div>
+                        <p class="signal-detail">{{ sig.detail }}</p>
+                    </div>
                 </div>
                 {% endfor %}
             </div>
         </div>
-        <div class="card">
-            <div class="section-title">リスク情報</div>
-            <ul class="risk-list">
-                {% for risk in risks %}
-                <li>{{ risk }}</li>
-                {% endfor %}
-            </ul>
-            <div class="section-title">プラス要素</div>
-            <ul class="risk-list positives">
-                {% for item in positives %}
-                <li>{{ item }}</li>
-                {% endfor %}
-            </ul>
+
+        <!-- Risk & Positive Factors -->
+        <div class="grid two info-grid">
+            <div class="card info-card risk-card">
+                <div class="section-title text-negative">⚠️ リスク情報</div>
+                <ul class="modern-list risk-list">
+                    {% for risk in risks %}
+                    <li>
+                        <span class="list-bullet">warn</span>
+                        <span class="list-text">{{ risk }}</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            <div class="card info-card positive-card">
+                <div class="section-title text-positive">✅ プラス要素</div>
+                <ul class="modern-list positive-list">
+                    {% for item in positives %}
+                    <li>
+                        <span class="list-bullet">check</span>
+                        <span class="list-text">{{ item }}</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
         </div>
     </div>
 </div>
