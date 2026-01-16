@@ -43,8 +43,8 @@ PERIOD_BY_INTERVAL = {
     "1m": "7d",
     "5m": "60d",
     "10m": "60d",
-    "1d": "6mo",
-    "1wk": "2y",
+    "1d": "5y",
+    "1wk": "5y",
     "1mo": "10y",
 }
 
@@ -323,6 +323,10 @@ def _build_points(df: pd.DataFrame, interval: str) -> List[Dict[str, Any]]:
     points: List[Dict[str, Any]] = []
     date_col = "date" if "date" in df.columns else df.columns[0]
     label_fmt = "%H:%M" if interval in INTRADAY_INTERVALS else "%Y/%m/%d"
+    
+    # Identify SMA columns
+    sma_cols = [c for c in df.columns if c.startswith("SMA")]
+
     for _, row in df.iterrows():
         date_val = row[date_col]
         label = date_val.strftime(label_fmt) if hasattr(date_val, "strftime") else str(date_val)
@@ -334,6 +338,11 @@ def _build_points(df: pd.DataFrame, interval: str) -> List[Dict[str, Any]]:
             "close": round(float(row["close"]), 1),
             "volume": int(row["volume"]) if not pd.isna(row.get("volume", None)) else 0,
         }
+        # Add SMA values
+        for col in sma_cols:
+            val = row[col]
+            point[col] = round(float(val), 1) if not pd.isna(val) else None
+
         try:
             candle = get_candle_info(point["open"], point["high"], point["low"], point["close"])
             point["pattern"] = candle.get("type")
@@ -511,6 +520,19 @@ def get_stock_header(code: str) -> Optional[Dict[str, Any]]:
 def get_chart_tab(code: str, interval: str = "1d") -> Dict[str, Any]:
     symbol = format_symbol_for_yfinance(code)
     df = fetch_stock_data(symbol, period=PERIOD_BY_INTERVAL.get(interval, "1mo"), interval=interval)
+    
+    # Calculate SMAs
+    sma_periods = [25, 75, 200]  # Default for daily
+    if interval == "1wk":
+        sma_periods = [13, 26, 52]
+    elif interval == "1mo":
+        sma_periods = [12, 24, 60]
+    elif interval in INTRADAY_INTERVALS:
+        sma_periods = [] # No SMA for intraday for now, or maybe small ones
+    
+    if df is not None and not df.empty and sma_periods:
+        df = add_technical_indicators(df, sma_periods=sma_periods)
+
     points = _build_points(df if df is not None else pd.DataFrame(), interval)
     support_levels = _support_levels(points)
     trend_label = _trend_label(points)

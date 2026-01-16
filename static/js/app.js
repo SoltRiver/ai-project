@@ -1,4 +1,4 @@
-﻿(function() {
+﻿(function () {
     const root = document.documentElement;
     const saved = localStorage.getItem('theme');
     if (saved) {
@@ -60,6 +60,10 @@
     function renderCandleCharts() {
         const wrappers = document.querySelectorAll('[data-chart-payload]');
         wrappers.forEach((wrapper) => {
+            // Check if already initialized to avoid double binding
+            if (wrapper.dataset.chartInitialized === 'true') return;
+            wrapper.dataset.chartInitialized = 'true';
+
             const payloadRaw = wrapper.getAttribute('data-chart-payload');
             const colors = getColors();
             const canvas = wrapper.querySelector('.candle-canvas');
@@ -72,222 +76,398 @@
             } catch (_) {
                 return;
             }
-            const points = payload.points || [];
+            const allPoints = payload.points || [];
             const levels = payload.support_levels || [];
-            const dpr = window.devicePixelRatio || 1;
-            const displayWidth = wrapper.clientWidth - 16;
-            const displayHeight = parseInt(canvas.getAttribute('height'), 10) || 420;
-            const width = displayWidth;
-            const height = displayHeight;
-            canvas.width = width * dpr;
-            canvas.height = height * dpr;
-            canvas.style.width = `${width}px`;
-            canvas.style.height = `${height}px`;
-            const ctx = canvas.getContext('2d');
-            if (!ctx) return;
-            ctx.scale(dpr, dpr);
-            ctx.clearRect(0, 0, width, height);
 
-            if (!points.length) {
-                ctx.fillStyle = colors.muted;
-                ctx.font = '14px "Segoe UI", sans-serif';
-                ctx.fillText('チャートデータがありません', 12, 24);
-                return;
-            }
+            // Identify SMA keys dynamically
+            const smaKeys = allPoints.length > 0
+                ? Object.keys(allPoints[0]).filter(k => k.startsWith('SMA'))
+                : [];
 
-            const highs = points.map((p) => p.high);
-            const lows = points.map((p) => p.low);
-            const volumes = points.map((p) => p.volume || 0);
-            const maxHigh = Math.max(...highs);
-            const minLow = Math.min(...lows);
-            const pad = Math.max(1, (maxHigh - minLow) * 0.05);
-            const yMin = minLow - pad;
-            const yMax = maxHigh + pad;
-            const priceAreaHeight = height * 0.7;
-            const priceTop = 8;
-            const priceBottom = priceTop + priceAreaHeight;
-            const volumeAreaHeight = height * 0.22;
-            const volumeTop = priceBottom + 6;
-            const chartLeft = 50;
-            const chartRight = width - 12;
-            const chartWidth = chartRight - chartLeft;
-            const barCount = points.length;
-            const step = chartWidth / barCount;
-            const candleWidth = Math.max(4, step * 0.6);
-
-            const yScale = (val) => {
-                const ratio = (val - yMin) / (yMax - yMin);
-                return priceBottom - ratio * (priceAreaHeight - 16);
+            // SMA Colors
+            const smaColors = {
+                'SMA25': '#f59e0b', // Amber
+                'SMA75': '#8b5cf6', // Violet
+                'SMA200': '#3b82f6', // Blue
+                'SMA13': '#f59e0b',
+                'SMA26': '#8b5cf6',
+                'SMA52': '#3b82f6',
+                'SMA12': '#f59e0b',
+                'SMA24': '#8b5cf6',
+                'SMA60': '#3b82f6',
             };
 
-            ctx.strokeStyle = colors.border;
-            ctx.lineWidth = 1;
-            ctx.font = '12px "Segoe UI", sans-serif';
-            ctx.fillStyle = colors.text;
+            // Viewport State
+            let viewCount = Math.min(allPoints.length, 100); // Default zoom level
+            let viewIndex = Math.max(0, allPoints.length - viewCount); // Start at newest data
 
-            // Y axis ticks
-            // Grid & Ticks
-            const ticks = 5;
-            ctx.textAlign = 'left';
-            ctx.textBaseline = 'middle';
-            
-            for (let i = 0; i <= ticks; i++) {
-                const value = yMin + ((yMax - yMin) * i) / ticks;
-                const y = priceBottom - ((priceAreaHeight - 16) * i) / ticks;
+            // Interaction State
+            let isDragging = false;
+            let lastX = 0;
+            let dpr = window.devicePixelRatio || 1;
 
-                // Grid line
-                ctx.strokeStyle = colors.chartGrid;
-                ctx.setLineDash([4, 4]);
-                ctx.beginPath();
-                ctx.moveTo(chartLeft, y);
-                ctx.lineTo(chartRight, y);
-                ctx.stroke();
-                ctx.setLineDash([]);
+            // Dimensions (updated on resize/draw)
+            let width, height;
 
-                // Tick label
-                ctx.fillStyle = colors.muted;
-                ctx.fillText(value.toFixed(1), 4, y);
+            function updateDimensions() {
+                const rect = wrapper.getBoundingClientRect();
+                width = rect.width - 32; // padding
+                const attrHeight = parseInt(canvas.getAttribute('height'), 10) || 420;
+                height = attrHeight;
+
+                // Canvas resolution
+                canvas.width = width * dpr;
+                canvas.height = height * dpr;
+
+                // CSS size
+                canvas.style.width = `${width}px`;
+                canvas.style.height = `${height}px`;
             }
 
-            // X axis ticks
-            // X axis ticks
-            const xTicks = Math.min(6, barCount);
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'top';
+            // Init dimensions
+            updateDimensions();
+            // Re-get context after resize
+            let ctx = canvas.getContext('2d');
 
-            for (let i = 0; i < xTicks; i++) {
-                const idx = Math.floor((barCount - 1) * (i / (xTicks - 1 || 1)));
-                const point = points[idx];
-                const x = chartLeft + idx * step + step / 2;
-                
-                // Grid line
-                ctx.strokeStyle = colors.chartGrid;
-                ctx.setLineDash([4, 4]);
-                ctx.beginPath();
-                ctx.moveTo(x, priceTop);
-                ctx.lineTo(x, priceBottom);
-                ctx.stroke();
-                ctx.setLineDash([]);
+            function draw() {
+                if (!ctx) return;
 
-                ctx.fillStyle = colors.muted;
-                ctx.fillText(point.label, x, height - 20);
-            }
+                // Visible subset
+                const endIndex = Math.min(allPoints.length, viewIndex + viewCount);
+                const points = allPoints.slice(viewIndex, endIndex);
 
-            // Support / resistance lines
-            levels.forEach((lvl) => {
-                const y = yScale(lvl.value);
-                ctx.setLineDash([6, 4]);
-                ctx.strokeStyle = lvl.type === 'support' ? colors.positive : lvl.type === 'resistance' ? colors.negative : colors.neutral;
-                ctx.beginPath();
-                ctx.moveTo(chartLeft, y);
-                ctx.lineTo(chartRight, y);
-                ctx.stroke();
-                ctx.setLineDash([]);
-            });
+                if (!points.length) {
+                    ctx.clearRect(0, 0, width * dpr, height * dpr);
+                    ctx.fillStyle = colors.muted;
+                    ctx.font = '14px "Segoe UI", sans-serif';
+                    ctx.fillText('データがありません', 20, 30);
+                    return;
+                }
 
-            // Candles
-            points.forEach((p, idx) => {
-                const xCenter = chartLeft + idx * step + step / 2;
-                const openY = yScale(p.open);
-                const closeY = yScale(p.close);
-                const highY = yScale(p.high);
-                const lowY = yScale(p.low);
-                const isUp = p.close >= p.open;
-                ctx.strokeStyle = isUp ? colors.positive : colors.negative;
-                ctx.fillStyle = isUp ? colors.positive : colors.negative;
+                // Reset canvas
+                ctx.setTransform(dpr, 0, 0, dpr, 0, 0); // Reset scale
+                ctx.clearRect(0, 0, width, height);
 
-                // wick
-                ctx.beginPath();
-                ctx.moveTo(xCenter, highY);
-                ctx.lineTo(xCenter, lowY);
-                ctx.stroke();
+                // Calculate Layout
+                const priceAreaHeight = height * 0.7;
+                const priceTop = 8;
+                const priceBottom = priceTop + priceAreaHeight;
+                const volumeAreaHeight = height * 0.22;
+                const volumeTop = priceBottom + 6;
+                const chartLeft = 50;
+                const chartRight = width - 12;
+                const chartWidth = chartRight - chartLeft;
 
-                // body
-                const bodyTop = Math.min(openY, closeY);
-                const bodyHeight = Math.max(2, Math.abs(closeY - openY));
-                ctx.fillRect(xCenter - candleWidth / 2, bodyTop, candleWidth, bodyHeight);
-            });
+                const barCount = points.length;
+                const step = chartWidth / Math.max(1, barCount);
+                const candleWidth = Math.max(1, step * 0.65);
 
-            // Volume bars
-            // Volume bars
-            const maxVolume = Math.max(...volumes) || 1;
-            
-            // Gradient for volume
-            const vGradient = ctx.createLinearGradient(0, volumeTop, 0, volumeTop + volumeAreaHeight);
-            vGradient.addColorStop(0, colors.gradientFrom);
-            vGradient.addColorStop(1, colors.gradientTo);
-            
-            points.forEach((p, idx) => {
-                const xCenter = chartLeft + idx * step + step / 2;
-                const barHeight = ((p.volume || 0) / maxVolume) * volumeAreaHeight;
-                const isUp = p.close >= p.open;
-                
-                ctx.fillStyle = isUp ? colors.positive : colors.negative;
-                ctx.globalAlpha = 0.2; // base opacity
-                ctx.fillRect(xCenter - candleWidth / 2, volumeTop + (volumeAreaHeight - barHeight), candleWidth, Math.max(2, barHeight));
-                
-                // Gradient overlay
-                ctx.fillStyle = vGradient;
-                ctx.globalAlpha = 0.3;
-                ctx.fillRect(xCenter - candleWidth / 2, volumeTop + (volumeAreaHeight - barHeight), candleWidth, Math.max(2, barHeight));
-                
-                ctx.globalAlpha = 1;
-            });
+                // Calculate Y Range (Price) considering SMAs
+                const highs = points.map((p) => p.high);
+                const lows = points.map((p) => p.low);
 
-            function showTooltip(evt) {
-                const rect = canvas.getBoundingClientRect();
-                const x = (evt.clientX - rect.left) * (width / rect.width);
-                const y = (evt.clientY - rect.top) * (height / rect.height);
-                
-                const idx = Math.min(points.length - 1, Math.max(0, Math.floor((x - chartLeft) / step)));
-                const point = points[idx];
-                if (!point) return;
-                
-                // ... Tooltip Content Generation ...
-                const nearLevels = (levels || []).filter((lvl) => Math.abs(point.close - lvl.value) <= (yMax - yMin) * 0.01);
-                let html = '';
-                html += `<div class="row"><span>譎る俣</span><span>${point.label}</span></div>`;
-                html += `<div class="row"><span>蟋句€､</span><span>${fmtPrice(point.open)}</span></div>`;
-                html += `<div class="row"><span>鬮伜€､</span><span>${fmtPrice(point.high)}</span></div>`;
-                html += `<div class="row"><span>螳牙€､</span><span>${fmtPrice(point.low)}</span></div>`;
-                html += `<div class="row"><span>邨ょ€､</span><span>${fmtPrice(point.close)}</span></div>`;
-                html += `<div class="row"><span>蜃ｺ譚･鬮・/span><span>${fmtVolume(point.volume)}</span></div>`;
-                if (point.pattern) html += `<div class="row"><span>雜ｳ繝代ち繝ｼ繝ｳ</span><span>${point.pattern}</span></div>`;
-                
-                 nearLevels.forEach((lvl) => {
-                    html += `<div class="row"><span>${lvl.label}</span><span>¥${Number(lvl.value).toLocaleString('ja-JP', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} / ${lvl.note}</span></div>`;
+                // Add visible SMAs to min/max
+                smaKeys.forEach(key => {
+                    points.forEach(p => {
+                        if (p[key] != null) {
+                            highs.push(p[key]);
+                            lows.push(p[key]);
+                        }
+                    });
                 });
 
-                tooltip.innerHTML = html;
-                tooltip.style.display = 'block';
-                
-                // Smart Positioning
-                const wrapRect = wrapper.getBoundingClientRect();
-                const tWidth = tooltip.offsetWidth || 220;
-                const tHeight = tooltip.offsetHeight || 160;
-                
-                // Default: Top Left fixed if not obscuring
-                // Or follow mouse but flip if too close to edge
-                
-                let left = evt.clientX - wrapRect.left + 20;
-                let top = evt.clientY - wrapRect.top + 20;
-                
-                if (left + tWidth > wrapRect.width) left = evt.clientX - wrapRect.left - tWidth - 20;
-                if (top + tHeight > wrapRect.height) top = evt.clientY - wrapRect.top - tHeight - 20;
-                
-                // Clamp
-                left = Math.max(10, Math.min(left, wrapRect.width - tWidth - 10));
-                top = Math.max(10, Math.min(top, wrapRect.height - tHeight - 10));
-                
-                tooltip.style.transform = `translate(${left}px, ${top}px)`;
+                const maxHigh = Math.max(...highs);
+                const minLow = Math.min(...lows);
+                const range = maxHigh - minLow;
+                const pad = Math.max(1, range * 0.05); // 5% padding
+                const yMin = minLow - pad;
+                const yMax = maxHigh + pad;
+
+                const yScale = (val) => {
+                    const ratio = (val - yMin) / (yMax - yMin);
+                    return priceBottom - ratio * (priceAreaHeight - 16);
+                };
+
+                // Helper: Get X coordinate for index relative to CURRENT VIEW
+                const getX = (i) => chartLeft + i * step + step / 2;
+
+                // --- Draw Grid & Y Axis ---
+                ctx.lineWidth = 1;
+                ctx.font = '11px "Segoe UI", sans-serif';
+                ctx.textAlign = 'right';
+                ctx.textBaseline = 'middle';
+
+                const ticks = 5;
+                for (let i = 0; i <= ticks; i++) {
+                    const value = yMin + ((yMax - yMin) * i) / ticks;
+                    const y = priceBottom - ((priceAreaHeight - 16) * i) / ticks;
+
+                    // Grid
+                    ctx.strokeStyle = colors.chartGrid;
+                    ctx.setLineDash([4, 4]);
+                    ctx.beginPath();
+                    ctx.moveTo(chartLeft, y);
+                    ctx.lineTo(chartRight, y);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+
+                    // Label
+                    ctx.fillStyle = colors.muted;
+                    ctx.fillText(value.toFixed(0), chartLeft - 6, y);
+                }
+
+                // --- Draw X Axis (Time) ---
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'top';
+                const tickStep = Math.ceil(barCount / 5);
+
+                for (let i = 0; i < barCount; i += tickStep) {
+                    const x = getX(i);
+                    const label = points[i].label;
+
+                    // Grid
+                    ctx.strokeStyle = colors.chartGrid;
+                    ctx.setLineDash([4, 4]);
+                    ctx.beginPath();
+                    ctx.moveTo(x, priceTop);
+                    ctx.lineTo(x, priceBottom);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+
+                    ctx.fillStyle = colors.muted;
+                    ctx.fillText(label, x, height - 16);
+                }
+
+                // --- Draw Support/Resistance ---
+                levels.forEach((lvl) => {
+                    const y = yScale(lvl.value);
+                    if (y < priceTop || y > priceBottom) return; // Out of view
+
+                    ctx.setLineDash([6, 4]);
+                    ctx.strokeStyle = lvl.type === 'support' ? colors.positive : lvl.type === 'resistance' ? colors.negative : colors.neutral;
+                    ctx.beginPath();
+                    ctx.moveTo(chartLeft, y);
+                    ctx.lineTo(chartRight, y);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                });
+
+                // --- Draw Candles ---
+                points.forEach((p, i) => {
+                    const xCenter = getX(i);
+                    const openY = yScale(p.open);
+                    const closeY = yScale(p.close);
+                    const highY = yScale(p.high);
+                    const lowY = yScale(p.low);
+                    const isUp = p.close >= p.open;
+
+                    ctx.strokeStyle = isUp ? colors.positive : colors.negative;
+                    ctx.fillStyle = isUp ? colors.positive : colors.negative;
+
+                    // Wick
+                    ctx.beginPath();
+                    ctx.moveTo(xCenter, highY);
+                    ctx.lineTo(xCenter, lowY);
+                    ctx.stroke();
+
+                    // Body
+                    const bodyTop = Math.min(openY, closeY);
+                    const bodyHeight = Math.max(1, Math.abs(closeY - openY));
+                    ctx.fillRect(xCenter - candleWidth / 2, bodyTop, candleWidth, bodyHeight);
+                });
+
+                // --- Draw SMAs ---
+                smaKeys.forEach(key => {
+                    ctx.strokeStyle = smaColors[key] || '#ffffff';
+                    ctx.lineWidth = 1.5;
+                    ctx.beginPath();
+
+                    let started = false;
+                    for (let i = 0; i < points.length; i++) {
+                        const val = points[i][key];
+                        if (val == null) {
+                            started = false; // break line on null
+                            continue;
+                        }
+                        const x = getX(i);
+                        const y = yScale(val);
+
+                        // Clip Y (though usually fine)
+                        if (!started) {
+                            ctx.moveTo(x, y);
+                            started = true;
+                        } else {
+                            ctx.lineTo(x, y);
+                        }
+                    }
+                    ctx.stroke();
+                });
+
+                // --- Draw Volume ---
+                const maxVolume = Math.max(...points.map(p => p.volume || 0)) || 1;
+                // Volume Gradient
+                const vGradient = ctx.createLinearGradient(0, volumeTop, 0, volumeTop + volumeAreaHeight);
+                vGradient.addColorStop(0, colors.gradientFrom);
+                vGradient.addColorStop(1, colors.gradientTo);
+
+                points.forEach((p, i) => {
+                    const val = p.volume || 0;
+                    const barHeight = (val / maxVolume) * volumeAreaHeight;
+                    const xCenter = getX(i);
+                    const isUp = p.close >= p.open;
+
+                    ctx.fillStyle = isUp ? colors.positive : colors.negative;
+                    ctx.globalAlpha = 0.2;
+                    ctx.fillRect(xCenter - candleWidth / 2, volumeTop + (volumeAreaHeight - barHeight), candleWidth, Math.max(1, barHeight));
+
+                    ctx.fillStyle = vGradient;
+                    ctx.globalAlpha = 0.3;
+                    ctx.fillRect(xCenter - candleWidth / 2, volumeTop + (volumeAreaHeight - barHeight), candleWidth, Math.max(1, barHeight));
+
+                    ctx.globalAlpha = 1.0;
+                });
             }
 
-            function hideTooltip() {
+            // --- Interactions ---
+
+            // Pan logic
+            const onMouseDown = (e) => {
+                isDragging = true;
+                lastX = e.clientX;
+                canvas.style.cursor = 'grabbing';
+            };
+            canvas.addEventListener('mousedown', onMouseDown);
+
+            const onMouseMoveGlobal = (e) => {
+                if (!isDragging) return;
+                const dx = e.clientX - lastX;
+                if (dx === 0) return;
+
+                // Move viewIndex
+                // Sensitivity: 1 pixel drag ~= 1 candle * sensitivity
+                const sensitivity = viewCount / width;
+                const deltaIndex = Math.round(-dx * sensitivity * 1.5);
+
+                if (deltaIndex !== 0) {
+                    const newIndex = viewIndex + deltaIndex;
+                    // Clamp
+                    viewIndex = Math.max(0, Math.min(allPoints.length - viewCount, newIndex));
+                    lastX = e.clientX;
+                    requestAnimationFrame(draw);
+                }
+            };
+            window.addEventListener('mousemove', onMouseMoveGlobal);
+
+            const onMouseUpGlobal = () => {
+                isDragging = false;
+                canvas.style.cursor = 'crosshair';
+            };
+            window.addEventListener('mouseup', onMouseUpGlobal);
+
+            // Zoom logic (Wheel)
+            canvas.addEventListener('wheel', (e) => {
+                e.preventDefault();
+
+                // Detect scroll vs zoom
+                if (e.ctrlKey || Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+                    // Zoom
+                    const zoomDir = Math.sign(e.deltaY);
+                    const zoomFactor = 0.1;
+                    const deltaCount = Math.round(viewCount * zoomFactor * zoomDir);
+
+                    const newCount = Math.max(10, Math.min(allPoints.length, viewCount + deltaCount));
+                    if (newCount !== viewCount) {
+                        const centerRatio = 0.5;
+                        const added = newCount - viewCount;
+                        viewIndex = Math.max(0, Math.min(allPoints.length - newCount, viewIndex - Math.round(added * centerRatio)));
+                        viewCount = newCount;
+                        requestAnimationFrame(draw);
+                    }
+                } else {
+                    // Pan (horizontal scroll)
+                    const panDir = Math.sign(e.deltaX || e.deltaY);
+                    const shift = Math.round(viewCount * 0.05 * panDir);
+                    viewIndex = Math.max(0, Math.min(allPoints.length - viewCount, viewIndex + shift));
+                    requestAnimationFrame(draw);
+                }
+            }, { passive: false });
+
+            // Tooltip (Mouse Move without Drag)
+            canvas.addEventListener('mousemove', (e) => {
+                if (isDragging) {
+                    tooltip.style.display = 'none';
+                    return;
+                }
+
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const chartLeft = 50;
+                const chartRight = width - 12;
+                const chartWidth = chartRight - chartLeft;
+
+                if (x < chartLeft || x > chartRight) {
+                    tooltip.style.display = 'none';
+                    draw(); // clear crosshair
+                    return;
+                }
+
+                const step = chartWidth / viewCount;
+                const relX = x - chartLeft;
+                const idxInView = Math.floor(relX / step);
+                const dataIdx = viewIndex + idxInView;
+
+                if (dataIdx >= 0 && dataIdx < allPoints.length) {
+                    const point = allPoints[dataIdx];
+                    // Redraw to show crosshair (optional, but good)
+                    draw();
+
+                    // Simple Crosshair on top
+                    const centerX = chartLeft + idxInView * step + step / 2;
+                    ctx.strokeStyle = colors.chartCrosshair;
+                    ctx.setLineDash([5, 5]);
+                    ctx.beginPath();
+                    ctx.moveTo(centerX, 0);
+                    ctx.lineTo(centerX, height);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+
+                    // Show Tooltip
+                    let html = '';
+                    html += `<div class="row"><span>日時</span><span>${point.label}</span></div>`;
+                    html += `<div class="row"><span>始値</span><span>${fmtPrice(point.open)}</span></div>`;
+                    html += `<div class="row"><span>高値</span><span>${fmtPrice(point.high)}</span></div>`;
+                    html += `<div class="row"><span>安値</span><span>${fmtPrice(point.low)}</span></div>`;
+                    html += `<div class="row"><span>終値</span><span>${fmtPrice(point.close)}</span></div>`;
+                    // SMAs in Tooltip
+                    smaKeys.forEach(k => {
+                        if (point[k] != null) {
+                            html += `<div class="row"><span style="color:${smaColors[k]}">${k}</span><span>${fmtPrice(point[k])}</span></div>`;
+                        }
+                    });
+
+                    tooltip.innerHTML = html;
+                    tooltip.style.display = 'block';
+
+                    // Position Tooltip
+                    const tWidth = tooltip.offsetWidth || 180;
+                    const tHeight = tooltip.offsetHeight || 120;
+                    let left = e.clientX - rect.left + 15;
+                    let top = e.clientY - rect.top + 15;
+
+                    if (left + tWidth > width) left = e.clientX - rect.left - tWidth - 15;
+                    if (top + tHeight > height) top = e.clientY - rect.top - tHeight - 15;
+
+                    tooltip.style.transform = `translate(${left}px, ${top}px)`;
+                }
+            });
+
+            canvas.addEventListener('mouseleave', () => {
                 tooltip.style.display = 'none';
-            }
+                draw(); // clear crosshair
+            });
 
-            canvas.onmousemove = showTooltip;
-            canvas.onmouseleave = hideTooltip;
+            // Initial Draw
+            draw();
         });
     }
 
@@ -301,7 +481,7 @@
         renderCandleCharts();
         initPatternPage();
     });
-})(); 
+})();
 
 function initPatternPage() {
     initPatternTabs();
