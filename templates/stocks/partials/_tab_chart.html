@@ -1,81 +1,66 @@
 <div class="tab-panel chart-panel" hx-get="/stocks/{{ stock.code }}/tab/chart?interval={{ interval }}"
     hx-trigger="every 20s" hx-target="#tab-content" hx-swap="innerHTML">
-    <div class="panel-header">
-        <div class="title-with-icon">
-            <span class="icon">📈</span>
-            <div>
-                <div class="panel-title">チャート</div>
+    {% endfor %}
+    </select>
+    </label>
+</div>
 
+<div class="card chart-card">
+    <div class="chart-headline">
+        <div>
+            <div class="chart-title">{{ stock.display_name }}</div>
+            <div class="chart-price-line">
+                <span class="chart-price">{{ chart_summary.last_close }}</span>
+                <span class="change-badge change-{{ chart_summary.change_direction }}">
+                    <span
+                        class="{{ 'arrow-up' if chart_summary.change_direction == 'up' else 'arrow-down' if chart_summary.change_direction == 'down' else '' }}">{{
+                        chart_summary.change_icon }}</span>
+                    {{ chart_summary.change_text }}
+                </span>
+            </div>
+            <div class="chart-sub muted">
+                始値 {{ chart_summary.open }} / 高値 {{ chart_summary.high }} / 安値 {{ chart_summary.low }} / {{
+                chart_summary.timestamp }}
             </div>
         </div>
-        <label class="select-wrap">
-            <span class="toggle-label">足種</span>
-            <select name="interval" hx-get="/stocks/{{ stock.code }}/tab/chart" hx-target="#tab-content"
-                hx-trigger="change" hx-swap="innerHTML">
-                {% for option in interval_options %}
-                <option value="{{ option.value }}" {% if interval==option.value %}selected{% endif %}>{{ option.label }}
-                </option>
-                {% endfor %}
-            </select>
-        </label>
+        <div class="trend-pill">{{ trend_label }}</div>
     </div>
 
-    <div class="card chart-card">
-        <div class="chart-headline">
-            <div>
-                <div class="chart-title">{{ stock.display_name }}</div>
-                <div class="chart-price-line">
-                    <span class="chart-price">{{ chart_summary.last_close }}</span>
-                    <span class="change-badge change-{{ chart_summary.change_direction }}">
-                        <span
-                            class="{{ 'arrow-up' if chart_summary.change_direction == 'up' else 'arrow-down' if chart_summary.change_direction == 'down' else '' }}">{{
-                            chart_summary.change_icon }}</span>
-                        {{ chart_summary.change_text }}
-                    </span>
+    <div class="chart-wrapper" data-chart-payload='{{ chart_payload | tojson }}'>
+        <canvas class="candle-canvas" width="960" height="420" aria-label="ローソク足チャート"></canvas>
+        <div class="chart-tooltip" role="tooltip"></div>
+        <div class="axis-note">{{ axis_note }}</div>
+    </div>
+</div>
+
+<!-- Modernized Info Sections -->
+<div class="info-stack">
+    <!-- Trading Signals -->
+    <div class="card signal-section">
+        <div class="section-header">
+            <div class="section-title">売買シグナル（初心者向け）</div>
+            <span class="badge neutral">AI分析</span>
+        </div>
+        <div class="signal-grid-modern">
+            {% for sig in signals %}
+            <div class="signal-card-modern tone-{{ sig.tone | default('neutral') }}">
+                <div class="signal-icon">
+                    {% if sig.tone == 'positive' or sig.tone == 'bullish' %}
+                    <span class="icon-bull">🐂</span>
+                    {% elif sig.tone == 'negative' or sig.tone == 'bearish' %}
+                    <span class="icon-bear">🐻</span>
+                    {% else %}
+                    <span class="icon-neutral">⚖️</span>
+                    {% endif %}
                 </div>
-                <div class="chart-sub muted">
-                    始値 {{ chart_summary.open }} / 高値 {{ chart_summary.high }} / 安値 {{ chart_summary.low }} / {{
-                    chart_summary.timestamp }}
+                <div class="signal-content">
+                    <div class="signal-title">{{ sig.title }}</div>
+                    <p class="signal-detail">{{ sig.detail }}</p>
                 </div>
             </div>
-            <div class="trend-pill">{{ trend_label }}</div>
-        </div>
-
-        <div class="chart-wrapper" data-chart-payload='{{ chart_payload | tojson }}'>
-            <canvas class="candle-canvas" width="960" height="420" aria-label="ローソク足チャート"></canvas>
-            <div class="chart-tooltip" role="tooltip"></div>
-            <div class="axis-note">{{ axis_note }}</div>
+            {% endfor %}
         </div>
     </div>
 
-    <!-- Modernized Info Sections -->
-    <div class="info-stack">
-        <!-- Trading Signals -->
-        <div class="card signal-section">
-            <div class="section-header">
-                <div class="section-title">売買シグナル（初心者向け）</div>
-                <span class="badge neutral">AI分析</span>
-            </div>
-            <div class="signal-grid-modern">
-                {% for sig in signals %}
-                <div class="signal-card-modern tone-{{ sig.tone | default('neutral') }}">
-                    <div class="signal-icon">
-                        {% if sig.tone == 'positive' or sig.tone == 'bullish' %}
-                        <span class="icon-bull">🐂</span>
-                        {% elif sig.tone == 'negative' or sig.tone == 'bearish' %}
-                        <span class="icon-bear">🐻</span>
-                        {% else %}
-                        <span class="icon-neutral">⚖️</span>
-                        {% endif %}
-                    </div>
-                    <div class="signal-content">
-                        <div class="signal-title">{{ sig.title }}</div>
-                        <p class="signal-detail">{{ sig.detail }}</p>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-        </div>
 
-
-    </div>
+</div>
