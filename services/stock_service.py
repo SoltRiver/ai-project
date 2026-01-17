@@ -656,7 +656,7 @@ def get_dividend_tab(code: str) -> Dict[str, Any]:
 
     # Fetch additional info for yield
     info = fetch_stock_info(symbol) or {}
-    yield_val = info.get("dividendYield")
+    yield_val = info.get("dividend_yield")
     formatted_yield = f"{yield_val:.2%}" if yield_val is not None else "データなし"
 
     yield_info = {
