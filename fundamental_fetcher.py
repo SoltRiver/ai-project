@@ -5,7 +5,7 @@
 
 from datetime import datetime
 from typing import Optional, Dict, Any, List
-
+import pandas as pd
 import yfinance as yf
 
 from analyzer import calculate_star_rating, format_stars
@@ -76,19 +76,58 @@ def fetch_fundamental_data(symbol: str) -> Optional[Dict[str, Any]]:
             "ex_dividend_date": _parse_date_value(info.get("exDividendDate") or info.get("nextDividendDate")),
         }
 
-        # 自己資本比率を計算（可能な場合）
-        if result["total_debt"] and result["market_cap"]:
+        # 自己資本比率を計算
+        # 1. infoにequity_ratioがある場合（米国株など）
+        if result.get("equity_ratio"):
+            pass  # 既に値が入っている場合はそのまま
+        # 2. totalAssetsとtotalStockholderEquityがinfoにある場合
+        elif result.get("total_assets") and result.get("total_equity"):
+             result["equity_ratio"] = (result["total_equity"] / result["total_assets"])
+        # 3. balance_sheetから取得する場合（日本株など）
+        else:
+            try:
+                bs = ticker.balance_sheet
+                if not bs.empty:
+                    # 最新のカラム（直近の決算）を取得
+                    latest_date = bs.columns[0]
+                    # pandasのSeriesとして取得
+                    latest_data = bs[latest_date]
+                    
+                    total_assets = None
+                    stockholders_equity = None
+
+                    # Total Assetsの検索
+                    if "Total Assets" in latest_data.index:
+                        total_assets = latest_data["Total Assets"]
+                    elif "TotalAssets" in latest_data.index:
+                        total_assets = latest_data["TotalAssets"]
+                    
+                    # Stockholders Equityの検索
+                    if "Stockholders Equity" in latest_data.index:
+                        stockholders_equity = latest_data["Stockholders Equity"]
+                    elif "Total Stockholder Equity" in latest_data.index:
+                        stockholders_equity = latest_data["Total Stockholder Equity"]
+                    elif "TotalEquity" in latest_data.index:
+                        stockholders_equity = latest_data["TotalEquity"]
+
+                    if total_assets and stockholders_equity and total_assets > 0:
+                        result["equity_ratio"] = (stockholders_equity / total_assets)
+            except Exception as e:
+                print(f"バランスシートからの自己資本比率計算エラー: {e}")
+
+        # フォールバック: 簡易計算 (Legacy logic)
+        if result.get("equity_ratio") is None and result["total_debt"] and result["market_cap"]:
             total_equity = result["market_cap"] / result["pbr"] if result["pbr"] else None
             if total_equity:
                 total_capital = result["total_debt"] + total_equity
                 if total_capital > 0:
-                    result["equity_ratio"] = (total_equity / total_capital) * 100
-                else:
-                    result["equity_ratio"] = None
-            else:
-                result["equity_ratio"] = None
-        else:
-            result["equity_ratio"] = None
+                    result["equity_ratio"] = (total_equity / total_capital)
+
+        # Normalize dividend_yield (handle percentage vs ratio)
+        if result.get("dividend_yield") is not None and result["dividend_yield"] > 0.5:
+             # Assuming if > 0.5 (50%), it's a percentage value (e.g. 2.62 for 2.62%)
+             # Normal yields are usually < 0.1 (10%)
+             result["dividend_yield"] = result["dividend_yield"] / 100
 
         return result
 

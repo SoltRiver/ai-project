@@ -595,7 +595,7 @@ def get_fundamental_tab(code: str) -> Dict[str, Any]:
         {"label": "PBR", "value": format_fundamental_value(fundamental.get("PBR"), "float")},
         {"label": "配当利回り", "value": format_fundamental_value(fundamental.get("配当利回り"), "percent")},
         {"label": "ROE", "value": format_fundamental_value(fundamental.get("ROE"), "percent")},
-        {"label": "自己資本比率", "value": format_fundamental_value(fundamental.get("閾ｪ蟾ｱ雉・悽豈皮紫") or fundamental.get("equity_ratio"), "percent")},
+        {"label": "自己資本比率", "value": format_fundamental_value(fundamental.get("自己資本比率"), "percent")},
     ]
     statuses = get_fundamental_statuses(fundamental)
     scores = build_company_scores(fundamental)
