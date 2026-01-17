@@ -593,7 +593,7 @@ def get_fundamental_tab(code: str) -> Dict[str, Any]:
     fundamentals = [
         {"label": "PER", "value": format_fundamental_value(fundamental.get("PER"), "float")},
         {"label": "PBR", "value": format_fundamental_value(fundamental.get("PBR"), "float")},
-        {"label": "配当利回り", "value": format_fundamental_value(fundamental.get("驟榊ｽ灘茜蝗槭ｊ") or fundamental.get("dividend_yield"), "percent")},
+        {"label": "配当利回り", "value": format_fundamental_value(fundamental.get("配当利回り"), "percent")},
         {"label": "ROE", "value": format_fundamental_value(fundamental.get("ROE"), "percent")},
         {"label": "自己資本比率", "value": format_fundamental_value(fundamental.get("閾ｪ蟾ｱ雉・悽豈皮紫") or fundamental.get("equity_ratio"), "percent")},
     ]
@@ -653,8 +653,14 @@ def get_dividend_tab(code: str) -> Dict[str, Any]:
             date_str = str(date_val)
         rows.append({"date": date_str, "amount": _fmt_price(item.get("amount"), decimals=1)})
 
+
+    # Fetch additional info for yield
+    info = fetch_stock_info(symbol) or {}
+    yield_val = info.get("dividendYield")
+    formatted_yield = f"{yield_val:.2%}" if yield_val is not None else "データなし"
+
     yield_info = {
-        "yield": "データなし",
+        "yield": formatted_yield,
         "policy": "安定配当を目標（参考値）",
     }
     return {"dividends": rows, "yield_info": yield_info}
