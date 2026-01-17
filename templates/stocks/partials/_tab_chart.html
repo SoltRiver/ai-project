@@ -5,7 +5,7 @@
             <span class="icon">📈</span>
             <div>
                 <div class="panel-title">チャート</div>
-                <p class="muted small">ローソク足は小数第1位表示、20秒ごとに自動更新します。</p>
+
             </div>
         </div>
         <label class="select-wrap">
@@ -77,24 +77,5 @@
             </div>
         </div>
 
-        <!-- Risk & Positive Factors -->
-        <div class="grid two info-grid">
-            <div class="card info-card risk-card">
-                <div class="section-title text-negative">⚠️ リスク情報</div>
-                <ul class="modern-list risk-list">
-                    {% for risk in risks %}
-                    <li>{{ risk }}</li>
-                    {% endfor %}
-                </ul>
-            </div>
-            <div class="card info-card positive-card">
-                <div class="section-title text-positive">✅ プラス要素</div>
-                <ul class="modern-list positive-list">
-                    {% for item in positives %}
-                    <li>{{ item }}</li>
-                    {% endfor %}
-                </ul>
-            </div>
-        </div>
+
     </div>
-</div>

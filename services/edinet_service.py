@@ -69,6 +69,9 @@ class EdinetClient:
                 "7974": "E02367",
                 "9984": "E02778",
                 "9983": "E03366",
+                "8306": "E03606", # Mitsubishi UFJ
+                "8316": "E03614", # Sumitomo Mitsui
+                "8411": "E03615", # Mizuho
             }
             return fallback_map.get(str(ticker))
         

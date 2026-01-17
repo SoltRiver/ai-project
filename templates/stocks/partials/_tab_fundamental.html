@@ -4,7 +4,7 @@
             <span class="icon">📊</span>
             <div>
                 <div class="panel-title">ファンダメンタル分析</div>
-                <p class="muted small">PER / PBR / 配当利回りなどの主要指標をまとめています。</p>
+
             </div>
         </div>
     </div>
@@ -59,13 +59,24 @@
     </div>
 
     <!-- Original Risks -->
-    <div class="card">
-        <div class="section-title">リスク情報</div>
-        <ul class="risk-list">
-            {% for risk in risks %}
-            <li>{{ risk }}</li>
-            {% endfor %}
-        </ul>
+    <!-- Risk & Positive Factors -->
+    <div class="grid two info-grid">
+        <div class="card info-card risk-card">
+            <div class="section-title text-negative">⚠️ リスク情報</div>
+            <ul class="modern-list risk-list">
+                {% for risk in risks %}
+                <li>{{ risk }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        <div class="card info-card positive-card">
+            <div class="section-title text-positive">✅ プラス要素</div>
+            <ul class="modern-list positive-list">
+                {% for item in positives %}
+                <li>{{ item }}</li>
+                {% endfor %}
+            </ul>
+        </div>
     </div>
 
     <!-- NEW EDINET Analysis Section -->
@@ -75,7 +86,7 @@
             <span class="icon">📑</span>
             <div>
                 <div class="panel-title">詳細分析 (EDINET連携)</div>
-                <p class="muted small">有価証券報告書(XBRL)から抽出した公式データです。</p>
+
             </div>
         </div>
     </div>
@@ -117,7 +128,7 @@
     <!-- Financial Statements Table -->
     <div class="card">
         <div class="section-title">抽出されたXBRL値 (単位: 百万円)</div>
-        <p class="muted small" style="margin-bottom: 10px;">EDINETから取得・解析された生の財務データです。</p>
+
         {% set fin = analysis.financials %}
         <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
             <tr style="border-bottom: 1px solid #ddd;">
@@ -190,7 +201,7 @@
     <!-- Composition Chart -->
     <div class="card">
         <div class="section-title">資産構成</div>
-        <p class="muted small">純資産と負債のバランス</p>
+
         <div id="assetsChartTab" style="width: 100%; height: 250px;"></div>
     </div>
 </div>

@@ -605,13 +605,16 @@ def get_fundamental_tab(code: str) -> Dict[str, Any]:
         "配当基準日": format_date(events.get("ex_dividend_date")),
         "権利付き最終日": "要確認",
     }
-    risks = [
-        "ボラティリティ（値動きの大きさ）を確認",
-        "出来高の急変はトレンド転換のサインになることがあります",
-        "悪材料ニュースが出た場合は反応を確認",
-        "決算発表前後は一時的な乱高下に注意",
-        "優待や配当の権利付き最終日は売買が増えます",
-    ]
+    # 1.5 Fetch chart data for dynamic Risk/Positive calculation
+    # Use 6mo daily data for standard volatility analysis
+    chart_df = fetch_stock_data(symbol, period="6mo", interval="1d")
+    points = _build_points(chart_df, "1d")
+    
+    # Calculate risks and positives dynamically
+    # Note: info is already fetched as 'fundamental' dict, but _build_risks expects yfinance info dict structure for volume
+    # We can fetch fresh realtime info or approximate. Let's fetch realtime for accuracy on volume.
+    realtime_info = fetch_realtime_data(symbol) or {}
+    risks = _build_risks(points, realtime_info)
     
     # 2. Fetch new EDINET Analysis data
     try:
@@ -632,6 +635,7 @@ def get_fundamental_tab(code: str) -> Dict[str, Any]:
         },
         "timings": timings,
         "risks": risks,
+        "positives": _build_positives(points),  # Added positives
         "glossary": glossary,
         "analysis": analysis  # Added new data
     }
