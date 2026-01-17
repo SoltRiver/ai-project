@@ -1656,3 +1656,66 @@ a:hover {
         grid-template-columns: 1fr;
     }
 }
+
+/* Modern Score Cards */
+.score-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1rem;
+    margin-top: 0.5rem;
+}
+
+.score-card-modern {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.score-card-modern:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-sm);
+}
+
+.score-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.score-header .label {
+    font-weight: 700;
+    font-size: 1.05rem;
+}
+
+.star-rating {
+    display: flex;
+    gap: 2px;
+}
+
+.star {
+    font-size: 1.25rem;
+    color: var(--border);
+    /* Empty star color */
+    transition: color 0.2s ease;
+}
+
+.star.filled {
+    color: #fbbf24;
+    /* Amber-400 */
+    text-shadow: 0 0 4px rgba(251, 191, 36, 0.4);
+}
+
+.score-reason {
+    font-size: 0.88rem;
+    line-height: 1.5;
+    color: var(--muted);
+    background: rgba(255, 255, 255, 0.03);
+    padding: 0.6rem 0.8rem;
+    border-radius: 8px;
+    border: 1px dashed var(--border);
+}

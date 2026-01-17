@@ -242,6 +242,60 @@ def _average_stars(values: List[int]) -> int:
     return max(1, min(5, round(sum(valid) / len(valid))))
 
 
+def _generate_score_reason(category: str, stars: int, metrics: Dict[str, Any]) -> str:
+    """スコアの理由を生成する"""
+    if stars >= 5:
+        level = "極めて優秀"
+    elif stars >= 4:
+        level = "優秀"
+    elif stars == 3:
+        level = "標準的"
+    elif stars == 2:
+        level = "やや懸念"
+    else:
+        level = "要注意"
+
+    if category == "安定性":
+        equity = metrics.get('equity_ratio')
+        beta = metrics.get('beta')
+        reasons = []
+        if equity:
+            reasons.append(f"自己資本比率{equity:.1f}%")
+        if beta:
+            reasons.append(f"ベータ値{beta:.2f}")
+        return f"財務基盤は{level}です。{'、'.join(reasons)}などから判断されます。"
+    
+    elif category == "成長性":
+        rev = metrics.get('revenue_growth')
+        earn = metrics.get('earnings_growth')
+        reasons = []
+        if rev:
+            reasons.append(f"売上高成長率{rev*100:.1f}%")
+        if earn:
+            reasons.append(f"利益成長率{earn*100:.1f}%")
+        if not reasons:
+            return "成長データが不足しています。"
+        return f"成長力は{level}です。{'、'.join(reasons)}などの推移です。"
+
+    elif category == "割安度":
+        per = metrics.get('PER')
+        pbr = metrics.get('PBR')
+        reasons = []
+        if per:
+            reasons.append(f"PER {per:.1f}倍")
+        if pbr:
+            reasons.append(f"PBR {pbr:.1f}倍")
+        return f"株価水準は{level}です。{'、'.join(reasons)}となっています。"
+
+    elif category == "配当魅力度":
+        div = metrics.get('配当利回り')
+        if div:
+            return f"配当水準は{level}です。利回りは{div*100:.2f}%となっています。"
+        return "配当データがありません（無配の可能性があります）。"
+
+    return ""
+
+
 def build_company_scores(fundamental_data: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
     """
     安定性・成長性・割安度・配当魅力度の★評価を返す
@@ -261,22 +315,26 @@ def build_company_scores(fundamental_data: Dict[str, Any]) -> Dict[str, Dict[str
         calculate_star_rating(beta, [1.5, 1.2, 1.0, 0.8], reverse=True),
         calculate_star_rating(equity_ratio, [20, 30, 40, 50], reverse=False),
     ])
+    stability_reason = _generate_score_reason("安定性", stability, {"equity_ratio": equity_ratio, "beta": beta})
 
     growth = _average_stars([
         calculate_star_rating(revenue_growth, [0.0, 0.05, 0.1, 0.15]),
         calculate_star_rating(earnings_growth, [0.0, 0.05, 0.1, 0.15]),
     ])
+    growth_reason = _generate_score_reason("成長性", growth, {"revenue_growth": revenue_growth, "earnings_growth": earnings_growth})
 
     valuation = _average_stars([
         calculate_star_rating(per, [25, 20, 15, 10], reverse=True),
         calculate_star_rating(pbr, [2.5, 2.0, 1.5, 1.0], reverse=True),
     ])
+    valuation_reason = _generate_score_reason("割安度", valuation, {"PER": per, "PBR": pbr})
 
     dividend = calculate_star_rating(dividend_yield, [0.01, 0.02, 0.04, 0.06])
+    dividend_reason = _generate_score_reason("配当魅力度", dividend, {"配当利回り": dividend_yield})
 
     return {
-        "安定性": {"stars": stability, "display": format_stars(stability)},
-        "成長性": {"stars": growth, "display": format_stars(growth)},
-        "割安度": {"stars": valuation, "display": format_stars(valuation)},
-        "配当魅力度": {"stars": dividend, "display": format_stars(dividend)},
+        "安定性": {"stars": stability, "display": format_stars(stability), "reason": stability_reason},
+        "成長性": {"stars": growth, "display": format_stars(growth), "reason": growth_reason},
+        "割安度": {"stars": valuation, "display": format_stars(valuation), "reason": valuation_reason},
+        "配当魅力度": {"stars": dividend, "display": format_stars(dividend), "reason": dividend_reason},
     }
