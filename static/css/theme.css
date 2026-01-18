@@ -1804,3 +1804,7 @@ a:hover {
     margin-top: 0 !important;
 }
 
+
+.detail-price .change-badge {
+    font-size: 1.5em;
+}
