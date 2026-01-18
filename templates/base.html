@@ -1,13 +1,15 @@
 <!DOCTYPE html>
 <html lang="ja" data-theme="{{ theme | default('light') }}">
+
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{{ page_title or "株価分析アプリ" }}</title>
-    <link rel="stylesheet" href="/static/css/theme.css" />
+    <link rel="stylesheet" href="/static/css/theme.css?v=2" />
     <script src="/static/js/htmx.min.js"></script>
-    <script src="/static/js/app.js" defer></script>
+    <script src="/static/js/app.js?v=2" defer></script>
 </head>
+
 <body class="app-shell">
     <header class="top-bar">
         <div class="brand">株価分析ツール</div>
@@ -23,4 +25,5 @@
         {% block content %}{% endblock %}
     </main>
 </body>
+
 </html>
