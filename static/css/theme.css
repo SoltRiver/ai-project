@@ -1743,3 +1743,13 @@ a:hover {
     border-radius: 8px;
     border: 1px dashed var(--border);
 }
+.panel-section-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--text);
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+    padding-left: 0.8rem;
+    border-left: 4px solid var(--accent);
+    line-height: 1.3;
+}

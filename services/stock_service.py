@@ -590,12 +590,27 @@ def get_fundamental_tab(code: str) -> Dict[str, Any]:
     # 1. Fetch original data (Yahoo Finance based) for existing UI components
     symbol = format_symbol_for_yfinance(code)
     fundamental = get_key_fundamentals(symbol) or {}
-    fundamentals = [
-        {"label": "PER", "value": format_fundamental_value(fundamental.get("PER"), "float")},
-        {"label": "PBR", "value": format_fundamental_value(fundamental.get("PBR"), "float")},
-        {"label": "配当利回り", "value": format_fundamental_value(fundamental.get("配当利回り"), "percent")},
-        {"label": "ROE", "value": format_fundamental_value(fundamental.get("ROE"), "percent")},
-        {"label": "自己資本比率", "value": format_fundamental_value(fundamental.get("自己資本比率"), "percent")},
+    fundamental_groups = [
+        {
+            "subtitle": "バリュエーション",
+            "items": [
+                {"label": "PER", "value": format_fundamental_value(fundamental.get("PER"), "float")},
+                {"label": "PBR", "value": format_fundamental_value(fundamental.get("PBR"), "float")},
+            ]
+        },
+        {
+            "subtitle": "財務・収益性",
+            "items": [
+                {"label": "ROE", "value": format_fundamental_value(fundamental.get("ROE"), "percent")},
+                {"label": "自己資本比率", "value": format_fundamental_value(fundamental.get("自己資本比率"), "percent")},
+            ]
+        },
+        {
+            "subtitle": "配当",
+            "items": [
+                {"label": "配当利回り", "value": format_fundamental_value(fundamental.get("配当利回り"), "percent")},
+            ]
+        }
     ]
     statuses = get_fundamental_statuses(fundamental)
     scores = build_company_scores(fundamental)
@@ -626,7 +641,7 @@ def get_fundamental_tab(code: str) -> Dict[str, Any]:
     glossary = GLOSSARY_TERMS[:6]
     
     return {
-        "fundamentals": fundamentals,
+        "fundamental_groups": fundamental_groups,
         "statuses": statuses,
         "scores": scores,
         "events": {

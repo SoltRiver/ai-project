@@ -1,5 +1,6 @@
 <div class="tab-panel">
 
+    <div class="panel-section-title">企業分析</div>
     <div class="score-grid" style="margin-bottom: 2rem;">
         {% for label, score in scores.items() %}
         <div class="score-card-modern">
@@ -16,9 +17,11 @@
         {% endfor %}
     </div>
 
-    <!-- Original Key Indicators -->
-    <div class="grid four">
-        {% for item in fundamentals %}
+    <!-- Fundamental Groups -->
+    {% for group in fundamental_groups %}
+    <div class="panel-section-title">{{ group.subtitle }}</div>
+    <div class="grid four" style="margin-bottom: 1.5rem;">
+        {% for item in group.items %}
         <div class="stat-card">
             <div class="label">{{ item.label }}</div>
             <div class="value">{{ item.value }}</div>
@@ -29,8 +32,10 @@
         </div>
         {% endfor %}
     </div>
+    {% endfor %}
 
     <!-- Events Card -->
+    <div class="panel-section-title">イベント情報</div>
     <div class="card">
         <div class="section-title">イベント</div>
         <div class="mini-table">
