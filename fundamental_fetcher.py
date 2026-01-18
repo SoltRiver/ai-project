@@ -236,6 +236,7 @@ def get_fundamental_statuses(fundamental_data: Dict[str, Any]) -> Dict[str, Dict
     dividend_yield = fundamental_data.get("配当利回り")
     roe = fundamental_data.get("ROE")
     profit_margin = fundamental_data.get("利益率")
+    equity_ratio = fundamental_data.get("自己資本比率")
 
     return {
         "PER": _status_for_lower_better(per, good=10, neutral=25),
@@ -243,6 +244,7 @@ def get_fundamental_statuses(fundamental_data: Dict[str, Any]) -> Dict[str, Dict
         "配当利回り": _status_for_higher_better(dividend_yield, great=0.04, ok=0.02, positive_label="優良"),
         "ROE": _status_for_higher_better(roe, great=0.1, ok=0.06, positive_label="優良"),
         "利益率": _status_for_higher_better(profit_margin, great=0.1, ok=0.05, positive_label="優良"),
+        "自己資本比率": _status_for_higher_better(equity_ratio, great=0.4, ok=0.2, positive_label="安定"),
     }
 
 
