@@ -1790,3 +1790,17 @@ a:hover {
     min-height: 300px;
 }
 
+
+/* Detail Header Adjustments */
+.detail-price {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: baseline !important;
+    justify-content: flex-start !important;
+    text-align: left !important;
+    gap: 1rem;
+}
+.detail-price .change-line {
+    margin-top: 0 !important;
+}
+

@@ -191,6 +191,19 @@
                 // Helper: Get X coordinate for index relative to CURRENT VIEW
                 const getX = (i) => chartLeft + i * step + step / 2;
 
+                // --- Draw Axis Labels ---
+                ctx.fillStyle = colors.muted;
+                ctx.font = '11px "Segoe UI", sans-serif';
+                ctx.textAlign = 'right';
+
+                // Y-Axis "Stock Price"
+                ctx.textBaseline = 'bottom';
+                ctx.fillText('株価', chartLeft - 8, priceTop - 4);
+
+                // X-Axis "Date"
+                ctx.textBaseline = 'top';
+                ctx.fillText('日付', chartRight, height - 14);
+
                 // --- Draw Grid & Y Axis ---
                 ctx.lineWidth = 1;
                 ctx.font = '11px "Segoe UI", sans-serif';

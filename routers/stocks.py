@@ -40,7 +40,7 @@ async def stock_detail(code: str, request: Request):
         raise HTTPException(status_code=404, detail="銘柄が見つかりません")
 
     tabs = [
-        {"name": "chart", "label": "チャート", "icon": "📈"},
+        {"name": "chart", "label": "テクニカル分析", "icon": "📈"},
         {"name": "fundamental", "label": "ファンダメンタル", "icon": "📊"},
         {"name": "dividend", "label": "配当", "icon": "💰"},
         {"name": "shareholder", "label": "株主優待", "icon": "🎁"},
