@@ -22,15 +22,19 @@
     {% for tab in tabs %}
     <button class="tab-button {% if loop.first %}is-active{% endif %}" type="button" data-tab-name="{{ tab.name }}"
         aria-pressed="{{ 'true' if loop.first else 'false' }}" hx-get="/stocks/{{ stock.code }}/tab/{{ tab.name }}"
-        hx-target="#tab-content" hx-swap="innerHTML">
+        hx-target="#tab-content" hx-swap="innerHTML" hx-indicator="#tab-loading">
         <span class="tab-icon">{{ tab.icon }}</span>
         <span>{{ tab.label }}</span>
     </button>
     {% endfor %}
 </div>
 
-<div id="tab-content" hx-get="/stocks/{{ stock.code }}/tab/chart" hx-trigger="load" hx-target="#tab-content"
-    hx-swap="innerHTML">
-    <div class="skeleton">読み込み中...</div>
+<div class="tab-content-wrapper">
+    <div id="tab-loading" class="htmx-indicator">
+        <div class="spinner"></div>
+    </div>
+    <div id="tab-content" hx-get="/stocks/{{ stock.code }}/tab/chart" hx-trigger="load" hx-target="#tab-content"
+        hx-swap="innerHTML" hx-indicator="#tab-loading">
+    </div>
 </div>
 {% endblock %}

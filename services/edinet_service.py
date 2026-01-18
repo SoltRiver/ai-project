@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 import zipfile
 import io
 import time
+from functools import lru_cache
 from edinet_xbrl.edinet_xbrl_parser import EdinetXbrlParser
 from typing import Optional, Dict, Any, List
 import yfinance as yf
@@ -292,6 +293,7 @@ class EdinetClient:
 
         return financials
 
+    @lru_cache(maxsize=32)
     def get_financial_data(self, ticker: str) -> Optional[Dict[str, Any]]:
         code = self.get_edinet_code(ticker)
         if not code:
@@ -299,7 +301,7 @@ class EdinetClient:
             return None
         
         # Optimization: Use yfinance to find the last earnings date
-        yf_ticker = yf.Ticker(f"{ticker}.T")
+        # yf_ticker = yf.Ticker(f"{ticker}.T")
         # earnings_date is often future, so key is finding the LAST report.
         # We'll search back from today.
         
