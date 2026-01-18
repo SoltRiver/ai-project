@@ -21,7 +21,7 @@
     {% for group in fundamental_groups %}
     <div class="panel-section-title">{{ group.subtitle }}</div>
     <div class="grid four" style="margin-bottom: 1.5rem;">
-        {% for item in group.items %}
+        {% for item in group['items'] %}
         <div class="stat-card">
             <div class="label">{{ item.label }}</div>
             <div class="value">{{ item.value }}</div>
