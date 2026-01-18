@@ -16,19 +16,12 @@
     <div class="card chart-card">
         <div class="chart-headline">
             <div>
-                <div class="chart-title">{{ stock.display_name }}</div>
-                <div class="chart-price-line">
-                    <span class="chart-price">{{ chart_summary.last_close }}</span>
-                    <span class="change-badge change-{{ chart_summary.change_direction }}">
-                        <span
-                            class="{{ 'arrow-up' if chart_summary.change_direction == 'up' else 'arrow-down' if chart_summary.change_direction == 'down' else '' }}">{{
-                            chart_summary.change_icon }}</span>
-                        {{ chart_summary.change_text }}
-                    </span>
-                </div>
                 <div class="chart-sub muted">
                     始値 {{ chart_summary.open }} / 高値 {{ chart_summary.high }} / 安値 {{ chart_summary.low }} / {{
                     chart_summary.timestamp }}
+                </div>
+                <div class="sma-legend">
+                    <!-- Populated by JS -->
                 </div>
             </div>
             <div class="trend-pill">{{ trend_label }}</div>
