@@ -69,7 +69,9 @@
             const colors = getColors();
             const canvas = wrapper.querySelector('.candle-canvas');
             const tooltip = wrapper.querySelector('.chart-tooltip');
-            const smaLegend = wrapper.querySelector('.sma-legend'); // New Legend Container
+            // Element is outside wrapper, in the card header
+            const card = wrapper.closest('.chart-card');
+            const smaLegend = card ? card.querySelector('.sma-legend') : null;
 
             if (!payloadRaw || !canvas || !tooltip) return;
 
