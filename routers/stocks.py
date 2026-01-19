@@ -41,7 +41,7 @@ async def stock_detail(code: str, request: Request):
 
     tabs = [
         {"name": "chart", "label": "テクニカル分析", "icon": "📈"},
-        {"name": "fundamental", "label": "ファンダメンタル", "icon": "📊"},
+        {"name": "fundamental", "label": "ファンダメンタル分析", "icon": "📊"},
         {"name": "dividend", "label": "配当", "icon": "💰"},
         {"name": "shareholder", "label": "株主優待", "icon": "🎁"},
     ]

@@ -592,7 +592,7 @@ def get_fundamental_tab(code: str) -> Dict[str, Any]:
     fundamental = get_key_fundamentals(symbol) or {}
     fundamental_groups = [
         {
-            "subtitle": "バリュエーション",
+            "subtitle": "割安性評価",
             "items": [
                 {"label": "PER", "value": format_fundamental_value(fundamental.get("PER"), "float")},
                 {"label": "PBR", "value": format_fundamental_value(fundamental.get("PBR"), "float")},

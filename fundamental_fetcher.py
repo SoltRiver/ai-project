@@ -199,29 +199,37 @@ def format_fundamental_value(value: Any, format_type: str = "float") -> str:
 
 def _status_for_lower_better(value: Optional[float],
                              good: float,
-                             neutral: float) -> Dict[str, str]:
+                             neutral: float,
+                             unit: str = "") -> Dict[str, str]:
     """値が低いほど良い指標のステータス"""
+    criteria = f"割安目安: {good}{unit}以下 / 標準: {neutral}{unit}以下"
     if value is None:
-        return {"label": "N/A", "color": "gray"}
+        return {"label": "N/A", "color": "gray", "criteria": criteria}
     if value <= good:
-        return {"label": "割安", "color": "green"}
+        return {"label": "割安", "color": "green", "criteria": criteria}
     if value <= neutral:
-        return {"label": "標準", "color": "gray"}
-    return {"label": "割高", "color": "red"}
+        return {"label": "標準", "color": "gray", "criteria": criteria}
+    return {"label": "割高", "color": "red", "criteria": criteria}
 
 
 def _status_for_higher_better(value: Optional[float],
                               great: float,
                               ok: float,
-                              positive_label: str = "優良") -> Dict[str, str]:
+                              positive_label: str = "優良",
+                              unit: str = "",
+                              is_percent: bool = False) -> Dict[str, str]:
     """値が高いほど良い指標のステータス"""
+    g_val = f"{great*100:.0f}%" if is_percent else f"{great}{unit}"
+    o_val = f"{ok*100:.0f}%" if is_percent else f"{ok}{unit}"
+    criteria = f"{positive_label}目安: {g_val}以上 / 標準: {o_val}以上"
+
     if value is None:
-        return {"label": "N/A", "color": "gray"}
+        return {"label": "N/A", "color": "gray", "criteria": criteria}
     if value >= great:
-        return {"label": positive_label, "color": "green"}
+        return {"label": positive_label, "color": "green", "criteria": criteria}
     if value >= ok:
-        return {"label": "標準", "color": "gray"}
-    return {"label": "弱め", "color": "red"}
+        return {"label": "標準", "color": "gray", "criteria": criteria}
+    return {"label": "弱め", "color": "red", "criteria": criteria}
 
 
 def get_fundamental_statuses(fundamental_data: Dict[str, Any]) -> Dict[str, Dict[str, str]]:
@@ -239,12 +247,12 @@ def get_fundamental_statuses(fundamental_data: Dict[str, Any]) -> Dict[str, Dict
     equity_ratio = fundamental_data.get("自己資本比率")
 
     return {
-        "PER": _status_for_lower_better(per, good=10, neutral=25),
-        "PBR": _status_for_lower_better(pbr, good=1, neutral=2),
-        "配当利回り": _status_for_higher_better(dividend_yield, great=0.04, ok=0.02, positive_label="優良"),
-        "ROE": _status_for_higher_better(roe, great=0.1, ok=0.06, positive_label="優良"),
-        "利益率": _status_for_higher_better(profit_margin, great=0.1, ok=0.05, positive_label="優良"),
-        "自己資本比率": _status_for_higher_better(equity_ratio, great=0.4, ok=0.2, positive_label="安定"),
+        "PER": _status_for_lower_better(per, good=10, neutral=25, unit="倍"),
+        "PBR": _status_for_lower_better(pbr, good=1, neutral=2, unit="倍"),
+        "配当利回り": _status_for_higher_better(dividend_yield, great=0.04, ok=0.02, positive_label="優良", is_percent=True),
+        "ROE": _status_for_higher_better(roe, great=0.1, ok=0.06, positive_label="優良", is_percent=True),
+        "利益率": _status_for_higher_better(profit_margin, great=0.1, ok=0.05, positive_label="優良", is_percent=True),
+        "自己資本比率": _status_for_higher_better(equity_ratio, great=0.4, ok=0.2, positive_label="安定", is_percent=True),
     }
 
 
