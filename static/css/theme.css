@@ -1743,6 +1743,7 @@ a:hover {
     border-radius: 8px;
     border: 1px dashed var(--border);
 }
+
 .panel-section-title {
     font-size: 1.15rem;
     font-weight: 700;
@@ -1765,9 +1766,11 @@ a:hover {
     z-index: 100;
     pointer-events: none;
 }
+
 .htmx-request .htmx-indicator {
     opacity: 1;
 }
+
 .htmx-request.htmx-indicator {
     opacity: 1;
 }
@@ -1782,7 +1785,9 @@ a:hover {
 }
 
 @keyframes spin {
-    to { transform: rotate(360deg); }
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 .tab-content-wrapper {
@@ -1800,6 +1805,7 @@ a:hover {
     text-align: left !important;
     gap: 1rem;
 }
+
 .detail-price .change-line {
     margin-top: 0 !important;
 }
@@ -1812,11 +1818,14 @@ a:hover {
 .sma-legend {
     display: flex;
     flex-wrap: wrap;
-    gap: 1rem;
-    margin-top: 0.25rem;
+    gap: 0.75rem;
+    margin-top: 0.2rem;
     font-size: 0.9rem;
-    font-weight: 600;
+    font-weight: 500;
+    min-height: 1.35rem;
+    /* Prevent layout shift */
 }
+
 .sma-item {
     display: inline-flex;
     align-items: center;
