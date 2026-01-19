@@ -57,6 +57,11 @@
     };
     const fmtVolume = (val) => (val === null || val === undefined || isNaN(val) ? 'N/A' : Number(val).toLocaleString('ja-JP'));
 
+    function fmtPrice(val) {
+        if (val == null || isNaN(val)) return '-';
+        return '¥' + Number(val).toLocaleString('ja-JP', { maximumFractionDigits: 1, minimumFractionDigits: 1 });
+    }
+
     function renderCandleCharts() {
         const wrappers = document.querySelectorAll('[data-chart-payload]');
         wrappers.forEach((wrapper) => {
