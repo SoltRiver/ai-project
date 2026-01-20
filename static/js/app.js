@@ -194,6 +194,7 @@
             let dpr = window.devicePixelRatio || 1;
             let width, height;
             let yScale = null;
+            let selectedDataIdx = null; // Sticky tooltip state
 
             function updateDimensions() {
                 const rect = wrapper.getBoundingClientRect();
@@ -366,14 +367,12 @@
                         const i = c.index - viewIndex;
                         const x = getX(i);
 
-                        // Draw Vertical Line (Solid now)
-                        ctx.strokeStyle = c.type === 'golden' ? '#eab308' : '#3b82f6';
-                        // Draw Vertical Line (Solid, Thicker)
+                        // Draw Vertical Line (UP to Icon)
                         ctx.strokeStyle = c.type === 'golden' ? '#eab308' : '#3b82f6';
                         ctx.lineWidth = 2.0;
                         ctx.beginPath();
                         ctx.moveTo(x, yScale(c.price));
-                        ctx.lineTo(x, volumeBottom);
+                        ctx.lineTo(x, priceTop); // Draw line UP to the icon
                         ctx.stroke();
 
                         // Draw Dot
@@ -382,7 +381,7 @@
                         ctx.arc(x, yScale(c.price), 4, 0, Math.PI * 2);
                         ctx.fill();
 
-                        // Icon & Label logic remains same...
+                        // Icon & Label logic
                         ctx.font = '16px "Segoe UI Emoji"';
                         ctx.textAlign = 'center';
                         ctx.textBaseline = 'bottom';
@@ -391,10 +390,19 @@
                         ctx.fillStyle = c.type === 'golden' ? '#eab308' : '#3b82f6';
                         ctx.fillText(icon, x, priceTop - 2);
 
-                        ctx.font = '10px "Segoe UI", sans-serif';
-                        ctx.fillText(c.label, x, priceTop + 12);
+                        // Removed Text Label (GC/DC) as requested
                     }
                 });
+
+                // --- Separator Line (Price vs Volume) ---
+                ctx.strokeStyle = colors.border;
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                // Draw line between price area and volume area
+                const separatorY = volumeTop - 10;
+                ctx.moveTo(chartLeft, separatorY);
+                ctx.lineTo(chartRight, separatorY);
+                ctx.stroke();
 
                 // --- Volume Bars ---
                 const vGradient = ctx.createLinearGradient(0, volumeTop, 0, volumeBottom);
@@ -418,12 +426,92 @@
                     ctx.fillRect(xCenter - candleWidth / 2, volumeBottom - barHeight, candleWidth, Math.max(1, barHeight));
                     ctx.globalAlpha = 1.0;
                 });
+
+                // Sticky Tooltip Rendering
+                if (selectedDataIdx !== null && yScale) {
+                    // Check if in view
+                    if (selectedDataIdx >= viewIndex && selectedDataIdx < viewIndex + viewCount) {
+                        const i = selectedDataIdx - viewIndex;
+                        const x = getX(i);
+                        const point = allPoints[selectedDataIdx];
+                        // If sticky, where to position? slightly offset from candle center?
+                        // Or reuse mouse position? Mouse position is not available in draw().
+                        // Pin it relative to candle top/bottom or fixed.
+                        // Let's mimic "top right of candle".
+                        const rect = canvas.getBoundingClientRect();
+                        const virtualY = rect.top + yScale(point.close); // Approximate Y
+                        showTooltip(point, x, virtualY, rect);
+                    } else {
+                        // Off screen
+                        tooltip.style.display = 'none';
+                    }
+                }
             }
 
             // ... interactions ...
 
             // Tooltip & Drag & Scroll
             canvas.style.cursor = 'grab'; // Indicate draggable
+
+            // --- Helper: Show Tooltip ---
+            function showTooltip(point, x, clientY, rect) {
+                // Construct Content
+                let html = `<div class="tooltip-header">${point.label}</div>`;
+                html += `<div class="tooltip-row"><span class="t-label">始値</span><span class="t-val">${fmtPrice(point.open)}</span></div>`;
+                html += `<div class="tooltip-row"><span class="t-label">高値</span><span class="t-val">${fmtPrice(point.high)}</span></div>`;
+                html += `<div class="tooltip-row"><span class="t-label">安値</span><span class="t-val">${fmtPrice(point.low)}</span></div>`;
+                html += `<div class="tooltip-row"><span class="t-label">終値</span><span class="t-val">${fmtPrice(point.close)}</span></div>`;
+
+                if (point.candle_name && point.candle_type) {
+                    html += `<div class="tooltip-divider"></div>`;
+                    html += `<div class="tooltip-row"><span class="t-label">形</span><span class="t-val">${point.candle_type}</span></div>`;
+                    html += `<div class="tooltip-row"><span class="t-label">種類</span><span class="t-val">${point.candle_name}</span></div>`;
+                }
+
+                tooltip.innerHTML = html;
+                tooltip.style.display = 'block';
+                tooltip.style.pointerEvents = 'none';
+
+                // Position
+                const tWidth = tooltip.offsetWidth || 180;
+                const tHeight = tooltip.offsetHeight || 120;
+                let left = x + 20;
+                let top = (clientY - rect.top) - 20;
+
+                // Boundary Logic
+                if (left + tWidth > width) left = x - tWidth - 20;
+                if (top + tHeight > height) top = height - tHeight - 10;
+                if (top < 0) top = 10;
+
+                tooltip.style.left = `${left}px`;
+                tooltip.style.top = `${top}px`;
+                tooltip.style.transform = 'none';
+            }
+
+            // --- Interaction: Click (Sticky Tooltip) ---
+            canvas.addEventListener('click', (e) => {
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+
+                const chartLeft = 50;
+                const chartRight = width - 50;
+                const chartWidth = chartRight - chartLeft;
+                const step = chartWidth / viewCount;
+                const idxInView = Math.floor((x - chartLeft) / step);
+                const dataIdx = Math.floor(viewIndex + idxInView);
+
+                if (dataIdx >= 0 && dataIdx < allPoints.length) {
+                    if (selectedDataIdx === dataIdx) {
+                        // Click same candle: Do nothing (keep locked)
+                    } else {
+                        selectedDataIdx = dataIdx;
+                    }
+                    draw();
+                } else {
+                    selectedDataIdx = null; // Click outside
+                    draw();
+                }
+            });
 
             canvas.addEventListener('mousedown', (e) => {
                 isDragging = true;
@@ -443,6 +531,47 @@
                 draw();
                 if (allPoints.length > 0) updateLegend(allPoints[allPoints.length - 1]);
             });
+
+            function showTooltip(point, x, clientY, rect) {
+                // Check Y-Axis Hover for Tooltip (Only for Hover, strict check)
+                // For pinned tooltip (selectedDataIdx !== null), we might skip strict Y check or keep it?
+                // Request says: "Display tooltip for that candle". Usually implies ignoring Y position for pinned.
+                // But let's reuse logic. If pinned, we pass a dummy 'force' flag? 
+
+                // Construct Content
+                let html = `<div class="tooltip-header">${point.label}</div>`;
+                html += `<div class="tooltip-row"><span class="t-label">始値</span><span class="t-val">${fmtPrice(point.open)}</span></div>`;
+                html += `<div class="tooltip-row"><span class="t-label">高値</span><span class="t-val">${fmtPrice(point.high)}</span></div>`;
+                html += `<div class="tooltip-row"><span class="t-label">安値</span><span class="t-val">${fmtPrice(point.low)}</span></div>`;
+                html += `<div class="tooltip-row"><span class="t-label">終値</span><span class="t-val">${fmtPrice(point.close)}</span></div>`;
+
+                if (point.candle_name && point.candle_type) {
+                    html += `<div class="tooltip-divider"></div>`;
+                    html += `<div class="tooltip-row"><span class="t-label">形</span><span class="t-val">${point.candle_type}</span></div>`;
+                    html += `<div class="tooltip-row"><span class="t-label">種類</span><span class="t-val">${point.candle_name}</span></div>`;
+                }
+
+                tooltip.innerHTML = html;
+                tooltip.style.display = 'block';
+                tooltip.style.pointerEvents = 'none';
+
+                // Position
+                const tWidth = tooltip.offsetWidth || 180;
+                const tHeight = tooltip.offsetHeight || 120;
+                let left = x + 20;
+                let top = (clientY - rect.top) - 20;
+
+                // Boundary Logic
+                if (left + tWidth > width) left = x - tWidth - 20;
+                if (top + tHeight > height) top = height - tHeight - 10;
+                if (top < 0) top = 10;
+
+                tooltip.style.left = `${left}px`;
+                tooltip.style.top = `${top}px`;
+                tooltip.style.transform = 'none';
+            }
+
+
 
             canvas.addEventListener('mousemove', (e) => {
                 const rect = canvas.getBoundingClientRect();
@@ -490,6 +619,75 @@
                     if (allPoints.length > 0) updateLegend(allPoints[allPoints.length - 1]);
                     return;
                 }
+
+                // Check Cross Icon Hover FIRST (Higher priority for details?)
+                // Or maybe transient?
+                let hoveredCross = null;
+                const my = e.clientY - rect.top;
+
+                // Visible Crosses
+                for (const c of crosses) {
+                    if (c.index >= viewIndex && c.index < viewIndex + viewCount) {
+                        const i = c.index - viewIndex;
+                        const cx = chartLeft + i * (chartWidth / viewCount) + (chartWidth / viewCount) / 2;
+                        // Icon Position: cx, priceTop - 2 (bottom baseline). Size approx 16px.
+                        // Hit box: +/- 10px X, priceTop - 25 to priceTop Y.
+                        const iconTop = priceTop - 25;
+                        const iconBottom = priceTop;
+
+                        if (Math.abs(x - cx) < 12 && my >= iconTop && my <= iconBottom) {
+                            hoveredCross = c;
+                            break;
+                        }
+                    }
+                }
+
+                if (hoveredCross) {
+                    // Show Cross Tooltip
+                    canvas.style.cursor = 'help'; // Indicate info
+
+                    const p = allPoints[hoveredCross.index];
+                    const label = hoveredCross.type === 'golden' ? 'ゴールデンクロス' : 'デッドクロス';
+                    const color = hoveredCross.type === 'golden' ? '#eab308' : '#3b82f6';
+
+                    let html = `<div class="tooltip-header" style="color:${color}">${label}</div>`;
+                    html += `<div class="tooltip-time">${p.label}</div>`;
+                    html += `<div class="tooltip-divider"></div>`;
+
+                    // Add SMA Values involved
+                    // We need to know which SMAs crossed. 
+                    // 'sortedSmaKeys' has the order. Pair is sortedSmaKeys[0] vs [1].
+                    if (sortedSmaKeys.length >= 2) {
+                        const shortKey = sortedSmaKeys[0];
+                        const longKey = sortedSmaKeys[1];
+                        const shortVal = p[shortKey];
+                        const longVal = p[longKey];
+
+                        // Get nice labels (Short/Med/Long)
+                        // We can reuse logic or just use keys
+                        html += `<div class="tooltip-row"><span class="t-label">${shortKey}</span><span class="t-val">${fmtPrice(shortVal)}</span></div>`;
+                        html += `<div class="tooltip-row"><span class="t-label">${longKey}</span><span class="t-val">${fmtPrice(longVal)}</span></div>`;
+                    }
+
+                    tooltip.innerHTML = html;
+                    tooltip.style.display = 'block';
+
+                    // Position
+                    const tWidth = tooltip.offsetWidth || 180;
+                    const tHeight = tooltip.offsetHeight || 100;
+                    let left = x + 20;
+                    let top = my + 20;
+                    if (left + tWidth > width) left = x - tWidth - 20;
+                    if (top + tHeight > height) top = height - tHeight - 10;
+
+                    tooltip.style.left = `${left}px`;
+                    tooltip.style.top = `${top}px`;
+                    tooltip.style.transform = 'none';
+                    return;
+                }
+
+                // If not hovering Cross, continue to Candle logic
+
                 const step = chartWidth / viewCount;
                 const idxInView = Math.floor((x - chartLeft) / step);
                 const dataIdx = Math.floor(viewIndex + idxInView);
@@ -506,63 +704,40 @@
 
                     updateLegend(point);
 
-                    // Check Y-Axis Hover for Tooltip
-                    if (!yScale) {
-                        tooltip.style.display = 'none';
-                        return;
+                    // --- Sticky Tooltip Check ---
+                    if (selectedDataIdx !== null) {
+                        if (yScale) {
+                            const yMouse = e.clientY - rect.top;
+                            const cHigh = yScale(point.high);
+                            const cLow = yScale(point.low);
+                            const buffer = 4;
+                            if (yMouse >= cHigh - buffer && yMouse <= cLow + buffer) {
+                                canvas.style.cursor = 'pointer';
+                            } else {
+                                canvas.style.cursor = isDragging ? 'grabbing' : 'grab';
+                            }
+                        }
+                    } else {
+                        // Normal Hover: Show Tooltip
+                        if (!yScale) {
+                            tooltip.style.display = 'none';
+                            return;
+                        }
+                        const yMouse = e.clientY - rect.top;
+                        const cHigh = yScale(point.high);
+                        const cLow = yScale(point.low);
+                        const buffer = 4;
+                        const isHoveringCandle = (yMouse >= cHigh - buffer && yMouse <= cLow + buffer);
+
+                        if (!isHoveringCandle) {
+                            tooltip.style.display = 'none';
+                            canvas.style.cursor = isDragging ? 'grabbing' : 'grab';
+                            return;
+                        }
+
+                        canvas.style.cursor = 'pointer';
+                        showTooltip(point, x, e.clientY, rect);
                     }
-                    const yMouse = e.clientY - rect.top;
-                    const cHigh = yScale(point.high);
-                    const cLow = yScale(point.low);
-                    const buffer = 4;
-                    const isHoveringCandle = (yMouse >= cHigh - buffer && yMouse <= cLow + buffer);
-
-                    if (!isHoveringCandle) {
-                        tooltip.style.display = 'none';
-                        canvas.style.cursor = isDragging ? 'grabbing' : 'grab';
-                        return;
-                    }
-
-                    canvas.style.cursor = 'pointer';
-
-                    // Enhanced Tooltip content
-                    let html = `<div class="tooltip-header">${point.label}</div>`;
-                    html += `<div class="tooltip-row"><span class="t-label">始値</span><span class="t-val">${fmtPrice(point.open)}</span></div>`;
-                    html += `<div class="tooltip-row"><span class="t-label">高値</span><span class="t-val">${fmtPrice(point.high)}</span></div>`;
-                    html += `<div class="tooltip-row"><span class="t-label">安値</span><span class="t-val">${fmtPrice(point.low)}</span></div>`;
-                    html += `<div class="tooltip-row"><span class="t-label">終値</span><span class="t-val">${fmtPrice(point.close)}</span></div>`;
-
-                    // Add Candle Details if available
-                    if (point.candle_name && point.candle_type) {
-                        html += `<div class="tooltip-divider"></div>`;
-                        html += `<div class="tooltip-row"><span class="t-label">形</span><span class="t-val">${point.candle_type}</span></div>`;
-                        html += `<div class="tooltip-row"><span class="t-label">種類</span><span class="t-val">${point.candle_name}</span></div>`;
-                    }
-
-                    tooltip.innerHTML = html;
-                    tooltip.style.display = 'block';
-                    tooltip.style.pointerEvents = 'none'; // Fix Scroll Issue
-                    // ... positioning logic ...
-                    // Position Tooltip: Top-Right of Cursor
-                    const tWidth = tooltip.offsetWidth || 180;
-                    const tHeight = tooltip.offsetHeight || 120;
-
-                    // Default: 20px right, 20px up from cursor relative to canvas
-                    let left = x + 20;
-                    let top = (e.clientY - rect.top) - 20;
-
-                    // Boundary checks
-                    if (left + tWidth > width) {
-                        left = x - tWidth - 20;
-                    }
-                    if (top + tHeight > height) {
-                        top = height - tHeight - 10;
-                    }
-                    if (top < 0) top = 10;
-
-                    tooltip.style.left = `${left}px`;
-                    tooltip.style.top = `${top}px`;
-                    tooltip.style.transform = 'none'; // Clear transform if used previously
                 }
             });
 

@@ -17,3 +17,19 @@
 ### Actions Taken
 - Confirmed all visual changes in browser.
 - No critical code logic errors were flagged.
+
+### Review Session 2 (Chart Interaction)
+- **Scope**: `static/js/app.js` (Sticky Tooltip, Cross Line)
+- **Codex Status**: Ran, but output was unresponsive/timed out.
+- **Verification**: 
+  - Manual code review performed. No logical errors found.
+  - Browser verification confirmed correct functionality.
+  - Confirmed no duplicate event listeners were introduced.
+
+### Review Session 3 (Round 2 Refinements)
+- **Scope**: `static/js/app.js` (Separator, Cross Tooltip, Sticky Reset)
+- **Codex Status**: **Success**.
+- **Findings**:
+  - **Duplicate Code**: Identified two identical `click` event listeners for the canvas.
+- **Action**: Removed the redundant listener (lines 565-589).
+- **Verification**: Browser subagent confirmed functionality remains correct (Sticky/Reset working).
