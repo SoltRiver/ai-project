@@ -188,6 +188,55 @@ def detect_dead_cross(sma_short: pd.Series, sma_long: pd.Series) -> bool:
     return prev_short >= prev_long and curr_short < curr_long
 
 
+def analyze_candlestick(open_price: float, high: float, low: float, close: float) -> Dict[str, str]:
+    """
+    ローソク足の形状を分析して名称と種類を返す
+    
+    Args:
+        open_price: 始値
+        high: 高値
+        low: 安値
+        close: 終値
+    
+    Returns:
+        {'name': str, 'type': str}
+    """
+    if open_price is None or close is None or high is None or low is None:
+        return {'name': '-', 'type': '-'}
+    
+    # NaN check
+    import math
+    if math.isnan(open_price) or math.isnan(close) or math.isnan(high) or math.isnan(low):
+         return {'name': '-', 'type': '-'}
+    
+    is_up = close >= open_price
+    candle_type = "陽線" if is_up else "陰線"
+    
+    body = abs(close - open_price)
+    range_len = high - low
+    
+    if range_len == 0:
+        return {'name': '一本値', 'type': candle_type}
+    
+    body_ratio = body / range_len
+    upper_shadow = (high - close) if is_up else (high - open_price)
+    lower_shadow = (open_price - low) if is_up else (close - low)
+    
+    name = "小" + candle_type # Default
+    
+    # 判定ロジック
+    if body_ratio < 0.1:
+        name = "十字線"
+    elif body_ratio > 0.8:
+        name = "大" + candle_type
+    elif lower_shadow > body * 2 and upper_shadow < body:
+        name = "下ヒゲ" + ("陽線" if is_up else "陰線") # カラカサなど
+    elif upper_shadow > body * 2 and lower_shadow < body:
+        name = "上ヒゲ" + ("陽線" if is_up else "陰線") # トンカチなど
+    
+    return {'name': name, 'type': candle_type}
+
+
 def get_rsi_status(rsi: Optional[float]) -> Dict[str, Any]:
     """
     RSIの状態を判定して返す

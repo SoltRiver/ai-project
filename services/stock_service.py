@@ -8,6 +8,8 @@ import pandas as pd
 
 from analyzer import (
     add_technical_indicators,
+    analyze_candlestick,
+    calculate_trendline,
     detect_dead_cross,
     detect_golden_cross,
     get_direction_label,
@@ -329,7 +331,16 @@ def _build_points(df: pd.DataFrame, interval: str) -> List[Dict[str, Any]]:
 
     for _, row in df.iterrows():
         date_val = row[date_col]
-        label = date_val.strftime(label_fmt) if hasattr(date_val, "strftime") else str(date_val)
+        label = date_val.strftime(label_fmt)
+        
+        # Analyze Candlestick
+        candlestick = analyze_candlestick(
+            open_price=row['open'],
+            high=row['high'],
+            low=row['low'],
+            close=row['close']
+        )
+
         point = {
             "label": label,
             "open": round(float(row["open"]), 1),
@@ -337,6 +348,8 @@ def _build_points(df: pd.DataFrame, interval: str) -> List[Dict[str, Any]]:
             "low": round(float(row["low"]), 1),
             "close": round(float(row["close"]), 1),
             "volume": int(row["volume"]) if not pd.isna(row.get("volume", None)) else 0,
+            "candle_name": candlestick['name'],
+            "candle_type": candlestick['type'],
         }
         # Add SMA values
         for col in sma_cols:

@@ -51,18 +51,34 @@ body.app-shell {
 }
 
 [data-theme="dark"] body.app-shell {
-    background:
-        radial-gradient(1200px 600px at 20% -10%, rgba(56, 189, 248, 0.3), transparent 55%),
-        radial-gradient(900px 600px at 80% 0%, rgba(16, 185, 129, 0.32), transparent 52%),
-        radial-gradient(700px 500px at 60% 85%, rgba(34, 211, 238, 0.28), transparent 55%),
-        radial-gradient(2px 2px at 18% 30%, rgba(255, 255, 255, 0.35), transparent 60%),
-        radial-gradient(1.8px 1.8px at 72% 40%, rgba(255, 255, 255, 0.3), transparent 60%),
-        radial-gradient(1.6px 1.6px at 42% 72%, rgba(255, 255, 255, 0.28), transparent 60%),
-        radial-gradient(1.6px 1.6px at 30% 55%, rgba(255, 255, 255, 0.26), transparent 60%),
-        radial-gradient(1.4px 1.4px at 82% 68%, rgba(255, 255, 255, 0.25), transparent 60%),
-        radial-gradient(1.3px 1.3px at 10% 65%, rgba(255, 255, 255, 0.22), transparent 60%),
-        radial-gradient(1.2px 1.2px at 60% 15%, rgba(255, 255, 255, 0.24), transparent 60%),
-        #070c1a;
+    /* Tokyo Night Background */
+    background: #1a1b26;
+    color: #a9b1d6;
+}
+
+[data-theme="dark"] {
+    --bg: #1a1b26;
+    --panel: #16161e;
+    /* Slightly darker for panels */
+    --muted: #565f89;
+    --text: #c0caf5;
+    --accent: #7aa2f7;
+    /* Tokyo Night Blue */
+    --positive: #9ece6a;
+    /* Tokyo Night Green */
+    --negative: #f7768e;
+    /* Tokyo Night Red */
+    --neutral: #a9b1d6;
+    --border: #414868;
+    --shadow: 0 30px 60px -35px rgba(0, 0, 0, 0.5);
+    --shadow-soft: 0 16px 30px rgba(0, 0, 0, 0.3);
+    --shadow-sm: 0 10px 18px rgba(0, 0, 0, 0.2);
+
+    /* Chart specific */
+    --chart-grid: rgba(169, 177, 214, 0.1);
+    --chart-crosshair: rgba(169, 177, 214, 0.3);
+    --chart-gradient-from: rgba(122, 162, 247, 0.2);
+    --chart-gradient-to: rgba(122, 162, 247, 0.0);
 }
 
 a {
@@ -1830,4 +1846,42 @@ a:hover {
     display: inline-flex;
     align-items: center;
     gap: 0.3rem;
+}
+
+/* Chart Tooltip Enhanced */
+.tooltip-header {
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: var(--text);
+    opacity: 0.9;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 0.3rem;
+    text-align: center;
+}
+
+.tooltip-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.25rem;
+    font-size: 0.85rem;
+    gap: 1rem;
+}
+
+.tooltip-row .t-label {
+    color: var(--muted);
+    font-size: 0.8rem;
+}
+
+.tooltip-row .t-val {
+    font-weight: 500;
+    color: var(--text);
+    font-feature-settings: "tnum";
+}
+
+.tooltip-divider {
+    height: 1px;
+    background: rgba(255, 255, 255, 0.1);
+    margin: 0.5rem 0;
 }

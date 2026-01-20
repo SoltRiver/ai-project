@@ -1,30 +1,37 @@
 <div class="tab-panel chart-panel" hx-get="/stocks/{{ stock.code }}/tab/chart?interval={{ interval }}"
-    hx-trigger="every 20s" hx-target="#tab-content" hx-swap="innerHTML">
-    <div class="chart-controls" style="display: flex; justify-content: flex-end; padding: 0.5rem;">
-        <label class="select-wrap">
-            <span class="toggle-label">足種</span>
-            <select name="interval" hx-get="/stocks/{{ stock.code }}/tab/chart" hx-target="#tab-content"
-                hx-trigger="change" hx-swap="innerHTML">
-                {% for option in interval_options %}
-                <option value="{{ option.value }}" {% if interval==option.value %}selected{% endif %}>{{ option.label }}
-                </option>
-                {% endfor %}
-            </select>
-        </label>
-    </div>
-
+    hx-trigger="every 20s" hx-target="this" hx-swap="outerHTML">
     <div class="card chart-card">
-        <div class="chart-headline">
-            <div>
-                <div class="chart-sub muted">
-                    始値 {{ chart_summary.open }} / 高値 {{ chart_summary.high }} / 安値 {{ chart_summary.low }} / {{
-                    chart_summary.timestamp }}
-                </div>
-                <div class="sma-legend">
-                    <!-- Populated by JS -->
+        <div class="chart-headline" style="align-items: center;">
+            <div style="display: flex; align-items: center; gap: 1rem; flex: 1;">
+                <!-- Status Badge (Left) -->
+                <div class="trend-pill">{{ trend_label }}</div>
+
+                <!-- Legend Group -->
+                <div>
+                    <div class="chart-sub muted">
+                        始値 {{ chart_summary.open }} / 高値 {{ chart_summary.high }} / 安値 {{ chart_summary.low }} / {{
+                        chart_summary.timestamp }}
+                    </div>
+                    <div class="sma-legend">
+                        <!-- Populated by JS -->
+                    </div>
                 </div>
             </div>
-            <div class="trend-pill">{{ trend_label }}</div>
+
+            <!-- Timeframe Selector (Right) -->
+            <div class="chart-controls-inline">
+                <label class="select-wrap" style="margin: 0; display: flex; align-items: center;">
+                    <span class="text-xs font-bold text-gray-400" style="margin-right: 0.5rem;">足種</span>
+                    <select name="interval" hx-get="/stocks/{{ stock.code }}/tab/chart" hx-target="#tab-content"
+                        hx-trigger="change" hx-swap="innerHTML" style="padding: 4px 8px; font-size: 0.9rem;">
+                        {% for option in interval_options %}
+                        <option value="{{ option.value }}" {% if interval==option.value %}selected{% endif %}>{{
+                            option.label }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </label>
+            </div>
         </div>
 
         <div class="chart-wrapper" data-chart-payload='{{ chart_payload | tojson }}'>

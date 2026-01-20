@@ -143,12 +143,40 @@
                     return;
                 }
 
+                // Map keys to Japanese labels
+                // Determine interval unit
+                const select = document.querySelector('select[name="interval"]');
+                const interval = select ? select.value : '1d';
+                let unit = '日';
+                if (interval.includes('wk') || interval === 'weekly') unit = '週';
+                if (interval.includes('mo') || interval === 'monthly') unit = 'ヶ月';
+
                 let html = '';
-                sortedSmaKeys.forEach(k => {
+                sortedSmaKeys.forEach((k, index) => {
                     const val = point ? point[k] : null;
                     const color = smaColors[k] || colors.text;
                     const valStr = fmtPrice(val);
-                    html += `<span class="sma-item" style="color:${color}"><span style="opacity:0.8">${k}</span> <span style="font-weight:700">${valStr}</span></span>`;
+
+                    // Dynamic Label Generation
+                    // Extract number from key (e.g., 'SMA25' -> 25)
+                    const numMatch = k.match(/\d+/);
+                    const num = numMatch ? parseInt(numMatch[0], 10) : '';
+
+                    // Determine role based on sorted order (Short/Med/Long)
+                    // Assuming standard 3 lines. If not, fallback to Key.
+                    let role = '';
+                    if (sortedSmaKeys.length === 3) {
+                        if (index === 0) role = '短期';
+                        if (index === 1) role = '中期';
+                        if (index === 2) role = '長期';
+                    } else if (sortedSmaKeys.length === 2) {
+                        if (index === 0) role = '短期';
+                        if (index === 1) role = '長期';
+                    }
+
+                    const label = (role && num) ? `${role}(${num}${unit})` : k.toUpperCase();
+
+                    html += `<span class="sma-item" style="color:${color}"><span style="opacity:0.8">${label}</span> <span style="font-weight:700">${valStr}</span></span>`;
                 });
                 smaLegend.innerHTML = html;
             }
@@ -165,6 +193,7 @@
             let lastX = 0;
             let dpr = window.devicePixelRatio || 1;
             let width, height;
+            let yScale = null;
 
             function updateDimensions() {
                 const rect = wrapper.getBoundingClientRect();
@@ -185,6 +214,7 @@
                 const points = allPoints.slice(viewIndex, endIndex);
 
                 if (!points.length) { // ... Empty handling ... 
+                    yScale = null;
                     ctx.clearRect(0, 0, width * dpr, height * dpr);
                     ctx.fillStyle = colors.muted;
                     ctx.font = '14px "Segoe UI", sans-serif';
@@ -196,13 +226,23 @@
                 ctx.clearRect(0, 0, width, height);
 
                 // Check Layout
-                const priceAreaHeight = height * 0.7;
-                const priceTop = 24; // Extra space for top icons
+                // Adjust layout to prevent overlap and add bottom margin for X-axis
+                const topMargin = 24;
+                const bottomMargin = 20; // Space for X-axis dates
+                const availableHeight = height - topMargin - bottomMargin;
+
+                // Price Area: Top 70% of available
+                const priceAreaHeight = availableHeight * 0.70;
+                const priceTop = topMargin;
                 const priceBottom = priceTop + priceAreaHeight;
-                const volumeAreaHeight = height * 0.22;
-                const volumeTop = priceBottom + 6;
+
+                // Volume Area: Bottom 25% of available (5% gap)
+                const volumeHeight = availableHeight * 0.25;
+                const volumeTop = priceBottom + (availableHeight * 0.05);
+                const volumeBottom = volumeTop + volumeHeight;
+
                 const chartLeft = 50;
-                const chartRight = width - 12;
+                const chartRight = width - 50; // Extra right space for Volume Axis
                 const chartWidth = chartRight - chartLeft;
                 const barCount = points.length;
                 const step = chartWidth / Math.max(1, barCount);
@@ -221,7 +261,7 @@
                 const yMin = minLow - pad;
                 const yMax = maxHigh + pad;
 
-                const yScale = (val) => priceBottom - ((val - yMin) / (yMax - yMin)) * (priceAreaHeight);
+                yScale = (val) => priceBottom - ((val - yMin) / (yMax - yMin)) * (priceAreaHeight);
                 const getX = (i) => chartLeft + i * step + step / 2;
 
                 // --- Draw Axis Labels ---
@@ -230,10 +270,16 @@
                 ctx.textAlign = 'right';
                 ctx.textBaseline = 'bottom';
                 ctx.fillText('株価', chartLeft - 8, priceTop - 4);
-                ctx.textBaseline = 'top';
-                ctx.fillText('日付', chartRight, height - 14);
 
-                // --- Grid & Y Axis ---
+                // Volume Label (Left side)
+                ctx.textAlign = 'right';
+                ctx.fillText('出来高', chartLeft - 8, volumeTop - 4);
+
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'top';
+                ctx.fillText('日付', width / 2, height - 14); // Bottom center
+
+                // --- Grid & Y Axis (Price) ---
                 ctx.lineWidth = 1;
                 ctx.font = '11px "Segoe UI", sans-serif';
                 ctx.textAlign = 'right';
@@ -241,7 +287,7 @@
                 const ticks = 5;
                 for (let i = 0; i <= ticks; i++) {
                     const value = yMin + ((yMax - yMin) * i) / ticks;
-                    const y = priceBottom - (i / ticks) * priceAreaHeight; // Corrected calc
+                    const y = priceBottom - (i / ticks) * priceAreaHeight;
                     ctx.strokeStyle = colors.chartGrid;
                     ctx.setLineDash([4, 4]);
                     ctx.beginPath(); ctx.moveTo(chartLeft, y); ctx.lineTo(chartRight, y); ctx.stroke();
@@ -249,6 +295,22 @@
                     ctx.fillStyle = colors.muted;
                     ctx.fillText(value.toFixed(0), chartLeft - 6, y);
                 }
+
+                // --- Volume Axis (Left) ---
+                const maxVolume = Math.max(...points.map(p => p.volume || 0)) || 1;
+                const volTicks = 3;
+                ctx.textAlign = 'right';
+                for (let i = 0; i <= volTicks; i++) {
+                    const volVal = (maxVolume * i) / volTicks;
+                    const y = volumeBottom - (i / volTicks) * volumeHeight; // Bottom-up
+
+                    ctx.fillStyle = colors.muted;
+                    // Format volume (K/M)
+                    let volStr = volVal >= 1000000 ? (volVal / 1000000).toFixed(1) + 'M' :
+                        volVal >= 1000 ? (volVal / 1000).toFixed(1) + 'K' : volVal.toFixed(0);
+                    ctx.fillText(volStr, chartLeft - 6, y);
+                }
+
 
                 // --- X Axis ---
                 ctx.textAlign = 'center';
@@ -259,10 +321,11 @@
                     const label = points[i].label;
                     ctx.strokeStyle = colors.chartGrid;
                     ctx.setLineDash([4, 4]);
-                    ctx.beginPath(); ctx.moveTo(x, priceTop); ctx.lineTo(x, priceBottom); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(x, priceTop); ctx.lineTo(x, volumeBottom); ctx.stroke(); // Full height grid
                     ctx.setLineDash([]);
                     ctx.fillStyle = colors.muted;
-                    ctx.fillText(label, x, height - 16);
+                    // Ensure label text doesn't overlap volume bars (draw below volume area)
+                    ctx.fillText(label, x, volumeBottom + 4);
                 }
 
                 // --- Candles ---
@@ -299,119 +362,135 @@
 
                 // --- Cross Events (Golden/Dead) ---
                 crosses.forEach(c => {
-                    // Check if index is in view
                     if (c.index >= viewIndex && c.index < viewIndex + viewCount) {
                         const i = c.index - viewIndex;
                         const x = getX(i);
 
-                        // Draw Vertical Line
-                        ctx.strokeStyle = c.type === 'golden' ? '#eab308' : '#3b82f6'; // Gold / Blue
-                        ctx.setLineDash([3, 3]);
-                        ctx.lineWidth = 1;
+                        // Draw Vertical Line (Solid now)
+                        ctx.strokeStyle = c.type === 'golden' ? '#eab308' : '#3b82f6';
+                        // Draw Vertical Line (Solid, Thicker)
+                        ctx.strokeStyle = c.type === 'golden' ? '#eab308' : '#3b82f6';
+                        ctx.lineWidth = 2.0;
                         ctx.beginPath();
                         ctx.moveTo(x, priceTop);
-                        ctx.lineTo(x, priceBottom);
+                        ctx.lineTo(x, volumeBottom);
                         ctx.stroke();
-                        ctx.setLineDash([]);
 
-                        // Draw Icon
+                        // Icon & Label logic remains same...
                         ctx.font = '16px "Segoe UI Emoji"';
                         ctx.textAlign = 'center';
                         ctx.textBaseline = 'bottom';
-                        // Golden: ☀, Dead: ☠ or ❄
                         const icon = c.type === 'golden' ? '☀' : '☠';
-
-                        // Background for icon for visibility
-                        ctx.fillStyle = colors.panel; // clear bg behind icon
-                        // ctx.beginPath(); ctx.arc(x, priceTop - 10, 10, 0, Math.PI*2); ctx.fill(); 
-
+                        ctx.fillStyle = colors.panel;
                         ctx.fillStyle = c.type === 'golden' ? '#eab308' : '#3b82f6';
                         ctx.fillText(icon, x, priceTop - 2);
 
-                        // Label (GC/DC)
                         ctx.font = '10px "Segoe UI", sans-serif';
                         ctx.fillText(c.label, x, priceTop + 12);
                     }
                 });
 
-                // --- Volume ---
-                const maxVolume = Math.max(...points.map(p => p.volume || 0)) || 1;
-                const vGradient = ctx.createLinearGradient(0, volumeTop, 0, volumeTop + volumeAreaHeight);
+                // --- Volume Bars ---
+                const vGradient = ctx.createLinearGradient(0, volumeTop, 0, volumeBottom);
                 vGradient.addColorStop(0, colors.gradientFrom);
                 vGradient.addColorStop(1, colors.gradientTo);
+
                 points.forEach((p, i) => {
                     const val = p.volume || 0;
-                    const barHeight = (val / maxVolume) * volumeAreaHeight;
+                    // Scale volume relative to max calculated above
+                    const barHeight = (val / maxVolume) * volumeHeight;
                     const xCenter = getX(i);
                     const isUp = p.close >= p.open;
+
+                    // Base color + Gradient overlay
                     ctx.fillStyle = isUp ? colors.positive : colors.negative;
-                    ctx.globalAlpha = 0.2;
-                    ctx.fillRect(xCenter - candleWidth / 2, volumeTop + (volumeAreaHeight - barHeight), candleWidth, Math.max(1, barHeight));
-                    ctx.fillStyle = vGradient;
                     ctx.globalAlpha = 0.3;
-                    ctx.fillRect(xCenter - candleWidth / 2, volumeTop + (volumeAreaHeight - barHeight), candleWidth, Math.max(1, barHeight));
+                    ctx.fillRect(xCenter - candleWidth / 2, volumeBottom - barHeight, candleWidth, Math.max(1, barHeight));
+
+                    ctx.fillStyle = vGradient;
+                    ctx.globalAlpha = 0.4;
+                    ctx.fillRect(xCenter - candleWidth / 2, volumeBottom - barHeight, candleWidth, Math.max(1, barHeight));
                     ctx.globalAlpha = 1.0;
                 });
             }
 
-            // --- Interactions ---
-            const onMouseDown = (e) => { isDragging = true; lastX = e.clientX; canvas.style.cursor = 'grabbing'; };
-            canvas.addEventListener('mousedown', onMouseDown);
-            const onMouseMoveGlobal = (e) => {
-                if (!isDragging) return;
-                const dx = e.clientX - lastX;
-                if (dx === 0) return;
-                const sensitivity = viewCount / width;
-                const deltaIndex = Math.round(-dx * sensitivity * 1.5);
-                if (deltaIndex !== 0) {
-                    viewIndex = Math.max(0, Math.min(allPoints.length - viewCount, viewIndex + deltaIndex));
-                    lastX = e.clientX;
-                    requestAnimationFrame(draw);
-                    // Update legend to latest visible if dragging? No, keep cursor logic or default to last visible.
-                    // If simply dragging, we don't have a cursor over chart, so maybe update to "center of view" or last. 
-                    // Let's stick to cursor hover for update.
-                }
-            };
-            window.addEventListener('mousemove', onMouseMoveGlobal);
-            const onMouseUpGlobal = () => { isDragging = false; canvas.style.cursor = 'crosshair'; };
-            window.addEventListener('mouseup', onMouseUpGlobal);
-            canvas.addEventListener('wheel', (e) => {
-                e.preventDefault();
-                if (e.ctrlKey || Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
-                    const zoomDir = Math.sign(e.deltaY);
-                    const deltaCount = Math.round(viewCount * 0.1 * zoomDir);
-                    const newCount = Math.max(10, Math.min(allPoints.length, viewCount + deltaCount));
-                    if (newCount !== viewCount) {
-                        const centerRatio = 0.5;
-                        const added = newCount - viewCount;
-                        viewIndex = Math.max(0, Math.min(allPoints.length - newCount, viewIndex - Math.round(added * centerRatio)));
-                        viewCount = newCount;
-                        requestAnimationFrame(draw);
-                    }
-                } else {
-                    const panDir = Math.sign(e.deltaX || e.deltaY);
-                    viewIndex = Math.max(0, Math.min(allPoints.length - viewCount, viewIndex + Math.round(viewCount * 0.05 * panDir)));
-                    requestAnimationFrame(draw);
-                }
-            }, { passive: false });
+            // ... interactions ...
 
-            // Tooltip
+            // Tooltip & Drag & Scroll
+            canvas.style.cursor = 'grab'; // Indicate draggable
+
+            canvas.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                lastX = e.clientX;
+                canvas.style.cursor = 'grabbing';
+                tooltip.style.display = 'none'; // Hide tooltip while dragging
+            });
+
+            const stopDrag = () => {
+                isDragging = false;
+                canvas.style.cursor = 'grab';
+            };
+            canvas.addEventListener('mouseup', stopDrag);
+            canvas.addEventListener('mouseleave', () => {
+                stopDrag();
+                tooltip.style.display = 'none';
+                draw();
+                if (allPoints.length > 0) updateLegend(allPoints[allPoints.length - 1]);
+            });
+
             canvas.addEventListener('mousemove', (e) => {
-                if (isDragging) { tooltip.style.display = 'none'; return; }
                 const rect = canvas.getBoundingClientRect();
                 const x = e.clientX - rect.left;
-                const chartLeft = 50; const chartRight = width - 12; const chartWidth = chartRight - chartLeft;
+
+                // Dragging Logic
+                if (isDragging) {
+                    const deltaX = e.clientX - lastX;
+                    lastX = e.clientX;
+
+                    // Calculate sensitivity (pixels per bar)
+                    const chartLeft = 50;
+                    const chartRight = width - 50;
+                    const chartWidth = chartRight - chartLeft;
+                    const step = chartWidth / viewCount;
+
+                    // Move viewIndex based on drag distance
+                    // Drag Right -> Move View Left (Earlier) -> Decrease Index
+                    // But wait, viewIndex is Start Index. 
+                    // Verify direction:
+                    // If I drag mouse right, I want to see left data? No, drag right usually pans content right.
+                    // If content pans right, we move simpler to earlier dates?
+                    // Let's implement natural drag: Mouse Right -> Content Right -> View Window shifts Left (Decreases index)
+
+                    const barsMoved = deltaX / step;
+                    viewIndex -= barsMoved;
+
+                    // Clamp
+                    const maxIndex = Math.max(0, allPoints.length - viewCount);
+                    viewIndex = Math.floor(viewIndex);
+                    viewIndex = Math.max(0, Math.min(viewIndex, maxIndex));
+
+                    draw();
+                    return;
+                }
+
+                // Tooltip Logic
+                // Recalculate layout metrics for hit testing
+                const chartLeft = 50;
+                const chartRight = width - 50;
+                const chartWidth = chartRight - chartLeft;
+
                 if (x < chartLeft || x > chartRight) {
                     tooltip.style.display = 'none'; draw();
-                    if (allPoints.length > 0) updateLegend(allPoints[allPoints.length - 1]); // Reset legend
+                    if (allPoints.length > 0) updateLegend(allPoints[allPoints.length - 1]);
                     return;
                 }
                 const step = chartWidth / viewCount;
                 const idxInView = Math.floor((x - chartLeft) / step);
-                const dataIdx = viewIndex + idxInView;
+                const dataIdx = Math.floor(viewIndex + idxInView);
                 if (dataIdx >= 0 && dataIdx < allPoints.length) {
                     const point = allPoints[dataIdx];
-                    draw(); // redraw
+                    draw();
+
                     // Crosshair
                     const centerX = chartLeft + idxInView * step + step / 2;
                     ctx.strokeStyle = colors.chartCrosshair;
@@ -419,29 +498,85 @@
                     ctx.beginPath(); ctx.moveTo(centerX, 0); ctx.lineTo(centerX, height); ctx.stroke();
                     ctx.setLineDash([]);
 
-                    // Update SMA Legend (Live)
                     updateLegend(point);
 
-                    // Tooltip
-                    let html = `<div class="row"><span>日時</span><span>${point.label}</span></div>`;
-                    html += `<div class="row"><span>始値</span><span>${fmtPrice(point.open)}</span></div>`;
-                    html += `<div class="row"><span>高値</span><span>${fmtPrice(point.high)}</span></div>`;
-                    html += `<div class="row"><span>安値</span><span>${fmtPrice(point.low)}</span></div>`;
-                    html += `<div class="row"><span>終値</span><span>${fmtPrice(point.close)}</span></div>`;
+                    // Check Y-Axis Hover for Tooltip
+                    if (!yScale) {
+                        tooltip.style.display = 'none';
+                        return;
+                    }
+                    const yMouse = e.clientY - rect.top;
+                    const cHigh = yScale(point.high);
+                    const cLow = yScale(point.low);
+                    const buffer = 4;
+                    const isHoveringCandle = (yMouse >= cHigh - buffer && yMouse <= cLow + buffer);
+
+                    if (!isHoveringCandle) {
+                        tooltip.style.display = 'none';
+                        return;
+                    }
+
+                    // Enhanced Tooltip content
+                    let html = `<div class="tooltip-header">${point.label}</div>`;
+                    html += `<div class="tooltip-row"><span class="t-label">始値</span><span class="t-val">${fmtPrice(point.open)}</span></div>`;
+                    html += `<div class="tooltip-row"><span class="t-label">高値</span><span class="t-val">${fmtPrice(point.high)}</span></div>`;
+                    html += `<div class="tooltip-row"><span class="t-label">安値</span><span class="t-val">${fmtPrice(point.low)}</span></div>`;
+                    html += `<div class="tooltip-row"><span class="t-label">終値</span><span class="t-val">${fmtPrice(point.close)}</span></div>`;
+
+                    // Add Candle Details if available
+                    if (point.candle_name && point.candle_type) {
+                        html += `<div class="tooltip-divider"></div>`;
+                        html += `<div class="tooltip-row"><span class="t-label">形</span><span class="t-val">${point.candle_type}</span></div>`;
+                        html += `<div class="tooltip-row"><span class="t-label">種類</span><span class="t-val">${point.candle_name}</span></div>`;
+                    }
 
                     tooltip.innerHTML = html;
                     tooltip.style.display = 'block';
-                    const tWidth = tooltip.offsetWidth || 180; const tHeight = tooltip.offsetHeight || 120;
-                    let left = e.clientX - rect.left + 15; let top = e.clientY - rect.top + 15;
-                    if (left + tWidth > width) left = e.clientX - rect.left - tWidth - 15;
-                    if (top + tHeight > height) top = e.clientY - rect.top - tHeight - 15;
-                    tooltip.style.transform = `translate(${left}px, ${top}px)`;
+                    tooltip.style.pointerEvents = 'none'; // Fix Scroll Issue
+                    // ... positioning logic ...
+                    // Position Tooltip: Top-Right of Cursor
+                    const tWidth = tooltip.offsetWidth || 180;
+                    const tHeight = tooltip.offsetHeight || 120;
+
+                    // Default: 20px right, 20px up from cursor relative to canvas
+                    let left = x + 20;
+                    let top = (e.clientY - rect.top) - 20;
+
+                    // Boundary checks
+                    if (left + tWidth > width) {
+                        left = x - tWidth - 20;
+                    }
+                    if (top + tHeight > height) {
+                        top = height - tHeight - 10;
+                    }
+                    if (top < 0) top = 10;
+
+                    tooltip.style.left = `${left}px`;
+                    tooltip.style.top = `${top}px`;
+                    tooltip.style.transform = 'none'; // Clear transform if used previously
                 }
             });
-            canvas.addEventListener('mouseleave', () => {
-                tooltip.style.display = 'none'; draw();
-                if (allPoints.length > 0) updateLegend(allPoints[allPoints.length - 1]);
-            });
+
+            // Wheel Scroll Logic
+            canvas.addEventListener('wheel', (e) => {
+                e.preventDefault(); // Prevent page scroll
+                const delta = e.deltaX || e.deltaY; // Support both axis
+
+                // Sensitivity
+                const speed = 0.5; // Bars per pixel roughly
+                const barsMoved = (delta / 50) * speed * viewCount * 0.1; // adjust scaling
+
+                // Mouse Wheel Down (Positive) -> Move Forward in Time (Pan Right) -> Increase Index
+                viewIndex += (delta > 0 ? 1 : -1) * Math.max(1, Math.abs(delta) / 10);
+
+                // Clamp
+                const maxIndex = Math.max(0, allPoints.length - viewCount);
+                viewIndex = Math.floor(viewIndex);
+                viewIndex = Math.max(0, Math.min(viewIndex, maxIndex));
+
+                draw();
+                if (allPoints.length > 0) updateLegend(allPoints[Math.min(allPoints.length - 1, Math.floor(viewIndex + viewCount - 1))]);
+            }, { passive: false });
 
             draw();
         });
