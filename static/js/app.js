@@ -269,15 +269,15 @@
                 ctx.font = '11px "Segoe UI", sans-serif';
                 ctx.textAlign = 'right';
                 ctx.textBaseline = 'bottom';
-                ctx.fillText('株価', chartLeft - 8, priceTop - 4);
+                ctx.fillText('株価', chartLeft - 8, priceTop - 15);
 
                 // Volume Label (Left side)
                 ctx.textAlign = 'right';
                 ctx.fillText('出来高', chartLeft - 8, volumeTop - 4);
 
-                ctx.textAlign = 'center';
+                ctx.textAlign = 'right';
                 ctx.textBaseline = 'top';
-                ctx.fillText('日付', width / 2, height - 14); // Bottom center
+                ctx.fillText('日付', chartRight, height - 14); // Bottom right
 
                 // --- Grid & Y Axis (Price) ---
                 ctx.lineWidth = 1;
@@ -372,9 +372,15 @@
                         ctx.strokeStyle = c.type === 'golden' ? '#eab308' : '#3b82f6';
                         ctx.lineWidth = 2.0;
                         ctx.beginPath();
-                        ctx.moveTo(x, priceTop);
+                        ctx.moveTo(x, yScale(c.price));
                         ctx.lineTo(x, volumeBottom);
                         ctx.stroke();
+
+                        // Draw Dot
+                        ctx.fillStyle = c.type === 'golden' ? '#eab308' : '#3b82f6';
+                        ctx.beginPath();
+                        ctx.arc(x, yScale(c.price), 4, 0, Math.PI * 2);
+                        ctx.fill();
 
                         // Icon & Label logic remains same...
                         ctx.font = '16px "Segoe UI Emoji"';
@@ -513,8 +519,11 @@
 
                     if (!isHoveringCandle) {
                         tooltip.style.display = 'none';
+                        canvas.style.cursor = isDragging ? 'grabbing' : 'grab';
                         return;
                     }
+
+                    canvas.style.cursor = 'pointer';
 
                     // Enhanced Tooltip content
                     let html = `<div class="tooltip-header">${point.label}</div>`;

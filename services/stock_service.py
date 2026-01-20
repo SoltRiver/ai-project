@@ -383,7 +383,7 @@ def _trend_label(points: List[Dict[str, Any]]) -> str:
     if not points:
         return "トレンド不明"
     closes = pd.Series([p["close"] for p in points])
-    return get_direction_label(closes, positive_label="上昇傾向", negative_label="下落傾向", neutral_label="もみ合い")
+    return get_direction_label(closes, positive_label="上昇傾向", negative_label="下落傾向", neutral_label="もみ合い（レンジ相場）")
 
 
 def _build_signals(points: List[Dict[str, Any]]) -> List[Dict[str, str]]:
