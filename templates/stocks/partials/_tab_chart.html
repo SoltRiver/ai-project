@@ -1,5 +1,4 @@
-<div class="tab-panel chart-panel" hx-get="/stocks/{{ stock.code }}/tab/chart?interval={{ interval }}"
-    hx-trigger="every 20s" hx-target="this" hx-swap="outerHTML">
+<div class="tab-panel chart-panel">
     <div class="card chart-card">
         <div class="chart-headline" style="align-items: center;">
             <div style="display: flex; align-items: center; gap: 1rem; flex: 1;">
@@ -34,7 +33,10 @@
             </div>
         </div>
 
-        <div class="chart-wrapper" data-chart-payload='{{ chart_payload | tojson }}'>
+        <div class="chart-wrapper">
+            <script id="chart-payload-json" type="application/json">
+                {{ chart_payload | tojson }}
+            </script>
             <canvas class="candle-canvas" width="960" height="550" aria-label="ローソク足チャート"></canvas>
             <div class="chart-tooltip" role="tooltip"></div>
 

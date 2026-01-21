@@ -54,3 +54,43 @@
   - **Syntax Warning**: Identified potential duplicate closure `})();` at end of file.
 - **Action**: Removed duplicate closure.
 - **Verification**: Browser subagent confirmed all features (Scroll, Interval, Tooltip) work as expected.
+
+### Review Session 6 (Round 6 - Critical Regression Fix)
+- **Issue**: Chart vanished (Blank Canvas) after Round 5 refinements.
+- **Root Cause**:
+  1.  **Syntax Error**: Premature IIFE closure `})();` at line 774 caused `app.js` to fail parsing.
+  2.  **Cache**: Browser was caching old `app.js` version.
+- **Action**:
+  - Removed line 774 `})();` to correct scope.
+  - Bumped `app.js` version to `v=4` in `base.html`.
+- **Verification**:
+  - **Browser**: Verified chart is fully visible and interactive again.
+  - **Syntax**: `node -c` confirmed valid syntax.
+
+### Review Session 7 (Round 7 - Drag & Tooltip Fixes)
+- **Status**: **Success** (Review executed 2026-01-21 19:58).
+- **Scope**: `static/js/app.js` (Drag Logic, Tooltip Logic).
+- **Issue**:
+  1. Dragging causes zoom (magnification change) instead of pan.
+  2. Tooltips not appearing on hover (strictness).
+- **Fixes**:
+  - **Drag**: Defined `maxIndex` in `mousemove` handler (was ReferenceError).
+  - **Tooltip**: Relaxed Y-axis strict check, fixed `getX` reference error.
+- **Verification**:
+  - **Browser**: Verified drag pans correctly without zoom. Verified tooltip appears on relaxed hover.
+  - **Code Review**: Confirmed variable scope (`maxIndex`, `xCenter`) is correct. No unused variables.
+
+### Review Session 8 (Round 8 - Visual Refinements)
+- **Status**: **Success** (Review executed 2026-01-22).
+- **Scope**: `static/js/app.js` (Legend, Tooltip).
+- **Issue**:
+  1. Chart became blank during implementation.
+  2. Legend text overlapped.
+- **Root Cause (Blank Chart)**:
+  - **Syntax Error**: Accidentally nested duplicate `if (isHoveringCandle)` blocks during regex replacement, causing a missing closing brace and `Unexpected token )` error.
+- **Fixes**:
+  - **Syntax**: Removed the duplicate code block and verified brace balance.
+  - **Legend**: Implemented `updateMainLegend` for structured HTML.
+- **Verification**:
+  - **Syntax**: `node -c static/js/app.js` passed (Exit code 0).
+  - **Browser**: Verified chart renders, legend is clean, and tooltip logic is strict.

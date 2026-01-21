@@ -60,12 +60,12 @@
 
 
     function renderCandleCharts() {
-        const wrappers = document.querySelectorAll('[data-chart-payload]');
+        const wrappers = document.querySelectorAll('.chart-wrapper');
         wrappers.forEach((wrapper) => {
             if (wrapper.dataset.chartInitialized === 'true') return;
             wrapper.dataset.chartInitialized = 'true';
 
-            const payloadRaw = wrapper.getAttribute('data-chart-payload');
+            const payloadScript = wrapper.querySelector('#chart-payload-json');
             const colors = getColors();
             const canvas = wrapper.querySelector('.candle-canvas');
             const tooltip = wrapper.querySelector('.chart-tooltip');
@@ -73,11 +73,11 @@
             const card = wrapper.closest('.chart-card');
             const smaLegend = card ? card.querySelector('.sma-legend') : null;
 
-            if (!payloadRaw || !canvas || !tooltip) return;
+            if (!payloadScript || !canvas || !tooltip) return;
 
             let payload;
             try {
-                payload = JSON.parse(payloadRaw);
+                payload = JSON.parse(payloadScript.textContent);
             } catch (_) {
                 return;
             }
@@ -138,7 +138,30 @@
                 }
             }
 
+            function updateMainLegend(point) {
+                const sub = document.querySelector('.chart-sub');
+                if (!sub || !point) return;
+
+                const o = fmtPrice(point.open);
+                const h = fmtPrice(point.high);
+                const l = fmtPrice(point.low);
+                const c = fmtPrice(point.close);
+                const v = fmtVolume(point.volume);
+                const t = point.label; // e.g. '2025/12/19'
+
+                let html = '';
+                html += `<span class="l-item"><span class="l-label">始値</span><span class="l-val">${o}</span></span>`;
+                html += `<span class="l-item"><span class="l-label">高値</span><span class="l-val">${h}</span></span>`;
+                html += `<span class="l-item"><span class="l-label">安値</span><span class="l-val">${l}</span></span>`;
+                html += `<span class="l-item"><span class="l-label">終値</span><span class="l-val">${c}</span></span>`;
+                html += `<span class="l-item"><span class="l-label">出来高</span><span class="l-val">${v}</span></span>`;
+                html += `<span class="l-item" style="color:var(--muted); font-size:0.9rem;">${t}</span>`;
+
+                sub.innerHTML = html;
+            }
+
             function updateLegend(point) {
+
                 if (!smaLegend) return;
                 if (!sortedSmaKeys.length) {
                     smaLegend.innerHTML = '';
@@ -185,8 +208,11 @@
 
             // Init Legend with latest data
             if (allPoints.length > 0) {
-                updateLegend(allPoints[allPoints.length - 1]);
+                const last = allPoints[allPoints.length - 1];
+                updateLegend(last);
+                updateMainLegend(last);
             }
+
 
             // Viewport State
             let viewCount = Math.min(allPoints.length, 100);
@@ -459,41 +485,6 @@
             // Tooltip & Drag & Scroll
             canvas.style.cursor = 'grab'; // Indicate draggable
 
-            // --- Helper: Show Tooltip ---
-            function showTooltip(point, x, clientY, rect) {
-                // Construct Content
-                let html = `<div class="tooltip-header">${point.label}</div>`;
-                html += `<div class="tooltip-row"><span class="t-label">始値</span><span class="t-val">${fmtPrice(point.open)}</span></div>`;
-                html += `<div class="tooltip-row"><span class="t-label">高値</span><span class="t-val">${fmtPrice(point.high)}</span></div>`;
-                html += `<div class="tooltip-row"><span class="t-label">安値</span><span class="t-val">${fmtPrice(point.low)}</span></div>`;
-                html += `<div class="tooltip-row"><span class="t-label">終値</span><span class="t-val">${fmtPrice(point.close)}</span></div>`;
-
-                if (point.candle_name && point.candle_type) {
-                    html += `<div class="tooltip-divider"></div>`;
-                    html += `<div class="tooltip-row"><span class="t-label">形</span><span class="t-val">${point.candle_type}</span></div>`;
-                    html += `<div class="tooltip-row"><span class="t-label">種類</span><span class="t-val">${point.candle_name}</span></div>`;
-                }
-
-                tooltip.innerHTML = html;
-                tooltip.style.display = 'block';
-                tooltip.style.pointerEvents = 'none';
-
-                // Position
-                const tWidth = tooltip.offsetWidth || 180;
-                const tHeight = tooltip.offsetHeight || 120;
-                let left = x + 20;
-                let top = (clientY - rect.top) - 20;
-
-                // Boundary Logic
-                if (left + tWidth > width) left = x - tWidth - 20;
-                if (top + tHeight > height) top = height - tHeight - 10;
-                if (top < 0) top = 10;
-
-                tooltip.style.left = `${left}px`;
-                tooltip.style.top = `${top}px`;
-                tooltip.style.transform = 'none';
-            }
-
             // --- Interaction: Click (Sticky Tooltip) ---
             canvas.addEventListener('click', (e) => {
                 const rect = canvas.getBoundingClientRect();
@@ -616,6 +607,7 @@
                     const barsMoved = deltaX / step;
                     viewIndex -= barsMoved;
 
+                    const maxIndex = Math.max(0, allPoints.length - viewCount);
                     viewIndex = Math.max(0, Math.min(viewIndex, maxIndex));
 
                     draw();
@@ -633,9 +625,14 @@
 
                 if (x < chartLeft || x > chartRight) {
                     tooltip.style.display = 'none'; draw();
-                    if (allPoints.length > 0) updateLegend(allPoints[allPoints.length - 1]);
+                    if (allPoints.length > 0) {
+                        const last = allPoints[allPoints.length - 1];
+                        updateLegend(last);
+                        updateMainLegend(last);
+                    }
                     return;
                 }
+
 
                 // Check Cross Icon Hover FIRST (Higher priority for details?)
                 // Or maybe transient?
@@ -724,8 +721,10 @@
                     ctx.setLineDash([]);
 
                     updateLegend(point);
+                    updateMainLegend(point);
 
                     // --- Sticky Tooltip Check ---
+
                     if (selectedDataIdx !== null) {
                         if (yScale) {
                             const yMouse = e.clientY - rect.top;
@@ -739,34 +738,34 @@
                             }
                         }
                     } else {
-                        // Normal Hover: Show Tooltip
+                        // Normal Hover: Show Tooltip (Relaxed logic)
                         if (!yScale) {
                             tooltip.style.display = 'none';
                             return;
                         }
+
                         const yMouse = e.clientY - rect.top;
                         const cHigh = yScale(point.high);
                         const cLow = yScale(point.low);
                         const buffer = 4;
                         const isHoveringCandle = (yMouse >= cHigh - buffer && yMouse <= cLow + buffer);
+
+                        // Cursor indicates clickable (sticky) if on candle
                         if (isHoveringCandle) {
                             canvas.style.cursor = 'pointer';
-                            const rect = canvas.getBoundingClientRect();
-                            const virtualY = rect.top + yScale(point.close);
-                            showTooltip(point, getX(idxInView), virtualY, rect);
                         } else {
                             canvas.style.cursor = isDragging ? 'grabbing' : 'grab';
-                            tooltip.style.display = 'none';
                         }
 
-                        if (!isHoveringCandle) {
+                        // Tooltip Restriction (Round 8): Only show if hovering strict candle area
+                        if (isHoveringCandle) {
+                            const rectBox = canvas.getBoundingClientRect();
+                            const virtualY = rectBox.top + yScale(point.close);
+                            const xCenter = chartLeft + idxInView * step + step / 2;
+                            showTooltip(point, xCenter, virtualY, rectBox);
+                        } else {
                             tooltip.style.display = 'none';
-                            canvas.style.cursor = isDragging ? 'grabbing' : 'grab';
-                            return;
                         }
-
-                        canvas.style.cursor = 'pointer';
-                        showTooltip(point, x, e.clientY, rect);
                     }
                 }
             });
@@ -806,130 +805,130 @@
         renderCandleCharts();
         initPatternPage();
     });
-})();
 
-function initPatternPage() {
-    initPatternTabs();
-    initPatternModal();
-}
 
-function animateCountBadges(scope = document) {
-    const badges = scope.querySelectorAll('.count-badge[data-count-target]');
-    badges.forEach((badge) => {
-        const target = Number.parseInt(badge.dataset.countTarget || '0', 10);
-        if (Number.isNaN(target)) return;
-        const duration = 450;
-        const start = performance.now();
-        badge.textContent = '0';
-        const tick = (now) => {
-            const progress = Math.min((now - start) / duration, 1);
-            const value = Math.floor(target * progress);
-            badge.textContent = String(value);
-            if (progress < 1) {
-                requestAnimationFrame(tick);
-            } else {
-                badge.textContent = String(target);
-            }
+    function initPatternPage() {
+        initPatternTabs();
+        initPatternModal();
+    }
+
+    function animateCountBadges(scope = document) {
+        const badges = scope.querySelectorAll('.count-badge[data-count-target]');
+        badges.forEach((badge) => {
+            const target = Number.parseInt(badge.dataset.countTarget || '0', 10);
+            if (Number.isNaN(target)) return;
+            const duration = 450;
+            const start = performance.now();
+            badge.textContent = '0';
+            const tick = (now) => {
+                const progress = Math.min((now - start) / duration, 1);
+                const value = Math.floor(target * progress);
+                badge.textContent = String(value);
+                if (progress < 1) {
+                    requestAnimationFrame(tick);
+                } else {
+                    badge.textContent = String(target);
+                }
+            };
+            requestAnimationFrame(tick);
+        });
+    }
+
+    function initPatternTabs() {
+        const tabs = document.querySelectorAll('.pattern-tab');
+        if (!tabs.length) return;
+        const setActive = (active) => {
+            tabs.forEach((tab) => {
+                const isActive = tab === active;
+                tab.classList.toggle('is-active', isActive);
+                tab.setAttribute('aria-selected', isActive ? 'true' : 'false');
+                tab.setAttribute('tabindex', isActive ? '0' : '-1');
+            });
         };
-        requestAnimationFrame(tick);
-    });
-}
-
-function initPatternTabs() {
-    const tabs = document.querySelectorAll('.pattern-tab');
-    if (!tabs.length) return;
-    const setActive = (active) => {
         tabs.forEach((tab) => {
-            const isActive = tab === active;
-            tab.classList.toggle('is-active', isActive);
-            tab.setAttribute('aria-selected', isActive ? 'true' : 'false');
-            tab.setAttribute('tabindex', isActive ? '0' : '-1');
+            if (tab.dataset.bound === 'true') return;
+            tab.dataset.bound = 'true';
+            tab.addEventListener('click', () => {
+                setActive(tab);
+                animateCountBadges();
+            });
         });
-    };
-    tabs.forEach((tab) => {
-        if (tab.dataset.bound === 'true') return;
-        tab.dataset.bound = 'true';
-        tab.addEventListener('click', () => {
-            setActive(tab);
-            animateCountBadges();
+        animateCountBadges();
+    }
+
+    function initPatternModal() {
+        const overlay = document.querySelector('[data-modal-overlay]');
+        if (!overlay) return;
+        const modal = overlay.querySelector('.pattern-modal');
+        const closeBtn = overlay.querySelector('[data-close-modal]');
+        const imgEl = overlay.querySelector('[data-modal-image]');
+        const nameEl = overlay.querySelector('[data-modal-name]');
+        const catchEl = overlay.querySelector('[data-modal-catch]');
+        const descLeadEl = overlay.querySelector('[data-modal-desc-lead]');
+        const descBodyEl = overlay.querySelector('[data-modal-desc-body]');
+        const detailEl = overlay.querySelector('[data-modal-detail]');
+        const sceneEl = overlay.querySelector('[data-modal-scene]');
+        const howtoEl = overlay.querySelector('[data-modal-howto]');
+        const notesEl = overlay.querySelector('[data-modal-notes]');
+
+        let lastFocus = null;
+
+        const close = () => {
+            overlay.classList.remove('is-open');
+            overlay.hidden = true;
+            if (lastFocus) lastFocus.focus();
+        };
+
+        const open = (btn) => {
+            lastFocus = btn;
+            overlay.hidden = false;
+            overlay.classList.add('is-open');
+            nameEl.textContent = btn.dataset.name || '';
+            catchEl.textContent = btn.dataset.catch || '';
+            descLeadEl.textContent = btn.dataset.descLead || '';
+            descBodyEl.textContent = btn.dataset.descBody || '';
+            detailEl.textContent = btn.dataset.detail || '';
+            sceneEl.textContent = btn.dataset.scene || '';
+            howtoEl.textContent = btn.dataset.howto || '';
+            if (btn.dataset.svg) {
+                imgEl.src = btn.dataset.svg;
+                imgEl.alt = btn.dataset.name || '';
+            }
+            notesEl.innerHTML = '';
+            const notes = (btn.dataset.notes || '').split('||').filter(Boolean);
+            notes.forEach((n) => {
+                const li = document.createElement('li');
+                li.textContent = n;
+                notesEl.appendChild(li);
+            });
+        };
+
+        document.querySelectorAll('.pattern-detail-trigger').forEach((btn) => {
+            btn.addEventListener('click', () => open(btn));
         });
-    });
-    animateCountBadges();
-}
-
-function initPatternModal() {
-    const overlay = document.querySelector('[data-modal-overlay]');
-    if (!overlay) return;
-    const modal = overlay.querySelector('.pattern-modal');
-    const closeBtn = overlay.querySelector('[data-close-modal]');
-    const imgEl = overlay.querySelector('[data-modal-image]');
-    const nameEl = overlay.querySelector('[data-modal-name]');
-    const catchEl = overlay.querySelector('[data-modal-catch]');
-    const descLeadEl = overlay.querySelector('[data-modal-desc-lead]');
-    const descBodyEl = overlay.querySelector('[data-modal-desc-body]');
-    const detailEl = overlay.querySelector('[data-modal-detail]');
-    const sceneEl = overlay.querySelector('[data-modal-scene]');
-    const howtoEl = overlay.querySelector('[data-modal-howto]');
-    const notesEl = overlay.querySelector('[data-modal-notes]');
-
-    let lastFocus = null;
-
-    const close = () => {
-        overlay.classList.remove('is-open');
-        overlay.hidden = true;
-        if (lastFocus) lastFocus.focus();
-    };
-
-    const open = (btn) => {
-        lastFocus = btn;
-        overlay.hidden = false;
-        overlay.classList.add('is-open');
-        nameEl.textContent = btn.dataset.name || '';
-        catchEl.textContent = btn.dataset.catch || '';
-        descLeadEl.textContent = btn.dataset.descLead || '';
-        descBodyEl.textContent = btn.dataset.descBody || '';
-        detailEl.textContent = btn.dataset.detail || '';
-        sceneEl.textContent = btn.dataset.scene || '';
-        howtoEl.textContent = btn.dataset.howto || '';
-        if (btn.dataset.svg) {
-            imgEl.src = btn.dataset.svg;
-            imgEl.alt = btn.dataset.name || '';
-        }
-        notesEl.innerHTML = '';
-        const notes = (btn.dataset.notes || '').split('||').filter(Boolean);
-        notes.forEach((n) => {
-            const li = document.createElement('li');
-            li.textContent = n;
-            notesEl.appendChild(li);
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) close();
         });
-    };
+        if (closeBtn) closeBtn.addEventListener('click', close);
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && overlay.classList.contains('is-open')) {
+                close();
+            }
+        });
+    }
 
-    document.querySelectorAll('.pattern-detail-trigger').forEach((btn) => {
-        btn.addEventListener('click', () => open(btn));
-    });
-    overlay.addEventListener('click', (e) => {
-        if (e.target === overlay) close();
-    });
-    if (closeBtn) closeBtn.addEventListener('click', close);
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && overlay.classList.contains('is-open')) {
-            close();
-        }
-    });
-}
-
-// --- Init & HTMX Support ---
-bindTabButtons();
-renderCandleCharts();
-initPatternModal();
-
-window.initCharts = () => {
+    // --- Init & HTMX Support ---
     bindTabButtons();
     renderCandleCharts();
-};
+    initPatternModal();
 
-document.body.addEventListener('htmx:afterSwap', () => {
-    window.initCharts();
-});
+    window.initCharts = () => {
+        bindTabButtons();
+        renderCandleCharts();
+    };
 
-}) ();
+    document.body.addEventListener('htmx:afterSwap', () => {
+        window.initCharts();
+    });
+
+})();

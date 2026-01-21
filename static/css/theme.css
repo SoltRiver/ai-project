@@ -348,6 +348,26 @@ a:hover {
     margin-top: 0.4rem;
 }
 
+/* Legend Item Styles (Round 8) */
+.l-item {
+    display: inline-block;
+    margin-right: 1.25rem;
+    font-size: 0.95rem;
+    white-space: nowrap;
+}
+
+.l-label {
+    color: var(--muted);
+    font-weight: 500;
+    margin-right: 0.35rem;
+}
+
+.l-val {
+    color: var(--text);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
 .tab-bar {
     display: flex;
     gap: 0.5rem;
