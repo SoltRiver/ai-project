@@ -94,3 +94,11 @@
 - **Verification**:
   - **Syntax**: `node -c static/js/app.js` passed (Exit code 0).
   - **Browser**: Verified chart renders, legend is clean, and tooltip logic is strict.
+
+### Review Session 9 (Round 9 - Volume Removal & Layout)
+- **Status**: **Success** (Review executed 2026-01-22).
+- **Scope**: `static/js/app.js` (Volume Text Removal, Top Margin Increase).
+- **Codex Interaction**: Prompted for `nl` command confirmation. Handled automatically/manually by selecting 'y'.
+- **Verification**:
+  - **Browser**: Verified "出来高" text is gone and chart top margin is increased to 40px preventing overlap.
+  - **Code**: Confirmed `topMargin` updated in both `draw` (line 259) and `mousemove` (line 643).

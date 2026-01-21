@@ -154,7 +154,7 @@
                 html += `<span class="l-item"><span class="l-label">高値</span><span class="l-val">${h}</span></span>`;
                 html += `<span class="l-item"><span class="l-label">安値</span><span class="l-val">${l}</span></span>`;
                 html += `<span class="l-item"><span class="l-label">終値</span><span class="l-val">${c}</span></span>`;
-                html += `<span class="l-item"><span class="l-label">出来高</span><span class="l-val">${v}</span></span>`;
+                // html += `<span class="l-item"><span class="l-label">出来高</span><span class="l-val">${v}</span></span>`;
                 html += `<span class="l-item" style="color:var(--muted); font-size:0.9rem;">${t}</span>`;
 
                 sub.innerHTML = html;
@@ -256,7 +256,7 @@
 
                 // Check Layout
                 // Adjust layout to prevent overlap and add bottom margin for X-axis
-                const topMargin = 24;
+                const topMargin = 40; // Increased to prevent legend overlap
                 const bottomMargin = 20; // Space for X-axis dates
                 const availableHeight = height - topMargin - bottomMargin;
 
@@ -640,7 +640,7 @@
                 const my = e.clientY - rect.top;
 
                 // Recalculate layout scope for hitbox
-                const topMargin = 24;
+                const topMargin = 40; // Match draw()
                 const priceTop = topMargin;
 
                 // Visible Crosses
