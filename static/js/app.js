@@ -234,15 +234,16 @@
                 const bottomMargin = 20; // Space for X-axis dates
                 const availableHeight = height - topMargin - bottomMargin;
 
-                // Price Area: Top 70% of available
-                const priceAreaHeight = availableHeight * 0.70;
+                // Price Area: Top 60% of available
+                const priceAreaHeight = availableHeight * 0.60;
                 const priceTop = topMargin;
                 const priceBottom = priceTop + priceAreaHeight;
 
-                // Volume Area: Bottom 25% of available (5% gap)
+                // Volume Area: Bottom 25% of available
                 const volumeHeight = availableHeight * 0.25;
-                const volumeTop = priceBottom + (availableHeight * 0.05);
-                const volumeBottom = volumeTop + volumeHeight;
+                // Gap is roughly 15%
+                const volumeTop = height - bottomMargin - volumeHeight;
+                const volumeBottom = height - bottomMargin;
 
                 const chartLeft = 50;
                 const chartRight = width - 50; // Extra right space for Volume Axis
@@ -401,9 +402,11 @@
                 ctx.strokeStyle = '#4b5563'; // Brighter gray
                 ctx.lineWidth = 1; // Thicker?
                 ctx.beginPath();
-                // Draw line between price area and volume area
-                const separatorY = volumeTop - 15; // Increased gap
+                // Draw line between price area and volume area. Center in the gap.
+                const separatorY = priceBottom + (volumeTop - priceBottom) / 2;
                 ctx.moveTo(chartLeft, separatorY);
+                ctx.lineTo(chartRight, separatorY);
+                ctx.stroke();
                 ctx.lineTo(chartRight, separatorY);
                 ctx.stroke();
 
@@ -616,15 +619,12 @@
                     // If content pans right, we move simpler to earlier dates?
                     // Let's implement natural drag: Mouse Right -> Content Right -> View Window shifts Left (Decreases index)
 
-                    const barsMoved = deltaX / step;
-                    viewIndex -= barsMoved;
-
-                    // Clamp
-                    const maxIndex = Math.max(0, allPoints.length - viewCount);
-                    viewIndex = Math.floor(viewIndex);
                     viewIndex = Math.max(0, Math.min(viewIndex, maxIndex));
 
                     draw();
+                    // Force cursor check after drag
+                    // Simply resetting to grab is fine, but if we stop dragging over a candle, 
+                    // we want to know. However, dragging usually implies movement.
                     return;
                 }
 
@@ -651,11 +651,11 @@
                         const i = c.index - viewIndex;
                         const cx = chartLeft + i * (chartWidth / viewCount) + (chartWidth / viewCount) / 2;
                         // Icon Position: cx, priceTop - 2 (bottom baseline). Size approx 16px.
-                        // Hit box: +/- 15px X, priceTop - 25 to priceTop + 5 Y.
+                        // Hit box: +/- 20px X, priceTop - 25 to priceTop + 5 Y.
                         const iconTop = priceTop - 25;
                         const iconBottom = priceTop + 5;
 
-                        if (Math.abs(x - cx) < 15 && my >= iconTop && my <= iconBottom) {
+                        if (Math.abs(x - cx) < 20 && my >= iconTop && my <= iconBottom) {
                             hoveredCross = c;
                             break;
                         }
@@ -748,6 +748,15 @@
                         const cLow = yScale(point.low);
                         const buffer = 4;
                         const isHoveringCandle = (yMouse >= cHigh - buffer && yMouse <= cLow + buffer);
+                        if (isHoveringCandle) {
+                            canvas.style.cursor = 'pointer';
+                            const rect = canvas.getBoundingClientRect();
+                            const virtualY = rect.top + yScale(point.close);
+                            showTooltip(point, getX(idxInView), virtualY, rect);
+                        } else {
+                            canvas.style.cursor = isDragging ? 'grabbing' : 'grab';
+                            tooltip.style.display = 'none';
+                        }
 
                         if (!isHoveringCandle) {
                             tooltip.style.display = 'none';
