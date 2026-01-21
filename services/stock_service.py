@@ -383,7 +383,18 @@ def _trend_label(points: List[Dict[str, Any]]) -> str:
     if not points:
         return "トレンド不明"
     closes = pd.Series([p["close"] for p in points])
-    return get_direction_label(closes, positive_label="上昇傾向", negative_label="下落傾向", neutral_label="もみ合い（レンジ相場）")
+    label = get_direction_label(closes, positive_label="トレンド相場：上昇", negative_label="トレンド相場：下落", neutral_label="レンジ相場：もみ合い")
+    return label
+
+
+def _trend_description(label: str) -> str:
+    if "上昇" in label:
+        return "高値・安値を切り上げながら上昇している状態です。買い優勢の局面です。"
+    elif "下落" in label:
+        return "高値・安値を切り下げながら下落している状態です。売り優勢の局面です。"
+    elif "もみ合い" in label:
+        return "一定の範囲内で価格が上下している状態です。方向感が乏しい局面です。"
+    return "トレンドの方向性が明確ではありません。"
 
 
 def _build_signals(points: List[Dict[str, Any]]) -> List[Dict[str, str]]:
@@ -548,7 +559,9 @@ def get_chart_tab(code: str, interval: str = "1d") -> Dict[str, Any]:
 
     points = _build_points(df if df is not None else pd.DataFrame(), interval)
     support_levels = _support_levels(points)
+    support_levels = _support_levels(points)
     trend_label = _trend_label(points)
+    trend_desc = _trend_description(trend_label)
     signals = _build_signals(points)
 
     if df is not None and not df.empty:
@@ -589,7 +602,10 @@ def get_chart_tab(code: str, interval: str = "1d") -> Dict[str, Any]:
         "interval": interval,
         "interval_options": interval_options,
         "chart_summary": chart_summary,
+        "chart_summary": chart_summary,
         "trend_label": trend_label,
+        "trend_desc": trend_desc,
+        "chart_payload": {"points": points, "support_levels": support_levels},
         "chart_payload": {"points": points, "support_levels": support_levels},
         "support_levels": support_levels,
         "signals": signals,

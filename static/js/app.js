@@ -85,9 +85,11 @@
             const levels = payload.support_levels || [];
 
             // Identify SMA keys dynamically & Sort
-            const smaKeys = allPoints.length > 0
-                ? Object.keys(allPoints[0]).filter(k => k.startsWith('SMA'))
-                : [];
+            // Scan last 5 points to ensure keys exist even if recent data is partial
+            const samplePoints = allPoints.slice(-5);
+            const allKeys = new Set();
+            samplePoints.forEach(p => Object.keys(p).forEach(k => allKeys.add(k)));
+            const smaKeys = Array.from(allKeys).filter(k => k.startsWith('SMA'));
 
             // Sort SMAs to determine Short/Long for Crossovers
             // Extract number: SMA25 -> 25
@@ -395,11 +397,12 @@
                 });
 
                 // --- Separator Line (Price vs Volume) ---
-                ctx.strokeStyle = colors.border;
-                ctx.lineWidth = 1;
+                // --- Separator Line (Price vs Volume) ---
+                ctx.strokeStyle = '#4b5563'; // Brighter gray
+                ctx.lineWidth = 1; // Thicker?
                 ctx.beginPath();
                 // Draw line between price area and volume area
-                const separatorY = volumeTop - 10;
+                const separatorY = volumeTop - 15; // Increased gap
                 ctx.moveTo(chartLeft, separatorY);
                 ctx.lineTo(chartRight, separatorY);
                 ctx.stroke();
@@ -501,10 +504,27 @@
                 const dataIdx = Math.floor(viewIndex + idxInView);
 
                 if (dataIdx >= 0 && dataIdx < allPoints.length) {
-                    if (selectedDataIdx === dataIdx) {
-                        // Click same candle: Do nothing (keep locked)
+                    // Strict Check: Did we click CANDLE?
+                    // Sticky only locks if clicking the candle itself (or very close)
+                    // If clicking empty space (bg/volume/top), resets.
+
+                    if (!yScale) { selectedDataIdx = null; draw(); return; }
+
+                    const point = allPoints[dataIdx];
+                    const cHigh = yScale(point.high);
+                    const cLow = yScale(point.low);
+                    const yClick = e.clientY - rect.top;
+                    const buffer = 10; // Generous buffer
+
+                    if (yClick >= cHigh - buffer && yClick <= cLow + buffer) {
+                        if (selectedDataIdx === dataIdx) {
+                            // Same clicked -> Do nothing
+                        } else {
+                            selectedDataIdx = dataIdx;
+                        }
                     } else {
-                        selectedDataIdx = dataIdx;
+                        // Clicked inside column but NOT on candle -> Reset
+                        selectedDataIdx = null;
                     }
                     draw();
                 } else {
@@ -631,11 +651,11 @@
                         const i = c.index - viewIndex;
                         const cx = chartLeft + i * (chartWidth / viewCount) + (chartWidth / viewCount) / 2;
                         // Icon Position: cx, priceTop - 2 (bottom baseline). Size approx 16px.
-                        // Hit box: +/- 10px X, priceTop - 25 to priceTop Y.
+                        // Hit box: +/- 15px X, priceTop - 25 to priceTop + 5 Y.
                         const iconTop = priceTop - 25;
-                        const iconBottom = priceTop;
+                        const iconBottom = priceTop + 5;
 
-                        if (Math.abs(x - cx) < 12 && my >= iconTop && my <= iconBottom) {
+                        if (Math.abs(x - cx) < 15 && my >= iconTop && my <= iconBottom) {
                             hoveredCross = c;
                             break;
                         }

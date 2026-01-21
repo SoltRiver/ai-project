@@ -33,3 +33,10 @@
   - **Duplicate Code**: Identified two identical `click` event listeners for the canvas.
 - **Action**: Removed the redundant listener (lines 565-589).
 - **Verification**: Browser subagent confirmed functionality remains correct (Sticky/Reset working).
+
+### Review Session 4 (Round 3 Refinements)
+- **Scope**: `static/js/app.js` (SMA Fix, Cross Tooltip, Sticky Strictness, Separator)
+- **Codex Status**: **Success** (No critical issues found).
+- **Verification**:
+  - **Browser**: Verified Status Badge, Cross Tooltip (hover works), Sticky Reset (background click), and Separator visuals.
+  - **Manual**: Logic check for SMA key scanning (`slice(-5)`) and hitbox math looks correct.
