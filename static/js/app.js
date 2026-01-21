@@ -613,11 +613,8 @@
 
                     // Move viewIndex based on drag distance
                     // Drag Right -> Move View Left (Earlier) -> Decrease Index
-                    // But wait, viewIndex is Start Index. 
-                    // Verify direction:
-                    // If I drag mouse right, I want to see left data? No, drag right usually pans content right.
-                    // If content pans right, we move simpler to earlier dates?
-                    // Let's implement natural drag: Mouse Right -> Content Right -> View Window shifts Left (Decreases index)
+                    const barsMoved = deltaX / step;
+                    viewIndex -= barsMoved;
 
                     viewIndex = Math.max(0, Math.min(viewIndex, maxIndex));
 
@@ -644,6 +641,10 @@
                 // Or maybe transient?
                 let hoveredCross = null;
                 const my = e.clientY - rect.top;
+
+                // Recalculate layout scope for hitbox
+                const topMargin = 24;
+                const priceTop = topMargin;
 
                 // Visible Crosses
                 for (const c of crosses) {
@@ -916,3 +917,19 @@ function initPatternModal() {
         }
     });
 }
+
+// --- Init & HTMX Support ---
+bindTabButtons();
+renderCandleCharts();
+initPatternModal();
+
+window.initCharts = () => {
+    bindTabButtons();
+    renderCandleCharts();
+};
+
+document.body.addEventListener('htmx:afterSwap', () => {
+    window.initCharts();
+});
+
+}) ();

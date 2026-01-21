@@ -43,5 +43,6 @@ Before running the `codex` command or requesting a review, you must explicitly c
     -   Format: Date, Scope, Findings, Actions Taken.
 
 7.  **Finalize & Push**:
+    -   **CRITICAL**: Before proceeding, verify that the `codex review` command has actually completed and that you have logged the specific results in `codex_fixes.md`. Do not assume it ran; check the output.
     -   **If Findings Existed**: Ensure `codex_fixes.md` is updated FIRST. Then run `git add .`, `git commit -m "Refactor: [Description] (w/ Fixes)"`, `git push`.
     -   **If No Findings**: Run `git add .`, `git commit -m "Refactor: [Description] (Verified)"`, `git push` immediately after review completion.

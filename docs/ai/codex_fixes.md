@@ -40,3 +40,17 @@
 - **Verification**:
   - **Browser**: Verified Status Badge, Cross Tooltip (hover works), Sticky Reset (background click), and Separator visuals.
   - **Manual**: Logic check for SMA key scanning (`slice(-5)`) and hitbox math looks correct.
+
+### Review Session 5 (Round 4 Refinements)
+- **Scope**: `static/js/app.js` (Cursor Logic, Spacing, Cross Hitbox), `_tab_chart.html` (Height)
+- **Codex Status**: **Success** (Review completed).
+- **Notes**: Previous commit was made prior to this check. Retroactive review confirmed no critical regressions.
+- **Verification**: Browser verification of cursor behavior was successful.
+
+### Review Session 6 (Round 5 Refinements - Regressions)
+- **Scope**: `static/js/app.js` (Scroll Fix, HTMX Support, Cross Scope)
+- **Codex Status**: **Success** (Review completed).
+- **Findings**:
+  - **Syntax Warning**: Identified potential duplicate closure `})();` at end of file.
+- **Action**: Removed duplicate closure.
+- **Verification**: Browser subagent confirmed all features (Scroll, Interval, Tooltip) work as expected.
