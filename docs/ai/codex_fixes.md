@@ -102,3 +102,12 @@
 - **Verification**:
   - **Browser**: Verified "出来高" text is gone and chart top margin is increased to 40px preventing overlap.
   - **Code**: Confirmed `topMargin` updated in both `draw` (line 259) and `mousemove` (line 643).
+
+### Review Session 10 (Round 10 - Date Removal & SMA Colors)
+- **Status**: **Success** (Review executed 2026-01-22).
+- **Scope**: `static/js/app.js` (Date removal, SMA Colors).
+- **Findings**:
+  - Codex noticed SMA color mapping inconsistencies (likely redundant keys), but no errors.
+- **Verification**:
+  - **Browser**: CONFIRMED Date is removed from legend.
+  - **Browser**: CONFIRMED Monthly SMA colors (12, 24, 60) match Daily/Weekly scheme.

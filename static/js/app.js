@@ -114,7 +114,10 @@
                 'SMA52': '#3b82f6',
                 'SMA5': '#ef4444',
                 'SMA20': '#f59e0b',
-                'SMA60': '#3b82f6'
+                'SMA60': '#3b82f6',
+                'SMA12': '#f59e0b', // Monthly Short
+                'SMA24': '#8b5cf6', // Monthly Medium
+                'SMA60': '#3b82f6'  // Monthly Long (Redundant key but safe)
             };
 
             // Pre-calculate Crosses
@@ -155,7 +158,7 @@
                 html += `<span class="l-item"><span class="l-label">安値</span><span class="l-val">${l}</span></span>`;
                 html += `<span class="l-item"><span class="l-label">終値</span><span class="l-val">${c}</span></span>`;
                 // html += `<span class="l-item"><span class="l-label">出来高</span><span class="l-val">${v}</span></span>`;
-                html += `<span class="l-item" style="color:var(--muted); font-size:0.9rem;">${t}</span>`;
+                // html += `<span class="l-item" style="color:var(--muted); font-size:0.9rem;">${t}</span>`;
 
                 sub.innerHTML = html;
             }
