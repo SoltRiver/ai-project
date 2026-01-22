@@ -111,3 +111,37 @@
 - **Verification**:
   - **Browser**: CONFIRMED Date is removed from legend.
   - **Browser**: CONFIRMED Monthly SMA colors (12, 24, 60) match Daily/Weekly scheme.
+
+### Review Session 11 (Stock List Refinements)
+- **Status**: **Success** (Review executed 2026-01-23).
+- **Scope**: `templates/stocks/list.html` (Search/Header), `services/stock_service.py` (Text cleaning).
+- **Findings**:
+  - **Syntax Error**: Identified extra closing `</div>` in `list.html`.
+- **Action**: Removed the redundant `</div>`.
+- **Verification**:
+  - **Browser**: CONFIRMED Search works, Header is correct, High/Low text logic works.
+  - **Code**: Confirmed `list.html` syntax is now valid.
+
+### Review Session 12 (Stock List Gaze Flow)
+- **Status**: **Success** (Review executed 2026-01-23).
+- **Scope**: `templates/stocks/list.html` (Layout Refinement).
+- **Findings**:
+  - Validated Flexbox implementation for Toolbar. No visual regressions flagged.
+- **Verification**:
+  - **Browser**: CONFIRMED Title -> Search -> Buttons -> Table visual flow.
+
+### Review Session 13 (Stock List Visuals Round 2)
+- **Status**: **Success** (Review executed 2026-01-23).
+- **Scope**: `templates/stocks/list.html` (Spacing, Labels, Layout).
+- **Findings**:
+  - Validated HTML structure updates. Using inline styles for quick spacing adjustment is acceptable for now.
+- **Verification**:
+  - **Browser**: CONFIRMED gap increase, button grouping, and correct label text.
+
+### Review Session 14 (Stock List Overlap Fix)
+- **Status**: **Success** (Review executed 2026-01-23).
+- **Scope**: `templates/stocks/list.html` (CSS Flex/Box model).
+- **Findings**:
+  - Validated `flex-wrap` and `box-sizing: border-box` addition.
+- **Verification**:
+  - **Browser**: CONFIRMED no overlap between Search Box and Add Button. Gap is clean.

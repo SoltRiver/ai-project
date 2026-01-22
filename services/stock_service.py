@@ -503,7 +503,7 @@ def get_stock_list() -> List[Dict[str, Any]]:
         if history is not None and not history.empty:
             high_val = float(history["high"].max())
             low_val = float(history["low"].min())
-            high_low_text = f"高値 {math.floor(high_val):,} / 安値 {math.floor(low_val):,}"
+            high_low_text = f"{math.floor(high_val):,} / {math.floor(low_val):,}"
 
         change = _format_change(info.get("current_price"), info.get("previous_close"))
         stocks.append(

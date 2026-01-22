@@ -1,25 +1,37 @@
 {% extends "base.html" %}
 {% block content %}
-<section class="page-header">
+<section class="page-header" style="margin-bottom: 2rem;">
     <div>
         <h1>株価リスト</h1>
     </div>
-    <div class="action-row">
-        <button class="primary-button" type="button">追加</button>
-        <button class="danger-button" type="button">削除</button>
+    <div>
         <span class="timestamp small">{{ timestamp_label }}</span>
     </div>
 </section>
+
+<!-- Toolbar: Search & Actions -->
+<!-- Toolbar: Search & Actions -->
+<div class="toolbar-container"
+    style="display: flex; gap: 1rem; margin-bottom: 1.5rem; align-items: center; flex-wrap: wrap;">
+    <div class="search-box" style="flex: 0 1 400px; position: relative; min-width: 250px;">
+        <input type="text" id="stock-search" placeholder="銘柄コードまたは銘柄名で検索..." class="search-input"
+            style="width: 100%; padding: 0.8rem 1rem; border: 1px solid var(--border); border-radius: 8px; background: var(--panel); color: var(--text); font-size: 1rem; box-shadow: var(--shadow-sm); box-sizing: border-box;">
+    </div>
+    <div class="action-buttons" style="display: flex; gap: 0.5rem; flex-shrink: 0;">
+        <button class="primary-button" type="button" style="padding: 0.8rem 1.2rem;">追加</button>
+        <button class="danger-button" type="button" style="padding: 0.8rem 1.2rem;">削除</button>
+    </div>
+</div>
 
 <div class="card">
     <table class="stock-table">
         <thead>
             <tr>
-                <th class="checkbox-col">削除フラグ</th>
+                <th class="checkbox-col" style="width: 60px; text-align: center;">削除</th>
                 <th>銘柄名（コード）</th>
                 <th>現在値</th>
-                <th>変動額</th>
-                <th>最高値 / 最低値</th>
+                <th>前日比</th>
+                <th>最高値 / 最安値</th>
             </tr>
         </thead>
         <tbody>
@@ -32,7 +44,9 @@
                 <td class="price-cell">{{ item.current_price }}</td>
                 <td class="change-cell">
                     <span class="change-badge change-{{ item.change_direction }}">
-                        <span class="{{ 'arrow-up' if item.change_direction == 'up' else 'arrow-down' if item.change_direction == 'down' else '' }}">{{ item.change_icon }}</span>
+                        <span
+                            class="{{ 'arrow-up' if item.change_direction == 'up' else 'arrow-down' if item.change_direction == 'down' else '' }}">{{
+                            item.change_icon }}</span>
                         {{ item.change_text }}
                     </span>
                 </td>
@@ -42,4 +56,27 @@
         </tbody>
     </table>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const searchInput = document.getElementById('stock-search');
+        if (searchInput) {
+            searchInput.addEventListener('input', function (e) {
+                const term = e.target.value.toLowerCase();
+                const rows = document.querySelectorAll('.stock-table tbody tr');
+                rows.forEach(row => {
+                    const nameCell = row.querySelector('.name-cell');
+                    if (nameCell) {
+                        const text = nameCell.textContent.toLowerCase();
+                        if (text.includes(term)) {
+                            row.style.display = '';
+                        } else {
+                            row.style.display = 'none';
+                        }
+                    }
+                });
+            });
+        }
+    });
+</script>
 {% endblock %}
