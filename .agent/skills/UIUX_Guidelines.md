@@ -29,6 +29,18 @@ When performing any frontend work, you must adopt the persona of a **UI/UX Speci
 -   **Responsiveness**: Does the layout break on window resize? Use `flex-wrap` where appropriate.
 -   **Edge Cases**: What happens with long text, empty states, or zero data?
 
+## 5. General Best Practices (Heuristics)
+-   **Visibility of System Status**: Always keep users informed about what is going on (e.g., "Saving...", "Loading...").
+-   **Error Prevention & Recovery**:
+    -   Ask for confirmation before destructive actions (e.g., Delete).
+    -   Provide clear, human-readable error messages (not just "Error 500").
+-   **Accessibility (A11y)**:
+    -   **Contrast**: Ensure text has sufficient contrast against background.
+    -   **Keyboard Support**: Can the user navigate via Tab?
+    -   **Labels**: Use `aria-label` or `<label>` for inputs.
+-   **Fitts's Law (Clickability)**: Make interactive elements large enough to click easily (add padding to buttons/links).
+-   **Aesthetic & Minimalist Design**: Do not overwhelm the user with irrelevant information. Remove "chartjunk" or redundant text.
+
 ## Implementation Checklist
 -   [ ] **Design Review**: Before implementation, plan the layout to satisfy Gaze Flow.
 -   [ ] **Code Implementation**: Use flexible layouts (`flexbox`, `grid`, `gap`, `box-sizing: border-box`) to prevent overlaps.
