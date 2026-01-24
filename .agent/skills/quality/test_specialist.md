@@ -27,7 +27,11 @@
         -   `docs/ai/codex_fixes.md`: 技術的な記録（英語/日本語混在可）
         -   `docs/human/codex_fixes_for_human.md`: **日本語(UTF-8)で**、非技術者にも分かるように記載。
 
-5.  **品質管理への確認**
+5.  **セキュリティ確認**
+    -   `SecuritySpecialist` に依頼し、セキュリティ監査（Secrets/Audit）を実施する。
+    -   指摘があれば修正を行う。
+
+6.  **品質管理への確認**
     -   `QualityGate`（品質管理エージェント）に最終確認を依頼する。
 
 ## Output Format (for logs)
@@ -44,4 +48,5 @@
 - [ ] 指摘事項の修正完了（あれば）
 - [ ] docs/ai/codex_fixes.md 更新
 - [ ] docs/human/codex_fixes_for_human.md 更新
+- [ ] SecuritySpecialist 確認済み
 - [ ] QualityGate 確認済み

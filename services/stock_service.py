@@ -32,7 +32,9 @@ from fundamental_fetcher import (
 )
 from stock_name_mapper import STOCK_NAME_MAP
 from terms_data import TERMS_DATA
+
 from services.financial_analyzer import FinancialAnalyzer
+from services.jquants_client import client as jquants_client
 
 # Initialize analyzer
 analyzer = FinancialAnalyzer()
@@ -59,16 +61,35 @@ def search_stocks(query: str) -> List[Dict[str, str]]:
         return []
     
     results = []
-    # Search in static map
-    for code, name in STOCK_NAME_MAP.items():
-        # Avoid duplicates (e.g. 7203 and 7203.T) - prefer short code for checking
-        if code.endswith('.T'):
-            continue
+    
+    results = []
+    
+    # Try fetching from J-Quants
+    issues = jquants_client.get_listed_issues()
+    if issues:
+        # Search in J-Quants data
+        # Keys are typically 'Code' and 'CompanyName'
+        for issue in issues:
+            code = issue.get("Code", "")
+            name = issue.get("CompanyName") or ""
             
-        # Check code or name
-        if query in code.lower() or query in name.lower():
-            results.append({"code": code, "name": name})
-            
+            # Simple matching
+            if query in code.lower() or query in name.lower():
+                results.append({"code": code, "name": name})
+                
+            if len(results) >= 10:
+                break
+    else:
+        # Fallback to static map if J-Quants fails or returns empty
+        for code, name in STOCK_NAME_MAP.items():
+            # Avoid duplicates (e.g. 7203 and 7203.T) - prefer short code for checking
+            if code.endswith('.T'):
+                continue
+                
+            # Check code or name
+            if query in code.lower() or query in name.lower():
+                results.append({"code": code, "name": name})
+
     return results[:10]  # Limit results
 
 

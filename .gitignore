@@ -6,3 +6,5 @@ __pycache__/
 .gemini/
 /brain/
 *.log
+
+.env
