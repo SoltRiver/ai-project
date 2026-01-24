@@ -37,8 +37,40 @@ from services.financial_analyzer import FinancialAnalyzer
 # Initialize analyzer
 analyzer = FinancialAnalyzer()
 
-# ウォッチリストのサンプル銘柄
-WATCHLIST_CODES = ["7203", "6758", "9984", "8306", "8035"]
+# ウォッチリストのサンプル銘柄 (簡易的なインメモリ保存)
+_WATCHLIST_CODES = ["7203", "6758", "9984", "8306", "8035"]
+
+def get_watchlist_codes() -> List[str]:
+    return _WATCHLIST_CODES
+
+def add_stock_to_watchlist(code: str) -> bool:
+    if code not in _WATCHLIST_CODES:
+        _WATCHLIST_CODES.append(code)
+        return True
+    return False
+
+def remove_stocks_from_watchlist(codes: List[str]):
+    global _WATCHLIST_CODES
+    _WATCHLIST_CODES = [c for c in _WATCHLIST_CODES if c not in codes]
+
+def search_stocks(query: str) -> List[Dict[str, str]]:
+    query = query.lower().strip()
+    if not query:
+        return []
+    
+    results = []
+    # Search in static map
+    for code, name in STOCK_NAME_MAP.items():
+        # Avoid duplicates (e.g. 7203 and 7203.T) - prefer short code for checking
+        if code.endswith('.T'):
+            continue
+            
+        # Check code or name
+        if query in code.lower() or query in name.lower():
+            results.append({"code": code, "name": name})
+            
+    return results[:10]  # Limit results
+
 
 # interval に対応する取得期間
 PERIOD_BY_INTERVAL = {
@@ -494,7 +526,7 @@ def _build_positives(points: List[Dict[str, Any]]) -> List[str]:
 
 def get_stock_list() -> List[Dict[str, Any]]:
     stocks: List[Dict[str, Any]] = []
-    for code in WATCHLIST_CODES:
+    for code in get_watchlist_codes():
         symbol = format_symbol_for_yfinance(code)
         info = fetch_stock_info(symbol) or {}
         display_name = _jp_name(code, info.get("name"))

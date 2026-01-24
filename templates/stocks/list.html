@@ -13,21 +13,27 @@
 <!-- Toolbar: Search & Actions -->
 <div class="toolbar-container"
     style="display: flex; gap: 1rem; margin-bottom: 1.5rem; align-items: center; flex-wrap: wrap;">
-    <div class="search-box" style="flex: 0 1 400px; position: relative; min-width: 250px;">
-        <input type="text" id="stock-search" placeholder="銘柄コードまたは銘柄名で検索..." class="search-input"
-            style="width: 100%; padding: 0.8rem 1rem; border: 1px solid var(--border); border-radius: 8px; background: var(--panel); color: var(--text); font-size: 1rem; box-shadow: var(--shadow-sm); box-sizing: border-box;">
-    </div>
-    <div class="action-buttons" style="display: flex; gap: 0.5rem; flex-shrink: 0;">
-        <button class="primary-button" type="button" style="padding: 0.8rem 1.2rem;">追加</button>
-        <button class="danger-button" type="button" style="padding: 0.8rem 1.2rem;">削除</button>
-    </div>
+    <form action="/stocks/add" method="post" style="display: contents;">
+        <div class="search-box" style="flex: 0 1 400px; position: relative; min-width: 250px;">
+            <input type="text" id="stock-search" name="code" placeholder="銘柄コードまたは銘柄名で検索..." class="search-input"
+                autocomplete="off"
+                style="width: 100%; padding: 0.8rem 1rem; border: 1px solid var(--border); border-radius: 8px; background: var(--panel); color: var(--text); font-size: 1rem; box-shadow: var(--shadow-sm); box-sizing: border-box;">
+            <ul id="search-results"
+                style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; list-style: none; padding: 0; margin: 4px 0 0 0; z-index: 1000; box-shadow: var(--shadow-md); max-height: 200px; overflow-y: auto;">
+            </ul>
+        </div>
+        <div class="action-buttons" style="display: flex; gap: 0.5rem; flex-shrink: 0;">
+            <button class="primary-button" type="submit" style="padding: 0.8rem 1.2rem;">追加</button>
+            <button class="danger-button" type="button" id="delete-btn" style="padding: 0.8rem 1.2rem;">削除</button>
+        </div>
+    </form>
 </div>
 
 <div class="card">
     <table class="stock-table">
         <thead>
             <tr>
-                <th class="checkbox-col" style="width: 60px; text-align: center;">削除</th>
+                <th class="checkbox-col" style="width: 40px; padding-right: 0;">削除</th>
                 <th>銘柄名（コード）</th>
                 <th>現在値</th>
                 <th>前日比</th>
@@ -37,7 +43,8 @@
         <tbody>
             {% for item in stocks %}
             <tr>
-                <td class="checkbox-col"><input type="checkbox" aria-label="{{ item.name }} を削除対象にする" /></td>
+                <td class="checkbox-col" style="padding-right: 0;"><input type="checkbox" name="selected_stocks"
+                        value="{{ item.code }}" aria-label="{{ item.name }} を削除対象にする" /></td>
                 <td class="name-cell">
                     <a href="/stocks/{{ item.code }}">{{ item.name }}</a>
                 </td>
@@ -60,21 +67,97 @@
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         const searchInput = document.getElementById('stock-search');
-        if (searchInput) {
+        const resultsList = document.getElementById('search-results');
+
+        // Autocomplete
+        if (searchInput && resultsList) {
+            let debounceTimer;
+
             searchInput.addEventListener('input', function (e) {
-                const term = e.target.value.toLowerCase();
-                const rows = document.querySelectorAll('.stock-table tbody tr');
-                rows.forEach(row => {
-                    const nameCell = row.querySelector('.name-cell');
-                    if (nameCell) {
-                        const text = nameCell.textContent.toLowerCase();
-                        if (text.includes(term)) {
-                            row.style.display = '';
+                clearTimeout(debounceTimer);
+                const query = e.target.value.trim();
+
+                if (query.length < 1) {
+                    resultsList.style.display = 'none';
+                    return;
+                }
+
+                debounceTimer = setTimeout(async () => {
+                    try {
+                        const res = await fetch(`/api/stocks/search?q=${encodeURIComponent(query)}`);
+                        if (!res.ok) return;
+                        const data = await res.json();
+                        const suggestions = data.suggestions || [];
+
+                        if (suggestions.length > 0) {
+                            resultsList.innerHTML = suggestions.map(s =>
+                                `<li style="padding: 0.8rem 1rem; cursor: pointer; border-bottom: 1px solid var(--border);">
+                                    ${s}
+                                </li>`
+                            ).join('');
+                            resultsList.style.display = 'block';
+
+                            // Click handler for items
+                            resultsList.querySelectorAll('li').forEach(li => {
+                                li.addEventListener('click', () => {
+                                    searchInput.value = li.textContent.trim();
+                                    resultsList.style.display = 'none';
+                                });
+                                // Hover effect
+                                li.addEventListener('mouseenter', () => li.style.background = 'var(--bg-hover)');
+                                li.addEventListener('mouseleave', () => li.style.background = 'var(--panel)');
+                            });
                         } else {
-                            row.style.display = 'none';
+                            resultsList.style.display = 'none';
                         }
+                    } catch (err) {
+                        console.error('Search failed', err);
                     }
+                }, 300);
+            });
+
+            // Hide on click outside
+            document.addEventListener('click', (e) => {
+                if (!searchInput.contains(e.target) && !resultsList.contains(e.target)) {
+                    resultsList.style.display = 'none';
+                }
+            });
+        }
+
+        // Filter functionality (Client-side filter preserved for existing rows if needed, or rely on adding)
+        // Converting existing filter logic to just highlight or maybe removing it since we have "Add" now.
+        // The previous logic filtered the table. The request says "Add button adds to list". 
+        // So search box is primarily for adding new stuff, not filtering existing list?
+        // "Add button press: Add stock entered in search box to list".
+        // "Delete button press: Delete checked stocks".
+        // The requirement implies the list is persistent/stateful.
+        // So the client-side filter might be confusing if it hides rows. Let's REMOVE the old filter logic 
+        // to avoid conflict with the "Add" purpose. The User Request implies search is for finding NEW stocks to add.
+
+        // Delete Button
+        const deleteBtn = document.getElementById('delete-btn');
+        if (deleteBtn) {
+            deleteBtn.addEventListener('click', function () {
+                const checked = document.querySelectorAll('input[name="selected_stocks"]:checked');
+                if (checked.length === 0) {
+                    return;
+                }
+
+                // Create a form to submit
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '/stocks/delete';
+
+                checked.forEach(box => {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'selected_stocks';
+                    input.value = box.value;
+                    form.appendChild(input);
                 });
+
+                document.body.appendChild(form);
+                form.submit();
             });
         }
     });

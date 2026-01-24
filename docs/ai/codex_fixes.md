@@ -145,3 +145,21 @@
   - Validated `flex-wrap` and `box-sizing: border-box` addition.
 - **Verification**:
   - **Browser**: CONFIRMED no overlap between Search Box and Add Button. Gap is clean.
+
+### Review Session 15 (Stock List Visuals Round 3)
+- **Status**: **Success** (Review executed 2026-01-23).
+- **Scope**: `templates/stocks/list.html` (Alignment, Padding).
+- **Findings**:
+  - Validated removal of `text-align: center` and padding adjustment.
+- **Verification**:
+  - **Browser**: CONFIRMED Left alignment of "削除" and reduced gap.
+
+### Review Session 16 (Stock Add Logic)
+- **Status**: **Success** (Review executed 2026-01-24).
+- **Scope**: `routers/stocks.py` (Add Logic), `verify_fix.py` (Functionality Test).
+- **Findings**:
+  - **Logic**: Confirmed fallback mechanism for "Name Only" input works using `STOCK_NAME_MAP`.
+  - **Logic**: Confirmed "Name (Code)" format parsing is robust.
+- **Verification**:
+  - **Script**: `verify_fix.py` passed all cases (Add by Name, Add by Code, Add by Autocomplete).
+  - **Regression**: `regression_test.py` checked all major pages and detailed tabs. All PASSED.

@@ -102,3 +102,63 @@ async def candle_patterns(request: Request):
     if request.headers.get("HX-Request") == "true":
         return templates.TemplateResponse("candle_patterns/partials/_list_area.html", context)
     return templates.TemplateResponse("candle_patterns/index.html", context)
+
+
+@router.post("/stocks/add")
+async def add_stock(request: Request):
+    form = await request.form()
+    code_input = form.get("code", "").strip()
+
+    if code_input:
+        target_code = None
+
+        # 1. Try extracting from "Name (Code)" format
+        if "(" in code_input and ")" in code_input:
+            parts = code_input.split("(")
+            if len(parts) > 1:
+                possible_code = parts[-1].replace(")", "").strip()
+                # Validate if it looks like a code (digits or digits.T)
+                if possible_code.isdigit() or (possible_code.endswith(".T") and possible_code[:-2].isdigit()):
+                    target_code = possible_code
+
+        # 2. If not found, check if input matches a name in the map
+        if not target_code:
+             from stock_name_mapper import STOCK_NAME_MAP
+             for k, v in STOCK_NAME_MAP.items():
+                 if v == code_input:
+                     target_code = k
+                     # Prefer 4 digit code if available
+                     if k.isdigit() and len(k) == 4:
+                        break
+        
+        # 3. If still not found, treat input as code directly
+        if not target_code:
+            target_code = code_input
+
+        if target_code:
+            stock_service.add_stock_to_watchlist(target_code)
+    
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse(url="/stocks", status_code=303)
+
+
+@router.post("/stocks/delete")
+async def delete_stocks(request: Request):
+    form = await request.form()
+    # checkboxes with same name come as list
+    codes = form.getlist("selected_stocks")
+    if codes:
+        stock_service.remove_stocks_from_watchlist(codes)
+    
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse(url="/stocks", status_code=303)
+
+
+from fastapi.responses import JSONResponse
+@router.get("/api/stocks/search")
+async def search_stocks_api(q: str = ""):
+    results = stock_service.search_stocks(q)
+    # Format for autocomplete: "Name (Code)"
+    suggestions = [f"{item['name']} ({item['code']})" for item in results]
+    return JSONResponse(content={"suggestions": suggestions})
+
