@@ -1,6 +1,6 @@
 from typing import Dict, Any, Optional
 from services.edinet_service import EdinetClient
-from data_fetcher import get_latest_price, fetch_stock_info
+from services.data_fetcher import get_latest_price, fetch_stock_info
 
 class FinancialAnalyzer:
     def __init__(self):

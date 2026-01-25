@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Optional
 
 import pandas as pd
 
-from analyzer import (
+from utils.analyzer import (
     add_technical_indicators,
     analyze_candlestick,
     calculate_trendline,
@@ -14,15 +14,15 @@ from analyzer import (
     detect_golden_cross,
     get_direction_label,
 )
-from candle_classify import get_candle_info
-from data_fetcher import (
+from utils.candle_classify import get_candle_info
+from services.data_fetcher import (
     fetch_dividends,
     fetch_realtime_data,
     fetch_stock_data,
     fetch_stock_info,
     format_symbol_for_yfinance,
 )
-from fundamental_fetcher import (
+from services.fundamental_fetcher import (
     build_company_scores,
     format_date,
     format_fundamental_value,
@@ -30,8 +30,8 @@ from fundamental_fetcher import (
     get_fundamental_statuses,
     get_key_fundamentals,
 )
-from stock_name_mapper import STOCK_NAME_MAP
-from terms_data import TERMS_DATA
+from data.stock_name_mapper import STOCK_NAME_MAP
+from data.terms_data import TERMS_DATA
 
 from services.financial_analyzer import FinancialAnalyzer
 from services.jquants_client import client as jquants_client
@@ -68,29 +68,47 @@ def search_stocks(query: str) -> List[Dict[str, str]]:
     issues = jquants_client.get_listed_issues()
     if issues:
         # Search in J-Quants data
-        # Keys are typically 'Code' and 'CompanyName'
         for issue in issues:
             code = issue.get("Code", "")
-            name = issue.get("CompanyName") or ""
+            # Normalize J-Quants V2 5-digit code (e.g. 72030 -> 7203)
+            if len(code) == 5 and code.endswith("0"):
+                code = code[:4]
+
+            # V2: CoName, V1: CompanyName
+            name = issue.get("CoName") or issue.get("CompanyName") or ""
+            # V2: CoNameEn, V1: CompanyNameEnglish
+            name_en = issue.get("CoNameEn") or issue.get("CompanyNameEnglish") or ""
             
-            # Simple matching
-            if query in code.lower() or query in name.lower():
+            # Prefix match (Code or Name)
+            # User requirement: "Prefix match"
+            code_match = code.lower().startswith(query)
+            name_match = name.lower().startswith(query)
+            name_en_match = name_en.lower().startswith(query)
+
+            if code_match or name_match or name_en_match:
                 results.append({"code": code, "name": name})
                 
-            if len(results) >= 10:
-                break
+            # Note: We need to sort ALL results, so we can't break early easily if we want global sort.
+            # But getting ALL matches might be heavy if query is just "1".
+            # Let's cap at a higher number then sort? Or just sort all matches.
+            # Japanese market has ~4000 stocks. Iterating all is fast in Python.
+            
     else:
-        # Fallback to static map if J-Quants fails or returns empty
+        # Fallback to static map
         for code, name in STOCK_NAME_MAP.items():
-            # Avoid duplicates (e.g. 7203 and 7203.T) - prefer short code for checking
             if code.endswith('.T'):
                 continue
                 
-            # Check code or name
-            if query in code.lower() or query in name.lower():
+            # Prefix match
+            if code.lower().startswith(query) or name.lower().startswith(query):
                 results.append({"code": code, "name": name})
 
-    return results[:10]  # Limit results
+    # Sort results by code (Ascending)
+    # Filter duplicates just in case
+    unique_results = {r['code']: r for r in results}.values()
+    sorted_results = sorted(unique_results, key=lambda x: x['code'])
+
+    return sorted_results[:10]  # Limit results after sorting
 
 
 # interval に対応する取得期間

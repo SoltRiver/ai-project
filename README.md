@@ -29,3 +29,11 @@ uvicorn fastapi_app:app --reload --port 8000
 ## ãƒ†ã‚¹ãƒˆ/ç¢ºèª
 - `uvicorn fastapi_app:app --reload` ã§èµ·å‹•ã—ã€ãƒªã‚¹ãƒˆâ†’è©³ç´°ã‚¿ãƒ–ã®é·ç§»ã‚’ç¢ºèªã€‚
 - yfinance ã¸ã®ãƒãƒƒãƒˆãƒ¯ãƒ¼ã‚¯ãŒå±Šã‹ãªã„å ´åˆã¯ç”»é¢ä¸Šã§ "N/A" è¡¨ç¤ºã«ãªã‚Šã¾ã™ã€‚
+
+## ƒfƒBƒŒƒNƒgƒŠ\¬
+Ú×‚Í [docs/architecture/directory_structure.md](docs/architecture/directory_structure.md) ‚ğQÆ‚µ‚Ä‚­‚¾‚³‚¢B
+
+- **data/**: ’è”«‘ƒf[ƒ^
+- **services/**: ƒrƒWƒlƒXƒƒWƒbƒN
+- **utils/**: ”Ä—pƒƒWƒbƒN
+- **scripts/**: ŒŸØƒfƒoƒbƒO—pƒXƒNƒŠƒvƒg

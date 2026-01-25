@@ -123,7 +123,7 @@ async def add_stock(request: Request):
 
         # 2. If not found, check if input matches a name in the map
         if not target_code:
-             from stock_name_mapper import STOCK_NAME_MAP
+             from data.stock_name_mapper import STOCK_NAME_MAP
              for k, v in STOCK_NAME_MAP.items():
                  if v == code_input:
                      target_code = k

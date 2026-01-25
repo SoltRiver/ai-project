@@ -8,64 +8,46 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class JQuantsClient:
-    BASE_URL = "https://api.jquants.com/v1"
+    BASE_URL = "https://api.jquants.com/v2"
     
     def __init__(self):
-        self.refresh_token = os.environ.get("JQUANTS_REFRESH_TOKEN")
-        self.id_token: Optional[str] = None
-        self.token_expiry: Optional[datetime] = None
+        # V2 uses API Key (x-api-key header)
+        self.api_key = os.environ.get("JQUANTS_API_KEY")
         self._listed_issues_cache: List[Dict[str, Any]] = []
-
-    def _get_id_token(self) -> str:
-        """
-        Get a valid ID token. Refreshes if expired or missing.
-        """
-        # Return existing if valid (with 1 min buffer)
-        if self.id_token and self.token_expiry and datetime.now() < self.token_expiry - timedelta(minutes=1):
-            return self.id_token
-
-        if not self.refresh_token:
-            print("WARN: JQUANTS_REFRESH_TOKEN not found in environment.")
-            return ""
-
-        try:
-            url = f"{self.BASE_URL}/token/auth_user"
-            resp = requests.post(url, params={"refresh_token": self.refresh_token})
-            resp.raise_for_status()
-            data = resp.json()
-            self.id_token = data.get("idToken")
-            # Usually lasts 24 hours, but safe default usually provided? API doesn't specify expiry in response body always,
-            # but usually it's correct to just refresh when needed. Docs say 24h.
-            self.token_expiry = datetime.now() + timedelta(hours=23) 
-            return self.id_token
-        except Exception as e:
-            print(f"Error refreshing J-Quants token: {e}")
-            return ""
 
     def get_listed_issues(self) -> List[Dict[str, Any]]:
         """
         Fetch list of listed issues (stocks). Use cache if populated.
+        V2 Endpoint: /v2/equities/master
         """
         if self._listed_issues_cache:
             return self._listed_issues_cache
             
-        token = self._get_id_token()
-        if not token:
+        if not self.api_key:
+            print("WARN: JQUANTS_API_KEY not found in environment.")
             return []
 
         try:
-            url = f"{self.BASE_URL}/listed/info"
-            headers = {"Authorization": f"Bearer {token}"}
+            url = f"{self.BASE_URL}/equities/master"
+            headers = {"x-api-key": self.api_key}
+            
+            # Note: V2 might return specific columns or all. 
+            # We just need simple list for now.
             resp = requests.get(url, headers=headers)
             resp.raise_for_status()
-            data = resp.json()
             
-            # Response format: {"info": [...]}
-            issues = data.get("info", [])
+            # V2 Response format: { "data": [ ... ], "pagination_key": ... }
+            body = resp.json()
+            issues = body.get("data", [])
+            
+            # Check if column names are different. Assuming "Code" and "CompanyName" exist based on "master" naming.
+            # If changed (e.g. "C", "N"), we might need mapping.
+            # But "master" usually implies full info. Let's assume standard names or fallback to checking the first item in debug.
+            
             self._listed_issues_cache = issues
             return issues
         except Exception as e:
-            print(f"Error fetching J-Quants listed issues: {e}")
+            print(f"Error fetching J-Quants listed issues (v2): {e}")
             return []
 
     def clear_cache(self):

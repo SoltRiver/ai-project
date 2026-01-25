@@ -4,9 +4,6 @@
     <div>
         <h1>株価リスト</h1>
     </div>
-    <div>
-        <span class="timestamp small">{{ timestamp_label }}</span>
-    </div>
 </section>
 
 <!-- Toolbar: Search & Actions -->
@@ -30,6 +27,9 @@
 </div>
 
 <div class="card">
+    <div style="text-align: left; margin-bottom: 0.5rem; padding-left: 0.5rem;">
+        <span class="timestamp small" style="color: var(--text-muted); font-size: 0.85rem;">{{ timestamp_label }}</span>
+    </div>
     <table class="stock-table">
         <thead>
             <tr>

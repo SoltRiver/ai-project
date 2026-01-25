@@ -8,8 +8,8 @@ from typing import Optional, Dict, Any, List
 import pandas as pd
 import yfinance as yf
 
-from analyzer import calculate_star_rating, format_stars
-from data_fetcher import format_symbol_for_yfinance
+from utils.analyzer import calculate_star_rating, format_stars
+from services.data_fetcher import format_symbol_for_yfinance
 
 
 def _parse_date_value(value: Any) -> Optional[datetime]:
