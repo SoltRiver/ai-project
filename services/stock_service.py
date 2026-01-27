@@ -36,7 +36,7 @@ from data.terms_data import TERMS_DATA
 from services.financial_analyzer import FinancialAnalyzer
 from services.jquants_client import client as jquants_client
 
-# Initialize analyzer
+# アナライザーの初期化
 analyzer = FinancialAnalyzer()
 
 # ウォッチリストのサンプル銘柄 (簡易的なインメモリ保存)
@@ -79,8 +79,8 @@ def search_stocks(query: str) -> List[Dict[str, str]]:
             # V2: CoNameEn, V1: CompanyNameEnglish
             name_en = issue.get("CoNameEn") or issue.get("CompanyNameEnglish") or ""
             
-            # Prefix match (Code or Name)
-            # User requirement: "Prefix match"
+            # 接頭辞一致 (コードまたは名称)
+            # ユーザー要件: "前方一致"
             code_match = code.lower().startswith(query)
             name_match = name.lower().startswith(query)
             name_en_match = name_en.lower().startswith(query)
@@ -616,14 +616,14 @@ def get_chart_tab(code: str, interval: str = "1d") -> Dict[str, Any]:
     symbol = format_symbol_for_yfinance(code)
     df = fetch_stock_data(symbol, period=PERIOD_BY_INTERVAL.get(interval, "1mo"), interval=interval)
     
-    # Calculate SMAs
-    sma_periods = [25, 75, 200]  # Default for daily
+    # 単純移動平均 (SMA) の計算
+    sma_periods = [25, 75, 200]  # 日足のデフォルト
     if interval == "1wk":
         sma_periods = [13, 26, 52]
     elif interval == "1mo":
         sma_periods = [12, 24, 60]
     elif interval in INTRADAY_INTERVALS:
-        sma_periods = [] # No SMA for intraday for now, or maybe small ones
+        sma_periods = [] # イントラデイ（日中足）では今のところSMAを表示しない、あるいは短い期間を使用する
     
     if df is not None and not df.empty and sma_periods:
         df = add_technical_indicators(df, sma_periods=sma_periods)
@@ -687,7 +687,7 @@ def get_chart_tab(code: str, interval: str = "1d") -> Dict[str, Any]:
 
 
 def get_fundamental_tab(code: str) -> Dict[str, Any]:
-    # 1. Fetch original data (Yahoo Finance based) for existing UI components
+    # 1. 既存UIコンポーネント用の元データ (Yahoo Financeベース) を取得
     symbol = format_symbol_for_yfinance(code)
     fundamental = get_key_fundamentals(symbol) or {}
     fundamental_groups = [
@@ -720,18 +720,18 @@ def get_fundamental_tab(code: str) -> Dict[str, Any]:
         "配当基準日": format_date(events.get("ex_dividend_date")),
         "権利付き最終日": "要確認",
     }
-    # 1.5 Fetch chart data for dynamic Risk/Positive calculation
-    # Use 6mo daily data for standard volatility analysis
+    # 1.5 動的なリスク・ポジティブ要素計算のためにチャートデータを取得
+    # 標準的なボラティリティ分析のために6ヶ月分の日足データを使用
     chart_df = fetch_stock_data(symbol, period="6mo", interval="1d")
     points = _build_points(chart_df, "1d")
     
-    # Calculate risks and positives dynamically
-    # Note: info is already fetched as 'fundamental' dict, but _build_risks expects yfinance info dict structure for volume
-    # We can fetch fresh realtime info or approximate. Let's fetch realtime for accuracy on volume.
+    # リスクとポジティブ要素を動的に計算
+    # Note: info変数は既に 'fundamental' 辞書として取得されているが、_build_risks は yfinance の info 構造（volume等）を期待している
+    # 正確な出来高のために、最新のリアルタイム情報を取得する。
     realtime_info = fetch_realtime_data(symbol) or {}
     risks = _build_risks(points, realtime_info)
     
-    # 2. Fetch new EDINET Analysis data
+    # 2. 新しいEDINET分析データを取得
     try:
         analysis = analyzer.analyze_stock(code)
     except Exception as e:
@@ -769,7 +769,7 @@ def get_dividend_tab(code: str) -> Dict[str, Any]:
         rows.append({"date": date_str, "amount": _fmt_price(item.get("amount"), decimals=1)})
 
 
-    # Fetch additional info for yield
+    # 利回りの追加情報を取得
     info = fetch_stock_info(symbol) or {}
     yield_val = info.get("dividend_yield")
     formatted_yield = f"{yield_val:.2%}" if yield_val is not None else "データなし"

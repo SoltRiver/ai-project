@@ -123,10 +123,10 @@ def fetch_fundamental_data(symbol: str) -> Optional[Dict[str, Any]]:
                 if total_capital > 0:
                     result["equity_ratio"] = (total_equity / total_capital)
 
-        # Normalize dividend_yield (handle percentage vs ratio)
+        # 配当利回りの正規化（パーセント値と比率の混在を処理）
         if result.get("dividend_yield") is not None and result["dividend_yield"] > 0.5:
-             # Assuming if > 0.5 (50%), it's a percentage value (e.g. 2.62 for 2.62%)
-             # Normal yields are usually < 0.1 (10%)
+             # 0.5 (50%) を超える場合は、パーセント値（例: 2.62% が 2.62 と入っている）とみなす
+             # 通常の利回りは 0.1 (10%) 未満
              result["dividend_yield"] = result["dividend_yield"] / 100
 
         return result

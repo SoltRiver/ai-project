@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-header" style="margin-bottom: 2rem;">
+    <div>
+        <h1>主要指標一覧</h1>
+        <p class="text-muted">主要な市場指標のリアルタイム（遅延あり）状況です。</p>
+    </div>
+    <div>
+        <button class="ghost-button" onclick="window.location.reload();">
+            更新
+        </button>
+    </div>
+</section>
+
+<div class="card">
+    <table class="stock-table">
+        <thead>
+            <tr>
+                <th>指標名</th>
+                <th>現在値</th>
+                <th>前日比</th>
+                <th>状態</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in indices %}
+            <tr>
+                <td class="name-cell">
+                    <strong>{{ item.name }}</strong>
+                    <br>
+                    <span style="font-size: 0.8em; color: var(--text-muted);">{{ item.ticker }}</span>
+                </td>
+                <td class="price-cell">
+                    {% if item.price %}
+                    {{ "{:,.2f}".format(item.price) }}
+                    {% else %}
+                    -
+                    {% endif %}
+                </td>
+                <td class="change-cell">
+                    {% if item.change is not none %}
+                    {% set color_class = 'change-up' if item.change > 0 else 'change-down' if item.change < 0
+                        else 'change-flat' %} {% set icon='↑' if item.change> 0 else '↓' if item.change < 0 else '→' %}
+                            <span class="change-badge {{ color_class }}">
+                            <span
+                                class="{{ 'arrow-up' if item.change > 0 else 'arrow-down' if item.change < 0 else '' }}">{{
+                                icon }}</span>
+                            {{ "{:+,.2f}".format(item.change) }} ({{ "{:+.2f}%".format(item.change_percent) }})
+                            </span>
+                            {% else %}
+                            -
+                            {% endif %}
+                </td>
+                <td>
+                    {% if item.status == 'OK' %}
+                    <span style="color: var(--color-success);">● 取得成功</span>
+                    {% else %}
+                    <span style="color: var(--color-danger);">× {{ item.status }}</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <div style="padding: 1rem; color: var(--text-muted); font-size: 0.9em;">
+        <p>※ データはYahoo Financeより取得しています。一部の指標（TOPIX、マザーズ等）はAPIの制限により取得できない場合があります。</p>
+        <p>※ 遅延データが含まれる場合があります。</p>
+    </div>
+</div>
+{% endblock %}

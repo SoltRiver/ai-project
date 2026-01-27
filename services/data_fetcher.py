@@ -162,20 +162,30 @@ def fetch_news(symbol: str, limit: int = 5) -> List[Dict[str, Any]]:
         items = ticker.news or []
         news_list = []
         for item in items[:limit]:
-            published = item.get("providerPublishTime")
+            # データ構造の正規化
+            # 最近のyfinanceは 'content' キー内に詳細を持つ場合がある
+            content = item.get("content", item)
+            
+            # published日時情報の取得（場所が変動するため複数箇所チェック）
+            valid_date = content.get("pubDate") or item.get("providerPublishTime")
             published_at = None
-            if isinstance(published, (int, float)):
+            
+            if valid_date:
                 try:
-                    published_at = datetime.fromtimestamp(published)
+                    if isinstance(valid_date, (int, float)):
+                        published_at = datetime.fromtimestamp(valid_date)
+                    else:
+                        # 文字列の場合のパース（必要なら実装）
+                        pass
                 except Exception:
                     published_at = None
 
             news_list.append({
-                "title": item.get("title"),
-                "publisher": item.get("publisher"),
-                "link": item.get("link"),
+                "title": content.get("title", "No Title"),
+                "publisher": content.get("provider", {}).get("displayName") if isinstance(content.get("provider"), dict) else "Unknown",
+                "link": content.get("canonicalUrl", {}).get("url") if isinstance(content.get("canonicalUrl"), dict) else content.get("link"),
                 "published_at": published_at,
-                "summary": item.get("summary"),
+                "summary": content.get("summary", ""),
             })
         return news_list
     except Exception as e:

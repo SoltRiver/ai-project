@@ -162,43 +162,74 @@ def parse_ai_response(content: str) -> Dict[str, str]:
     return result
 
 
-def generate_news_insights(
-    symbol: str,
-    news_items: List[Dict[str, Any]],
-    model: str = "gpt-4o-mini",
-) -> Optional[str]:
-    """ニュース一覧から初心者向け要約と価格インパクト解説を生成する"""
+def analyze_news_impact_batch(news_items: List[Dict[str, Any]], model: str = "gpt-4o-mini") -> List[Dict[str, Any]]:
+    """
+    ニュース一覧をAIで分析し、要約と影響銘柄を抽出する。
+    """
     client = get_ai_client()
     if client is None or not news_items:
-        return None
+        return []
 
-    prompt_lines = [
-        f"以下は銘柄 {symbol} に関連するニュースです。初心者向けに短く要約し、株価への影響を一言で付けてください。",
-        "期待する出力: 箇条書きで『要約 - 株価への影響』形式。",
-        "",
+    # プロンプト構築
+    articles_text = ""
+    for idx, item in enumerate(news_items):
+        articles_text += f"[ID:{idx}] {item.get('title')} (Source: {item.get('publisher')})\n{item.get('summary', '')}\n\n"
+
+    prompt = f"""
+以下の金融ニュース記事を分析し、JSON形式のリストで回答してください。
+各記事について以下の情報が必要です：
+1. summarized_content: 初心者向けの3行程度の要約（日本語）。
+2. impacted_stocks: このニュースが影響を与える可能性のある銘柄リスト。
+   各銘柄には以下の情報を含めてください：
+   - name: 銘柄名または業種名（例: トヨタ自動車、半導体セクター）
+   - impact_type: "positive" または "negative"
+   - reason: なぜプラス/マイナスなのかの短い理由
+
+記事リスト:
+{articles_text}
+
+出力フォーマット（JSONのみ）:
+[
+  {{
+    "id": 0,
+    "summarized_content": "要約テキスト...",
+    "impacted_stocks": [
+      {{"name": "銘柄A", "impact_type": "positive", "reason": "理由..."}},
+      {{"name": "銘柄B", "impact_type": "negative", "reason": "理由..."}}
     ]
-    for item in news_items:
-        title = item.get("title", "")
-        summary = item.get("summary", "")
-        publisher = item.get("publisher", "")
-        prompt_lines.append(f"- タイトル: {title} / 発行元: {publisher} / 内容: {summary}")
-
-    prompt = "\n".join(prompt_lines)
+  }}
+]
+"""
 
     try:
         response = client.chat.completions.create(
             model=model,
             messages=[
-                {"role": "system", "content": "あなたは金融ニュースを分かりやすく要約するアナリストです。"},
+                {"role": "system", "content": "あなたは熟練した金融市場アナリストです。JSON形式のみで回答してください。"},
                 {"role": "user", "content": prompt},
             ],
-            temperature=0.4,
-            max_tokens=800,
+            temperature=0.3, # 分析の一貫性を重視
+            response_format={"type": "json_object"},
         )
-        return response.choices[0].message.content
+        content = response.choices[0].message.content
+        import json
+        data = json.loads(content)
+        
+        # 配列が "articles" キーに入っている場合と、直接リストの場合に対応
+        if isinstance(data, dict):
+            # キーを探す
+            for key in ["articles", "news", "items", "results"]:
+                if key in data and isinstance(data[key], list):
+                    return data[key]
+            # 見つからない場合はルートがリストであることを期待したいが、Dictならそのまま返すか空
+            return []
+        
+        return data if isinstance(data, list) else []
+
     except Exception as e:
-        print(f"ニュース要約生成エラー: {e}")
-        return None
+        print(f"ニュース分析AIエラー: {e}")
+        return []
+
 
 
 def generate_simple_analysis_fallback(
