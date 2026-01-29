@@ -219,4 +219,16 @@ equirements.txt.
     - **Browser**: Verified 18 basic and 35 advanced patterns are correctly listed and images load properly.
     - **UI**: Verified "詳細を見る" modals display the updated, rich pattern metadata.
 
+### Review Session 22 (Environment Cleanup & Rule Sync)
+- **Status**: **Success** (Executed 2026-01-30).
+- **Scope**: `.venv/`, `__pycache__/`, `.agent/rules/edit-rules.md`.
+- **Findings**:
+    - **Architecture Error**: `__pycache__` and `.venv` were found to be tracked by git, even though they are listed in `.gitignore`. This causes bloat and potential conflicts.
+    - **Rule Sync**: `.agent/rules/edit-rules.md` showed uncommitted differences, likely due to line-ending mismatches.
+- **Action**:
+    - Untracked `__pycache__` and `.venv` from the repository using `git rm --cached`.
+    - Normalized `.agent/rules/edit-rules.md`.
+- **Verification**:
+    - **Git Status**: Verified that no compiled or environment-specific files remain in the tracking area.
+
 
