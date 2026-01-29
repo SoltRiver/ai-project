@@ -205,3 +205,18 @@ equirements.txt.
   - **Script**: `test_tickers.py` confirmed connectivity to N225, DJI, IXIC.
   - **Import Check**: `python -c "import ..."` passed.
 
+### Review Session 21 (Candlestick Patterns Expansion)
+- **Status**: **Success** (Executed 2026-01-29).
+- **Scope**: `services/stock_service.py`, `.env`, `requirements.txt`.
+- **Findings**:
+    - **Missing Dependency**: `edinet-xbrl` was missing in the current virtual environment (`.venv`), causing import failures in `stock_service.py`.
+    - **Environment Path Issue**: The `.venv` in `c:\Users\curem\ai-project` was misconfigured, pointing to a non-existent `C:\develop\ai-project` path for site-packages.
+- **Action**:
+    - Installed `edinet-xbrl` explicitly into the environment.
+    - Used the `C:\develop\ai-project\.venv` environment with the correct site-packages mapping to run the server.
+    - Expanded `CANDLE_PATTERN_CARDS` from 14 patterns to 53 patterns (18 basic, 35 advanced).
+- **Verification**:
+    - **Browser**: Verified 18 basic and 35 advanced patterns are correctly listed and images load properly.
+    - **UI**: Verified "詳細を見る" modals display the updated, rich pattern metadata.
+
+
