@@ -137,12 +137,21 @@ def _build_glossary_terms() -> List[Dict[str, str]]:
     terms: List[Dict[str, str]] = []
     for category, items in TERMS_DATA.items():
         for key, term in items.items():
+            # Check for explicit ID mapping or fall back to English name
+            english_name = term.get("english") or key
+            term_id = english_name.lower().replace(" ", "_")
+            
+            # Manual overrides for acronyms to match images (per.png, rsi.png etc)
+            if key in ["PER", "PBR", "RSI", "MACD"]:
+                term_id = key.lower()
+
             terms.append(
                 {
                     "term": term.get("japanese") or key,
                     "meaning": term.get("meaning") or "",
                     "tip": term.get("usage") or "",
                     "category": category,
+                    "id": term_id,
                 }
             )
     return terms
