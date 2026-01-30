@@ -19,6 +19,10 @@ This skill acts as your "Quality Keeper". You must follow this checklist strictl
         -   Data Loading (Interval changes)
         -   Interactivity (Tooltips, Drag, Scroll)
     -   **Use Browser Subagent** to verify these.
+    -   **Visual Integrity Check**:
+        -   Verify Candlestick Pattern images are fully visible (not cut off).
+        -   Confirm no unintended overflow in cards.
+        -   **Broken Image Check**: Run JS `document.querySelectorAll('img').forEach(img => console.assert(img.naturalWidth > 0, img.src))` to ensure all images loaded.
 
 3.  **Codex Review**
     -   Run the `codex` command: `codex "Review my changes in [files] for logic, security, and regression risks."`
