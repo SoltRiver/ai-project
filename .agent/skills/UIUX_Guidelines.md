@@ -21,6 +21,7 @@ When performing any frontend work, you must adopt the persona of a **UI/UX Speci
 
 ## 3. Visual Integrity
 -   **No Overlaps**: Ensure elements do not overlap, especially on smaller screens or when content is dynamic.
+    -   *Action*: Resize browser window to mobile width (~375px) and verify header/card layouts.
 -   **Spacing**: Maintain sufficient whitespace (padding/margin) between major sections (e.g., Header vs Content). Avoid "cramped" layouts.
 -   **Alignment**: Are text and interactions property aligned?
 
@@ -35,7 +36,8 @@ When performing any frontend work, you must adopt the persona of a **UI/UX Speci
     -   Ask for confirmation before destructive actions (e.g., Delete).
     -   Provide clear, human-readable error messages (not just "Error 500").
 -   **Accessibility (A11y)**:
-    -   **Contrast**: Ensure text has sufficient contrast against background.
+    -   **Contrast**: Ensure text has sufficient contrast against background (Target WCAG AA, ~4.5:1).
+        -   *Action*: Check dark mode specifically. Background `#1a1b26` needs text brighter than `#94a3b8` (Slate-400).
     -   **Keyboard Support**: Can the user navigate via Tab?
     -   **Labels**: Use `aria-label` or `<label>` for inputs.
 -   **Fitts's Law (Clickability)**: Make interactive elements large enough to click easily (add padding to buttons/links).

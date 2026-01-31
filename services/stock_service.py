@@ -1426,12 +1426,20 @@ def get_candle_patterns_page() -> Dict[str, Any]:
     category_counts = {
         c["key"]: sum(len(group_by_category[g][c["key"]]) for g in group_by_category) for c in categories
     }
+    
+    # Calculate group counts dynamically to ensure consistency
+    dynamic_group_counts = {g: 0 for g in group_labels}
+    for item in CANDLE_PATTERN_CARDS:
+        grp = item.get("group", "basic")
+        if grp in dynamic_group_counts:
+            dynamic_group_counts[grp] += 1
+
     return {
         "patterns": CANDLE_PATTERN_CARDS,
         "categories": categories,
         "group_by_category": group_by_category,
         "group_labels": group_labels,
-        "group_counts": CANDLE_PATTERN_GROUP_COUNTS,
+        "group_counts": dynamic_group_counts,
         "category_counts": category_counts,
     }
 

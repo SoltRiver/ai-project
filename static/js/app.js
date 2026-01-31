@@ -815,27 +815,12 @@
         initPatternModal();
     }
 
-    function animateCountBadges(scope = document) {
-        const badges = scope.querySelectorAll('.count-badge[data-count-target]');
-        badges.forEach((badge) => {
-            const target = Number.parseInt(badge.dataset.countTarget || '0', 10);
-            if (Number.isNaN(target)) return;
-            const duration = 450;
-            const start = performance.now();
-            badge.textContent = '0';
-            const tick = (now) => {
-                const progress = Math.min((now - start) / duration, 1);
-                const value = Math.floor(target * progress);
-                badge.textContent = String(value);
-                if (progress < 1) {
-                    requestAnimationFrame(tick);
-                } else {
-                    badge.textContent = String(target);
-                }
-            };
-            requestAnimationFrame(tick);
-        });
+    function initPatternPage() {
+        initPatternTabs();
+        initPatternModal();
     }
+
+    /* Removed animateCountBadges function to prevent count fluctuation */
 
     function initPatternTabs() {
         const tabs = document.querySelectorAll('.pattern-tab');
@@ -853,10 +838,10 @@
             tab.dataset.bound = 'true';
             tab.addEventListener('click', () => {
                 setActive(tab);
-                animateCountBadges();
+                // animateCountBadges(); // Removed
             });
         });
-        animateCountBadges();
+        // animateCountBadges(); // Removed
     }
 
     function initPatternModal() {
