@@ -4,9 +4,11 @@ OpenAI GPT-4系を使用して株価分析コメントやニュース解説を�
 """
 
 import os
+import json
 from typing import Optional, Dict, Any, List
 
 from openai import OpenAI
+import google.generativeai as genai
 
 
 def get_ai_client() -> Optional[OpenAI]:
@@ -15,6 +17,15 @@ def get_ai_client() -> Optional[OpenAI]:
     if not api_key:
         return None
     return OpenAI(api_key=api_key)
+
+
+def get_gemini_model(model_name: str = "gemini-1.5-flash") -> Optional[genai.GenerativeModel]:
+    """Gemini APIキーを読み込み、GenerativeModelを返す"""
+    api_key = os.getenv("GOOGLE_API_KEY")
+    if not api_key:
+        return None
+    genai.configure(api_key=api_key)
+    return genai.GenerativeModel(model_name)
 
 
 def _format_number(value: Any, digits: int = 2, suffix: str = "") -> str:
@@ -162,12 +173,12 @@ def parse_ai_response(content: str) -> Dict[str, str]:
     return result
 
 
-def analyze_news_impact_batch(news_items: List[Dict[str, Any]], model: str = "gpt-4o-mini") -> List[Dict[str, Any]]:
+def analyze_news_impact_batch(news_items: List[Dict[str, Any]], model: str = "gemini-flash-latest") -> List[Dict[str, Any]]:
     """
     ニュース一覧をAIで分析し、要約と影響銘柄を抽出する。
+    優先的に Gemini API を使用し、失敗した場合は OpenAI にフォールバックする。
     """
-    client = get_ai_client()
-    if client is None or not news_items:
+    if not news_items:
         return []
 
     # プロンプト構築
@@ -177,21 +188,23 @@ def analyze_news_impact_batch(news_items: List[Dict[str, Any]], model: str = "gp
 
     prompt = f"""
 以下の金融ニュース記事を分析し、JSON形式のリストで回答してください。
-各記事について以下の情報が必要です：
-1. summarized_content: 初心者向けの3行程度の要約（日本語）。
-2. impacted_stocks: このニュースが影響を与える可能性のある銘柄リスト。
-   各銘柄には以下の情報を含めてください：
+各記事について以下の情報が必要です（必ず日本語で回答してください）：
+1. translated_title: ニュース記事タイトルの自然な日本語訳。
+2. summarized_content: 初心者向けの3行程度の要約（日本語）。元記事が英語であっても必ず日本語で要約してください。
+3. impacted_stocks: このニュースが影響を与える可能性のある銘柄リスト。
+   各銘柄には以下の情報を含めてください（銘柄名も日本語にすること）：
    - name: 銘柄名または業種名（例: トヨタ自動車、半導体セクター）
    - impact_type: "positive" または "negative"
-   - reason: なぜプラス/マイナスなのかの短い理由
+   - reason: なぜプラス/マイナスなのかの短い理由（日本語）
 
 記事リスト:
 {articles_text}
 
-出力フォーマット（JSONのみ）:
+出力フォーマット（JSONのみ、キー名は厳密に守ること）:
 [
   {{
     "id": 0,
+    "translated_title": "日本語訳タイトル...",
     "summarized_content": "要約テキスト...",
     "impacted_stocks": [
       {{"name": "銘柄A", "impact_type": "positive", "reason": "理由..."}},
@@ -201,33 +214,74 @@ def analyze_news_impact_batch(news_items: List[Dict[str, Any]], model: str = "gp
 ]
 """
 
+    # 1. Gemini を試行
+    gemini_model = get_gemini_model(model)
+    if gemini_model:
+        try:
+            print(f"Geminiでニュース分析中... ({model})")
+            response = gemini_model.generate_content(
+                prompt,
+                generation_config=genai.GenerationConfig(
+                    response_mime_type="application/json",
+                    temperature=0.3
+                )
+            )
+            content = response.text
+            print(f"Gemini raw response: {content[:200]}...")
+            data = json.loads(content)
+            
+            # 配列化して返す
+            if isinstance(data, dict):
+                # 配列が特定のキーに入っている場合
+                for key in ["articles", "news", "items", "results", "data"]:
+                    if key in data and isinstance(data[key], list):
+                        print(f"Gemini: Found list in key '{key}' with {len(data[key])} items.")
+                        return data[key]
+                # ルートが単一のオブジェクトで、必要なキーが含まれている場合（Geminiが単一記事と誤認した場合など）
+                if any(k in data for k in ["translated_title", "summarized_content", "impacted_stocks"]):
+                    print("Gemini: Found single article object, wrapping in list.")
+                    return [data]
+            
+            if isinstance(data, list):
+                print(f"Gemini: Success! Received {len(data)} items.")
+                return data
+            
+            print("Gemini: Format mismatch, failing over.")
+            return []
+        except Exception as e:
+            print(f"Gemini分析エラー: {type(e).__name__}: {e}。OpenAIへのフォールバックを試みます。")
+
+    # 2. OpenAI にフォールバック
+    client = get_ai_client()
+    if client is None:
+        return []
+
     try:
+        print("OpenAIでニュース分析中... (gpt-4o-mini)")
         response = client.chat.completions.create(
-            model=model,
+            model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": "あなたは熟練した金融市場アナリストです。JSON形式のみで回答してください。"},
                 {"role": "user", "content": prompt},
             ],
-            temperature=0.3, # 分析の一貫性を重視
+            temperature=0.3,
             response_format={"type": "json_object"},
         )
         content = response.choices[0].message.content
-        import json
         data = json.loads(content)
         
-        # 配列が "articles" キーに入っている場合と、直接リストの場合に対応
         if isinstance(data, dict):
-            # キーを探す
-            for key in ["articles", "news", "items", "results"]:
+            for key in ["articles", "news", "items", "results", "data"]:
                 if key in data and isinstance(data[key], list):
                     return data[key]
-            # 見つからない場合はルートがリストであることを期待したいが、Dictならそのまま返すか空
+            if "translated_title" in data or "summarized_content" in data:
+                return [data]
             return []
         
         return data if isinstance(data, list) else []
 
     except Exception as e:
-        print(f"ニュース分析AIエラー: {e}")
+        print(f"OpenAI分析エラー: {e}")
         return []
 
 

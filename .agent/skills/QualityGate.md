@@ -23,6 +23,9 @@ This skill acts as your "Quality Keeper". You must follow this checklist strictl
         -   Verify Candlestick Pattern images are fully visible (not cut off).
         -   Confirm no unintended overflow in cards.
         -   **Broken Image Check**: Run JS `document.querySelectorAll('img').forEach(img => console.assert(img.naturalWidth > 0, img.src))` to ensure all images loaded.
+        -   **Layout & A11y Check**:
+            -   Resize window to check for overlaps (Mobile/Tablet).
+            -   Verify text contrast in Dark Mode (no illegible low-contrast text).
 
 3.  **Codex Review**
     -   Run the `codex` command: `codex "Review my changes in [files] for logic, security, and regression risks."`

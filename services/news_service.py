@@ -64,9 +64,11 @@ def fetch_and_analyze_market_news() -> List[Dict[str, Any]]:
                  analysis = analyzed_data[idx]
 
         if analysis:
+            item["translated_title"] = analysis.get("translated_title")
             item["ai_summary"] = analysis.get("summarized_content", "要約の生成に失敗しました")
             item["impacted_stocks"] = analysis.get("impacted_stocks", [])
         else:
+             item["translated_title"] = None
              item["ai_summary"] = "要約機能は停止しています" # ユーザー要件によりこの文言
              item["impacted_stocks"] = []
 
