@@ -1,0 +1,270 @@
+/* ==========================================
+   Ranking Page Styles
+   ========================================== */
+.ranking-container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding-bottom: 3rem;
+}
+
+.ranking-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    border: 1px solid var(--border);
+    background: var(--panel);
+    border-radius: 16px;
+}
+
+.control-group {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.control-group label {
+    font-weight: 700;
+    color: var(--muted);
+}
+
+/* Tabs */
+.tab-buttons {
+    display: flex;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 0.25rem;
+    border-radius: 10px;
+}
+
+.tab-btn {
+    padding: 0.5rem 1.25rem;
+    border: none;
+    background: transparent;
+    color: var(--text);
+    font-weight: 700;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.tab-btn.active {
+    background: var(--bg);
+    color: var(--accent);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* AI Analysis Card */
+.ai-analysis-card {
+    border-radius: 16px;
+    overflow: hidden;
+    margin-bottom: 2rem;
+}
+
+.ai-analysis-card.top-theme {
+    border: 1px solid rgba(34, 197, 94, 0.2);
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.08) 0%, transparent 100%);
+}
+
+.ai-analysis-card.bottom-theme {
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.08) 0%, transparent 100%);
+}
+
+.ai-analysis-card .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.last-updated {
+    font-size: 0.8rem;
+    color: var(--muted);
+}
+
+.ai-analysis-card .ai-content {
+    line-height: 1.8;
+    color: var(--text);
+    font-size: 1rem;
+    padding: 1.5rem;
+}
+
+/* Ranking Table */
+.ranking-table-wrapper {
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    background: var(--panel);
+}
+
+.ranking-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.ranking-table th {
+    background: rgba(255, 255, 255, 0.03);
+    padding: 1.25rem 1rem;
+    text-align: left;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+}
+
+.ranking-row {
+    transition: background 0.2s;
+}
+
+.ranking-row:hover {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.row-top:hover {
+    background: rgba(34, 197, 94, 0.05);
+}
+
+.row-bottom:hover {
+    background: rgba(239, 68, 68, 0.05);
+}
+
+.ranking-table td {
+    padding: 1.25rem 1rem;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+}
+
+/* Medal Styles */
+.medal {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.2rem;
+    height: 2.2rem;
+    border-radius: 50%;
+    font-weight: 900;
+    font-size: 1.1rem;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+}
+
+.medal-1 {
+    background: linear-gradient(135deg, #ffd700, #b8860b);
+    color: #000;
+}
+
+.medal-2 {
+    background: linear-gradient(135deg, #c0c0c0, #708090);
+    color: #000;
+}
+
+.medal-3 {
+    background: linear-gradient(135deg, #cd7f32, #8b4513);
+    color: #fff;
+}
+
+.rank-num {
+    font-weight: 700;
+    color: var(--muted);
+    padding-left: 0.7rem;
+}
+
+/* Cells */
+.symbol-cell .stock-name a {
+    font-weight: 800;
+    font-size: 1.05rem;
+    color: var(--text);
+    text-decoration: none;
+}
+
+.symbol-cell .stock-name a:hover {
+    color: var(--accent);
+}
+
+.price-cell {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
+}
+
+.bg-positive-soft {
+    background: rgba(34, 197, 94, 0.1);
+    color: var(--positive);
+    border-radius: 6px;
+    padding: 0.2rem 0.5rem;
+    font-weight: 700;
+}
+
+.bg-negative-soft {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--negative);
+    border-radius: 6px;
+    padding: 0.2rem 0.5rem;
+    font-weight: 700;
+}
+
+.sector-badge {
+    display: inline-block;
+    padding: 0.2rem 0.6rem;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+    font-size: 0.75rem;
+    margin-bottom: 0.4rem;
+    color: var(--muted);
+    border: 1px solid var(--border);
+}
+
+.reason-text {
+    margin: 0;
+    font-size: 0.88rem;
+    color: var(--text);
+    opacity: 0.85;
+}
+
+/* Arrow Animation */
+.arrow-icon {
+    display: inline-block;
+    margin-right: 2px;
+    font-weight: bold;
+}
+
+.row-top .arrow-icon {
+    animation: arrow-bounce-up 2s infinite ease-in-out;
+}
+
+.row-bottom .arrow-icon {
+    animation: arrow-bounce-down 2s infinite ease-in-out;
+}
+
+@keyframes arrow-bounce-up {
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-4px);
+    }
+}
+
+@keyframes arrow-bounce-down {
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(4px);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .arrow-icon {
+        animation: none !important;
+    }
+}

@@ -231,4 +231,33 @@ equirements.txt.
 - **Verification**:
     - **Git Status**: Verified that no compiled or environment-specific files remain in the tracking area.
 
+### Review Session 23 (Ranking Feature Phase 1)
+- **Status**: **Success** (Executed 2026-02-01).
+- **Scope**: `services/ranking_service.py`, `routers/ranking.py`, `templates/ranking/index.html`.
+- **Findings**:
+    1.  **Performance Risk**: `enrich_info` in `ranking_service.py` performs up to 20 individual `yf.Ticker().info` calls synchronously. This may cause slow response times or rate limits.
+    2.  **Hardcoded Data**: `RANKING_UNIVERSE` is large and hardcoded in the service. Recommended to move to `data/` directory.
+    3.  **Synchronous AI Analysis**: The initial page load in `routers/ranking.py` performs AI analysis synchronously, delaying the TTM (Time to Main).
+- **Action**:
+    - Verified that HTMX is used for navigation, mitigating the impact of slow initial loads after the first visit.
+    - Confirmed the use of `threads=True` in `yf.download` for the bulk data fetch.
+    - Corrected `base.html` navigation mismatch issues discovered during implementation.
+- **Verification**:
+    - **Regression**: `scripts/regression_test.py` execution initiated.
+    - **Security**: Confirmed API key safety and input validation.
 
+### Review Session 24 (Ranking Display Polish)
+- **Status**: **Success** (Executed 2026-02-02).
+- **Scope**: `services/ranking_service.py`, `templates/ranking/index.html`, `templates/ranking/_list.html`.
+- **Findings**:
+    1.  **AI Raw Text Output**: AI analyzed results sometimes included Markdown (`***`, `###`) or literal `<br>` tags which were being rendered as plain text. 
+    2.  **Multilingual Issues**: Stock names and sectors were inconsistently returning in English from yfinance.
+    3.  **Visual Hierarchy**: The disclaimer text was not prominent enough and misplaced relative to the description.
+- **Action**:
+    - Implemented `JP_STOCK_NAME_MAP` and `SECTOR_MAP` for full Japanese localization.
+    - Added `clean_markdown` to service layer and `white-space: pre-wrap` to template for clean AI text rendering.
+    - Relocated and styled disclaimer to high-contrast red directly under the main description.
+    - Applied `nowrap` to Rank, Symbol, and Change columns to prevent awkward wrapping.
+- **Verification**:
+    - **Browser**: Verified all 6 user requirements (Japanese names, Right-side arrow, No-wrap, Red disclaimer, Clean AI text, Japanese sectors).
+    - **Regression**: `scripts/regression_test.py` PASSED with content verification.

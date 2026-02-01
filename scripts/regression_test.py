@@ -1,7 +1,7 @@
 import requests
 import sys
 
-BASE_URL = "http://localhost:8000"
+BASE_URL = "http://127.0.0.1:8001"
 
 def check_url(url, description):
     print(f"Checking {description} ({url})...", end=" ")
@@ -27,11 +27,30 @@ def regression_test():
         ("/stocks", "Stock List (Explicit)"),
         ("/glossary", "Glossary"),
         ("/candle-patterns", "Candle Patterns"),
+        ("/ranking", "Ranking Page"),
     ]
     
     for url, desc in pages:
         if not check_url(f"{BASE_URL}{url}", desc):
             all_pass = False
+        
+        # Rankings 画面の特定要素チェック（デグレード防止）
+        if url == "/ranking":
+            print("Verifying Ranking Page content...", end=" ")
+            try:
+                resp = requests.get(f"{BASE_URL}{url}")
+                if "銘柄騰落ランキング" in resp.text and "主要銘柄の中から" in resp.text:
+                    if "AIによるランキング分析" in resp.text:
+                        print("OK (Visual elements verified)")
+                    else:
+                        print("FAIL (AI Analysis section missing)")
+                        all_pass = False
+                else:
+                    print("FAIL (Title or Description missing)")
+                    all_pass = False
+            except Exception as e:
+                print(f"FAIL (Error during content verification: {e})")
+                all_pass = False
 
     # Check detail page of a known stock (assuming 7203 Toyota is usually there or added)
     # If not present, we should add it first or check list to find one.

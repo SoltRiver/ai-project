@@ -6,20 +6,26 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{{ page_title or "株価分析アプリ" }}</title>
     <link rel="stylesheet" href="/static/css/theme.css?v=4" />
+    <link rel="stylesheet" href="/static/css/ranking.css?v=1" />
     <script src="/static/js/htmx.min.js"></script>
     <script src="/static/js/app.js?v=8" defer></script>
 </head>
 
 <body class="app-shell">
     <header class="top-bar">
-        <div class="brand">株価分析ツール</div>
-        <nav class="nav-links">
+        <a href="/" class="brand" style="text-decoration: none;">
+            <span class="brand-icon">📈</span>
+            <span class="brand-title">StockAnalyst</span>
+            <span class="brand-sub">AI</span>
+        </a>
+        <div class="nav-links">
             <a href="/indices">主要指標</a>
             <a href="/news">ニュース</a>
             <a href="/stocks">株価リスト</a>
+            <a href="/ranking">ランキング</a>
             <a href="/glossary">用語集</a>
-            <a href="/candle-patterns">ローソク足パターン</a>
-        </nav>
+            <a href="/candle-patterns">ローソク足</a>
+        </div>
         <button class="ghost-button" type="button" data-action="toggle-theme">テーマ切替</button>
     </header>
 

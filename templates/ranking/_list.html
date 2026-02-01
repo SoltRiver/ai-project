@@ -1,0 +1,66 @@
+<!-- AIによるランキング分析セクション -->
+<section class="ai-analysis-card card mb-4 {% if rank_type == 'top' %}top-theme{% else %}bottom-theme{% endif %}">
+    <div class="card-header">
+        <h3><span class="ai-icon">🤖</span> AIによるランキング分析</h3>
+        <span class="last-updated">{{ last_updated }}</span>
+    </div>
+    <div class="card-body ai-content" style="white-space: pre-wrap;">
+        {{ ai_analysis }}
+    </div>
+</section>
+
+<!-- ランキングリスト -->
+<div class="ranking-table-wrapper card">
+    <table class="ranking-table">
+        <thead>
+            <tr>
+                <th style="white-space: nowrap;">ランク</th>
+                <th>銘柄（コード）</th>
+                <th>現在値</th>
+                <th>変動額</th>
+                <th>変動率</th>
+                <th>セクター / 理由</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr class="ranking-row {% if rank_type == 'top' %}row-top{% else %}row-bottom{% endif %}">
+                <td class="rank-cell" style="white-space: nowrap;">
+                    {% if loop.index <= 3 %} <span class="medal medal-{{ loop.index }}">{{ loop.index }}</span>
+                        {% else %}
+                        <span class="rank-num">{{ loop.index }}</span>
+                        {% endif %}
+                </td>
+                <td class="symbol-cell" style="white-space: nowrap;">
+                    <div class="stock-name">
+                        <a href="/stocks/{{ item.symbol }}">{{ item.name }}（{{ item.symbol }}）</a>
+                    </div>
+                </td>
+                <td class="price-cell">
+                    ¥{{ "{:,.1f}".format(item.price) }}
+                </td>
+                <td class="change-cell {% if item.change > 0 %}text-positive{% elif item.change < 0 %}text-negative{% endif %}"
+                    style="white-space: nowrap;">
+                    ¥{{ "{:,.1f}".format(item.change) }}
+                    <span class="arrow-icon" style="margin-left: 4px;">{% if item.change > 0 %}↑{% elif item.change < 0
+                            %}↓{% endif %}</span>
+                </td>
+                <td
+                    class="percent-cell {% if item.change_percent > 0 %}bg-positive-soft{% elif item.change_percent < 0 %}bg-negative-soft{% endif %}">
+                    {{ "{:+.2f}%".format(item.change_percent) }}
+                </td>
+                <td class="reason-cell">
+                    <span class="sector-badge">{{ item.sector }}</span>
+                    <p class="reason-text">{{ item.reason }}</p>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="6" class="text-center py-4">データが取得できませんでした。</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- HTMXリクエストの成功後にスクリプト等が必要な場合はここに記述 -->
