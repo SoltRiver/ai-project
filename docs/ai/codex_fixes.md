@@ -121,8 +121,8 @@
 - **Verification**:
   - **Browser**: CONFIRMED Search works, Header is correct, High/Low text logic works.
   - **Code**: Confirmed `list.html` syntax is now valid.
-- **Browser**: CONFIRMED Search works, Header is correct, High/Low text logic works.
-- **Code**: Confirmed `list.html` syntax is now valid.
+  - **Browser**: CONFIRMED Search works, Header is correct, High/Low text logic works.
+  - **Code**: Confirmed `list.html` syntax is now valid.
 
 ### Review Session 12 (Stock List Gaze Flow)
 - **Status**: **Success** (Review executed 2026-01-23).
@@ -181,7 +181,7 @@
 - **Findings**:
   - **Secrets**: Verified API key is in .env and not in code.
   - **Logic**: Verified fallback structure in stock_service.py.
-  - **Mock Test**: erify_jquants_mock.py verified the J-Quants response parsing logic works.
+  - **Mock Test**:  erify_jquants_mock.py verified the J-Quants response parsing logic works.
 - **Security Check**:
   - Confirmed .gitignore includes .env.
   - Grep check for key in code passed (No results).
@@ -189,8 +189,8 @@
 ### Review Session 19 (J-Quants Review)
 - **Status**: **Success** (Review executed 2026-01-25).
 - **Findings**: 
-  - **Missing Dependency**: Added python-dotenv to 
-equirements.txt.
+  - **Missing Dependency**: Added python-dotenv to requirements.txt.
+
 ### Review Session 20 (Major Indices Implementation)
 - **Status**: **Success** (Review executed 2026-01-27).
 - **Scope**: `services/market_indices.py`, `routers/indices.py`, `templates/indices/index.html`.
@@ -261,3 +261,19 @@ equirements.txt.
 - **Verification**:
     - **Browser**: Verified all 6 user requirements (Japanese names, Right-side arrow, No-wrap, Red disclaimer, Clean AI text, Japanese sectors).
     - **Regression**: `scripts/regression_test.py` PASSED with content verification.
+
+### Review Session 25 (Ranking UI & Performance Phase 2)
+- **Status**: **Success** (Executed 2026-02-02).
+- **Scope**: `services/ranking_service.py`, `routers/ranking.py`, `static/css/ranking.css`, `templates/ranking/index.html`.
+- **Findings**:
+    1.  **Timeout Risk**: Sequential `yf.Ticker.info` calls for many items were causing severe latency (~10-20s).
+    2.  **UI Feedback**: User requested more prominent disclaimers and a modern dropdown for period selection.
+- **Actions**:
+    - **Performance**: Optimized `enrich_info` to only fetch `t.info` if ticker is not in `JP_STOCK_NAME_MAP`.
+    - **Optimization**: Updated router to pass `target_type` (top/bottom) to `get_rankings`, avoiding enrichment of the unrequested list.
+    - **UI**: Implemented a "Glowing/Pulsing" gradient box for the disclaimer in `ranking.css`.
+    - **UI**: Redesigned the period dropdown as a `modern-select` with premium transitions and custom SVG arrow.
+- **Verification**:
+    - **Browser**: Verified < 2s response time for both tabs.
+    - **Visual**: Verified the striking glow effect on the disclaimer and the modern look of the dropdown.
+    - **Data**: Confirmed Rise/Fall lists are correctly populated after optimization.

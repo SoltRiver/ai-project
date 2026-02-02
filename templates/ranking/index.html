@@ -6,8 +6,11 @@
         <h1>銘柄騰落ランキング</h1>
         <p class="description" style="margin-top: 0.5rem; color: var(--muted); margin-bottom: 0.25rem;">
             主要銘柄の中から、指定期間で最も上昇・下落した銘柄をAIが分析します。</p>
-        <p class="disclaimer-mini" style="color: #d32f2f !important; font-size: 0.85rem; font-weight: 700;">
-            ※本画面の情報は投資勧誘を目的としたものではなく、投資の最終判断はご自身で行ってください。</p>
+        <div class="disclaimer-box">
+            <p class="disclaimer-text-large">
+                本画面の情報は投資勧誘を目的としたものではなく、投資の最終判断はご自身で行ってください。
+            </p>
+        </div>
     </div>
 </section>
 
@@ -25,7 +28,7 @@
 
     <div class="control-group">
         <label for="period-select">期間:</label>
-        <select id="period-select" name="period" class="select-input" hx-get="/ranking/list"
+        <select id="period-select" name="period" class="modern-select" hx-get="/ranking/list"
             hx-target="#ranking-display" hx-include="[name='rank-type-input']" hx-trigger="change">
             <option value="today" selected>今日</option>
             <option value="week">週間</option>

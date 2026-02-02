@@ -268,3 +268,87 @@
         animation: none !important;
     }
 }
+
+/* Modern Dropdown */
+.modern-select {
+    appearance: none;
+    -webkit-appearance: none;
+    background: var(--panel);
+    border: 2px solid var(--border);
+    border-radius: 14px;
+    padding: 0.75rem 3rem 0.75rem 1.5rem;
+    color: var(--text);
+    font-weight: 800;
+    font-size: 1.05rem;
+    cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='3' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 1.25rem center;
+    background-size: 1.2rem;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: var(--shadow-sm);
+    min-width: 160px;
+}
+
+.modern-select:hover {
+    border-color: var(--accent);
+    background-color: rgba(255, 255, 255, 0.05);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+    transform: translateY(-1px);
+}
+
+.modern-select:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.2);
+}
+
+/* Disclaimer Enhancement */
+.disclaimer-box {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(239, 68, 68, 0.05) 100%);
+    border: 2px solid #ef4444;
+    border-radius: 16px;
+    padding: 1.5rem;
+    margin-top: 1.5rem;
+    margin-bottom: 2.5rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(239, 68, 68, 0.15);
+    backdrop-filter: blur(10px);
+    animation: glow-pulse 4s infinite ease-in-out;
+}
+
+@keyframes glow-pulse {
+
+    0%,
+    100% {
+        box-shadow: 0 10px 30px rgba(239, 68, 68, 0.15);
+        border-color: rgba(239, 68, 68, 0.6);
+    }
+
+    50% {
+        box-shadow: 0 10px 40px rgba(239, 68, 68, 0.3);
+        border-color: rgba(239, 68, 68, 1);
+    }
+}
+
+.disclaimer-text-large {
+    color: #ef4444 !important;
+    font-size: 1.25rem;
+    font-weight: 900;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    letter-spacing: 0.02em;
+    line-height: 1.4;
+}
+
+.disclaimer-text-large::before,
+.disclaimer-text-large::after {
+    content: "⚠️";
+    font-size: 1.6rem;
+    filter: drop-shadow(0 0 5px rgba(239, 68, 68, 0.5));
+}

@@ -70,10 +70,10 @@ def fetch_ranking_data(period_type: str = "today") -> List[Dict[str, Any]]:
     主要銘柄の騰落率ランキング用データを一括取得・計算する
     """
     days_map = {
-        "today": 5,   # 前日比取得のため少し余分に
-        "week": 10,
-        "month": 35,
-        "year": 300
+        "today": 7,   # 前日比取得のため少し余分に (土日祝考慮)
+        "week": 14,
+        "month": 45,
+        "year": 400
     }
     target_days = {
         "today": 1,
@@ -132,7 +132,7 @@ def fetch_ranking_data(period_type: str = "today") -> List[Dict[str, Any]]:
             
     return results
 
-def get_rankings(period_type: str = "today", limit: int = 10) -> Dict[str, List[Dict[str, Any]]]:
+def get_rankings(period_type: str = "today", limit: int = 10, target_type: Optional[str] = None) -> Dict[str, List[Dict[str, Any]]]:
     """
     上昇率・下落率ランキングを取得する
     """
@@ -140,25 +140,49 @@ def get_rankings(period_type: str = "today", limit: int = 10) -> Dict[str, List[
     if not all_data:
         return {"top": [], "bottom": []}
     
-    # 銘柄情報の補完（セクター等） - 頻繁に変わらないのでキャッシュや内部マッパーが理想だが、
-    # Phase1では主要10銘柄のみ yf.Ticker で取得する
+    # NaNや異常値があれば排除 (念のため)
+    all_data = [x for x in all_data if pd.notnull(x["change_percent"])]
     
-    top = sorted(all_data, key=lambda x: (x["change_percent"], x["change"]), reverse=True)[:limit]
-    bottom = sorted(all_data, key=lambda x: (x["change_percent"], x["change"]))[:limit]
+    if not all_data:
+        return {"top": [], "bottom": []}
+
+    # 取得したいタイプが明確な場合は片方だけ計算
+    top = []
+    bottom = []
+    
+    if target_type is None or target_type == "top":
+        top = sorted(all_data, key=lambda x: (x["change_percent"], x["change"]), reverse=True)[:limit]
+    
+    if target_type is None or target_type == "bottom":
+        bottom = sorted(all_data, key=lambda x: (x["change_percent"], x["change"]))[:limit]
     
     def enrich_info(rank_list):
+        if not rank_list:
+            return []
         for item in rank_list:
+            symbol_only = item["symbol"]
+            # マッピングにある場合はそれを使う (高速化)
+            if symbol_only in JP_STOCK_NAME_MAP:
+                item["name"] = JP_STOCK_NAME_MAP[symbol_only]
+                # セクター情報を既知のものから推測、または最小限の取得
+                if item.get("sector") == "不明":
+                    # 一旦セクターなしでも名前があれば十分な場合が多いが、
+                    # ユーザー満足度向上のため、もし info が必要ならここでのみ呼ぶ
+                    # (ただし10個以上は重いので、上位のみにするなどの配慮が必要)
+                    pass 
+                item["reason"] = f"市場動向や個別材料による騰落が考えられます。"
+                continue
+
+            # マッピングにない場合のみ yfinance に問い合わせ
             try:
                 t = yf.Ticker(item["full_symbol"])
+                # .info 呼び出しを最小限にするため、必要最低限のキーだけ取得したいが
+                # yfinanceのTicker.infoは全体をフェッチするので注意
                 info = t.info
-                # 日本語名称を優先 (マッピング -> info.longName -> info.shortName)
-                symbol_only = item["symbol"]
-                item["name"] = JP_STOCK_NAME_MAP.get(symbol_only) or info.get("longName") or info.get("shortName") or symbol_only
-                # セクターの日本語化
+                item["name"] = info.get("longName") or info.get("shortName") or symbol_only
                 raw_sector = info.get("sector", "不明")
                 item["sector"] = SECTOR_MAP.get(raw_sector, raw_sector)
-                # 理由の生成 (Phase1: 一旦「市場動向による」等の定型)
-                item["reason"] = f"{item['sector']}セクターの動きや個別材料による騰落が考えられます。"
+                item["reason"] = f"{item['sector']}セクターの動きによる騰落。"
             except:
                 pass
         return rank_list
