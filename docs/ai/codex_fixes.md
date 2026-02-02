@@ -291,3 +291,16 @@
 - **Verification**:
     - **Browser**: Verified Basic/Advanced tabs and modal layout. Confirmed Tips are rendered as an unordered list.
     - **Quality**: Verified all 53 patterns are updated and descriptive fields are intact.
+
+### Review Session 27 (Candlestick Modal UI Refinement)
+- **Status**: **Success** (Executed 2026-02-03).
+- **Scope**: `static/css/theme.css`, `templates/base.html`.
+- **Findings**:
+    1.  **Visual Hierarchy**: Subtitles (`h3`) in the modal were smaller (14px) than body text (16px), causing imbalance.
+    2.  **Caching**: CSS changes were initially not reflected due to browser caching.
+- **Action**:
+    - Increased `h3` size to 1.15rem (18.4px) and decreased body `p` to 0.95rem (15.2px).
+    - Added decorative blue left-border indicators to `h3` and lightbulb icons to `tips-list`.
+    - Bumped `theme.css` to `v=5` in `base.html` to force reload.
+- **Verification**:
+    - **Browser**: Verified corrected hierarchy and new visual elements.
