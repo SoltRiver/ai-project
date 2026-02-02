@@ -29,24 +29,18 @@
                     </div>
                 </div>
                 <div class="pattern-info-block">
-                    <div class="pattern-info-title">ひと言メモ</div>
-                    <div class="pattern-info-text">{{ p.catch }}</div>
+                    <div class="pattern-info-title">推奨アクション</div>
+                    <div class="pattern-info-text">{{ p.action if p.action else p.catch }}</div>
                 </div>
             </div>
 
             <div class="pattern-card__actions">
-                <button class="pattern-button pattern-detail-trigger"
-                        type="button"
-                        data-pattern-id="{{ p.id }}"
-                        data-name="{{ p.name }}"
-                        data-catch="{{ p.catch }}"
-                        data-desc-lead="{{ p.desc_lead }}"
-                        data-desc-body="{{ p.desc_body }}"
-                        data-detail="{{ p.detail_desc }}"
-                        data-scene="{{ p.scene }}"
-                        data-howto="{{ p.howto }}"
-                        data-notes="{{ p.notes | join('||') }}"
-                        data-svg="/static/{{ p.svg }}">
+                <button class="pattern-button pattern-detail-trigger" type="button" data-pattern-id="{{ p.id }}"
+                    data-name="{{ p.name }}" data-action="{{ p.action if p.action else p.catch if p.catch else '' }}"
+                    data-desc-lead="{{ p.desc_lead }}" data-desc-body="{{ p.desc_body }}"
+                    data-detail="{{ p.detail_desc }}" data-scene="{{ p.scene }}" data-howto="{{ p.howto }}"
+                    data-tips="{{ p.tips | join('||') if p.tips else p.notes | join('||') if p.notes else '' }}"
+                    data-svg="/static/{{ p.svg }}">
                     詳細を見る
                 </button>
             </div>

@@ -851,13 +851,13 @@
         const closeBtn = overlay.querySelector('[data-close-modal]');
         const imgEl = overlay.querySelector('[data-modal-image]');
         const nameEl = overlay.querySelector('[data-modal-name]');
-        const catchEl = overlay.querySelector('[data-modal-catch]');
+        const actionEl = overlay.querySelector('[data-modal-action]');
         const descLeadEl = overlay.querySelector('[data-modal-desc-lead]');
         const descBodyEl = overlay.querySelector('[data-modal-desc-body]');
         const detailEl = overlay.querySelector('[data-modal-detail]');
         const sceneEl = overlay.querySelector('[data-modal-scene]');
         const howtoEl = overlay.querySelector('[data-modal-howto]');
-        const notesEl = overlay.querySelector('[data-modal-notes]');
+        const tipsEl = overlay.querySelector('[data-modal-tips]');
 
         let lastFocus = null;
 
@@ -872,7 +872,7 @@
             overlay.hidden = false;
             overlay.classList.add('is-open');
             nameEl.textContent = btn.dataset.name || '';
-            catchEl.textContent = btn.dataset.catch || '';
+            actionEl.textContent = btn.dataset.action || btn.dataset.catch || '';
             descLeadEl.textContent = btn.dataset.descLead || '';
             descBodyEl.textContent = btn.dataset.descBody || '';
             detailEl.textContent = btn.dataset.detail || '';
@@ -882,12 +882,13 @@
                 imgEl.src = btn.dataset.svg;
                 imgEl.alt = btn.dataset.name || '';
             }
-            notesEl.innerHTML = '';
-            const notes = (btn.dataset.notes || '').split('||').filter(Boolean);
-            notes.forEach((n) => {
+            tipsEl.innerHTML = '';
+            const tipsSource = btn.dataset.tips || btn.dataset.notes || '';
+            const tips = tipsSource.split('||').filter(Boolean);
+            tips.forEach((t) => {
                 const li = document.createElement('li');
-                li.textContent = n;
-                notesEl.appendChild(li);
+                li.textContent = t;
+                tipsEl.appendChild(li);
             });
         };
 

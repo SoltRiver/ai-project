@@ -277,3 +277,17 @@
     - **Browser**: Verified < 2s response time for both tabs.
     - **Visual**: Verified the striking glow effect on the disclaimer and the modern look of the dropdown.
     - **Data**: Confirmed Rise/Fall lists are correctly populated after optimization.
+
+### Review Session 26 (Candlestick Metadata Refinement)
+- **Status**: **Success** (Executed 2026-02-03).
+- **Scope**: `services/stock_service.py`, `templates/candle_patterns/*`, `static/js/app.js`.
+- **Findings**:
+    1.  **String Mismatch in Batch Edits**: `multi_replace_file_content` reported "target content not found" multiple times. This was caused by subtle differences in previous edits (e.g., missing training dots in `detail_desc`, slight whitespace variations in SVG paths).
+    2.  **Frontend Sync**: Added `data-action` and `data-tips` while keeping `data-catch` and `data-notes` for fallback, ensuring old data still works if the service isn't fully updated.
+- **Action**:
+    - Performed granular replacements for problematic chunks.
+    - Standardized description punctuation during the update.
+    - Synchronized modal selectors/labels in `app.js` and `index.html`.
+- **Verification**:
+    - **Browser**: Verified Basic/Advanced tabs and modal layout. Confirmed Tips are rendered as an unordered list.
+    - **Quality**: Verified all 53 patterns are updated and descriptive fields are intact.
