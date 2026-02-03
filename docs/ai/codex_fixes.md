@@ -318,3 +318,17 @@
     - Bumped `theme.css` to `v=6` and `app.js` to `v=10` for cache busting.
 - **Verification**:
     - **Browser**: Verified appearance threshold (100vh), smooth scroll behavior, and responsive positioning.
+
+### Review Session 29 (Volume Chart Enhancement)
+- **Status**: **Success** (Executed 2026-02-04).
+- **Scope**: `static/js/app.js`.
+- **Findings**:
+    1.  **UI/UX**: Changed volume bar color to gold (#FFD700) for better visibility.
+    2.  **Information**: Expanded tooltip to include Date (YYYY-MM-DD) and Volume (万株).
+    3.  **Interaction**: Enabled tooltips when hovering over the volume area (previously candle-only).
+- **Action**:
+    - Refactored `renderCandleCharts` and `showTooltip` in `app.js`.
+    - Fixed syntax errors and removed duplicate function definitions introduced during editing.
+    - Bumped `app.js` version to `v=11` in `base.html`.
+- **Verification**:
+    - **Browser**: Confirmed gold color, date formatting, volume units, and hover detection.

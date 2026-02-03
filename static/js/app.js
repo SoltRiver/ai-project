@@ -449,10 +449,8 @@
                     // Scale volume relative to max calculated above
                     const barHeight = (val / maxVolume) * volumeHeight;
                     const xCenter = getX(i);
-                    const isUp = p.close >= p.open;
-
-                    // Base color + Gradient overlay
-                    ctx.fillStyle = isUp ? colors.positive : colors.negative;
+                    // Base color + Gradient overlay (Changed to #FFD700 Gold)
+                    ctx.fillStyle = '#FFD700';
                     ctx.globalAlpha = 0.3;
                     ctx.fillRect(xCenter - candleWidth / 2, volumeBottom - barHeight, candleWidth, Math.max(1, barHeight));
 
@@ -550,13 +548,14 @@
             });
 
             function showTooltip(point, x, clientY, rect) {
-                // Check Y-Axis Hover for Tooltip (Only for Hover, strict check)
-                // For pinned tooltip (selectedDataIdx !== null), we might skip strict Y check or keep it?
-                // Request says: "Display tooltip for that candle". Usually implies ignoring Y position for pinned.
-                // But let's reuse logic. If pinned, we pass a dummy 'force' flag? 
-
                 // Construct Content
-                let html = `<div class="tooltip-header">${point.label}</div>`;
+                // Format Date: 2025/12/19 -> 2025-12-19
+                const formattedDate = (point.label || '').replace(/\//g, '-');
+                const volInWan = point.volume != null ? (point.volume / 10000).toLocaleString('ja-JP', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + '万株' : 'N/A';
+
+                let html = `<div class="tooltip-header">${formattedDate}</div>`;
+                html += `<div class="tooltip-row"><span class="t-label">出来高</span><span class="t-val">${volInWan}</span></div>`;
+                html += `<div class="tooltip-divider"></div>`;
                 html += `<div class="tooltip-row"><span class="t-label">始値</span><span class="t-val">${fmtPrice(point.open)}</span></div>`;
                 html += `<div class="tooltip-row"><span class="t-label">高値</span><span class="t-val">${fmtPrice(point.high)}</span></div>`;
                 html += `<div class="tooltip-row"><span class="t-label">安値</span><span class="t-val">${fmtPrice(point.low)}</span></div>`;
@@ -599,14 +598,11 @@
                     const deltaX = e.clientX - lastX;
                     lastX = e.clientX;
 
-                    // Calculate sensitivity (pixels per bar)
                     const chartLeft = 50;
                     const chartRight = width - 50;
                     const chartWidth = chartRight - chartLeft;
                     const step = chartWidth / viewCount;
 
-                    // Move viewIndex based on drag distance
-                    // Drag Right -> Move View Left (Earlier) -> Decrease Index
                     const barsMoved = deltaX / step;
                     viewIndex -= barsMoved;
 
@@ -614,20 +610,16 @@
                     viewIndex = Math.max(0, Math.min(viewIndex, maxIndex));
 
                     draw();
-                    // Force cursor check after drag
-                    // Simply resetting to grab is fine, but if we stop dragging over a candle, 
-                    // we want to know. However, dragging usually implies movement.
                     return;
                 }
 
-                // Tooltip Logic
-                // Recalculate layout metrics for hit testing
                 const chartLeft = 50;
                 const chartRight = width - 50;
                 const chartWidth = chartRight - chartLeft;
 
                 if (x < chartLeft || x > chartRight) {
-                    tooltip.style.display = 'none'; draw();
+                    tooltip.style.display = 'none';
+                    draw();
                     if (allPoints.length > 0) {
                         const last = allPoints[allPoints.length - 1];
                         updateLegend(last);
@@ -636,23 +628,16 @@
                     return;
                 }
 
-
-                // Check Cross Icon Hover FIRST (Higher priority for details?)
-                // Or maybe transient?
+                // Check Cross Icon Hover
                 let hoveredCross = null;
                 const my = e.clientY - rect.top;
-
-                // Recalculate layout scope for hitbox
-                const topMargin = 40; // Match draw()
+                const topMargin = 40;
                 const priceTop = topMargin;
 
-                // Visible Crosses
                 for (const c of crosses) {
                     if (c.index >= viewIndex && c.index < viewIndex + viewCount) {
                         const i = c.index - viewIndex;
                         const cx = chartLeft + i * (chartWidth / viewCount) + (chartWidth / viewCount) / 2;
-                        // Icon Position: cx, priceTop - 2 (bottom baseline). Size approx 16px.
-                        // Hit box: +/- 20px X, priceTop - 25 to priceTop + 5 Y.
                         const iconTop = priceTop - 25;
                         const iconBottom = priceTop + 5;
 
@@ -664,9 +649,7 @@
                 }
 
                 if (hoveredCross) {
-                    // Show Cross Tooltip
-                    canvas.style.cursor = 'help'; // Indicate info
-
+                    canvas.style.cursor = 'help';
                     const p = allPoints[hoveredCross.index];
                     const label = hoveredCross.type === 'golden' ? 'ゴールデンクロス' : 'デッドクロス';
                     const color = hoveredCross.type === 'golden' ? '#eab308' : '#3b82f6';
@@ -675,17 +658,11 @@
                     html += `<div class="tooltip-time">${p.label}</div>`;
                     html += `<div class="tooltip-divider"></div>`;
 
-                    // Add SMA Values involved
-                    // We need to know which SMAs crossed. 
-                    // 'sortedSmaKeys' has the order. Pair is sortedSmaKeys[0] vs [1].
                     if (sortedSmaKeys.length >= 2) {
                         const shortKey = sortedSmaKeys[0];
                         const longKey = sortedSmaKeys[1];
                         const shortVal = p[shortKey];
                         const longVal = p[longKey];
-
-                        // Get nice labels (Short/Med/Long)
-                        // We can reuse logic or just use keys
                         html += `<div class="tooltip-row"><span class="t-label">${shortKey}</span><span class="t-val">${fmtPrice(shortVal)}</span></div>`;
                         html += `<div class="tooltip-row"><span class="t-label">${longKey}</span><span class="t-val">${fmtPrice(longVal)}</span></div>`;
                     }
@@ -693,7 +670,6 @@
                     tooltip.innerHTML = html;
                     tooltip.style.display = 'block';
 
-                    // Position
                     const tWidth = tooltip.offsetWidth || 180;
                     const tHeight = tooltip.offsetHeight || 100;
                     let left = x + 20;
@@ -707,11 +683,10 @@
                     return;
                 }
 
-                // If not hovering Cross, continue to Candle logic
-
                 const step = chartWidth / viewCount;
                 const idxInView = Math.floor((x - chartLeft) / step);
                 const dataIdx = Math.floor(viewIndex + idxInView);
+
                 if (dataIdx >= 0 && dataIdx < allPoints.length) {
                     const point = allPoints[dataIdx];
                     draw();
@@ -726,50 +701,26 @@
                     updateLegend(point);
                     updateMainLegend(point);
 
-                    // --- Sticky Tooltip Check ---
-
-                    if (selectedDataIdx !== null) {
-                        if (yScale) {
-                            const yMouse = e.clientY - rect.top;
-                            const cHigh = yScale(point.high);
-                            const cLow = yScale(point.low);
-                            const buffer = 4;
-                            if (yMouse >= cHigh - buffer && yMouse <= cLow + buffer) {
-                                canvas.style.cursor = 'pointer';
-                            } else {
-                                canvas.style.cursor = isDragging ? 'grabbing' : 'grab';
-                            }
-                        }
-                    } else {
-                        // Normal Hover: Show Tooltip (Relaxed logic)
-                        if (!yScale) {
-                            tooltip.style.display = 'none';
-                            return;
-                        }
-
+                    // Cursor & Tooltip
+                    if (yScale) {
                         const yMouse = e.clientY - rect.top;
                         const cHigh = yScale(point.high);
                         const cLow = yScale(point.low);
                         const buffer = 4;
                         const isHoveringCandle = (yMouse >= cHigh - buffer && yMouse <= cLow + buffer);
 
-                        // Cursor indicates clickable (sticky) if on candle
                         if (isHoveringCandle) {
                             canvas.style.cursor = 'pointer';
                         } else {
                             canvas.style.cursor = isDragging ? 'grabbing' : 'grab';
                         }
 
-                        // Tooltip Restriction (Round 8): Only show if hovering strict candle area
-                        if (isHoveringCandle) {
-                            const rectBox = canvas.getBoundingClientRect();
-                            const virtualY = rectBox.top + yScale(point.close);
-                            const xCenter = chartLeft + idxInView * step + step / 2;
-                            showTooltip(point, xCenter, virtualY, rectBox);
-                        } else {
-                            tooltip.style.display = 'none';
+                        if (selectedDataIdx === null) {
+                            showTooltip(point, centerX, e.clientY, rect);
                         }
                     }
+                } else {
+                    tooltip.style.display = 'none';
                 }
             });
 
@@ -809,11 +760,6 @@
         initPatternPage();
     });
 
-
-    function initPatternPage() {
-        initPatternTabs();
-        initPatternModal();
-    }
 
     function initPatternPage() {
         initPatternTabs();
