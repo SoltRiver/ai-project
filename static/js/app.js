@@ -906,14 +906,47 @@
         });
     }
 
+    function initBackToTop() {
+        const btn = document.getElementById('backToTop');
+        if (!btn) return;
+
+        const updateVisibility = () => {
+            const viewportHeight = window.innerHeight;
+            if (window.scrollY > viewportHeight) {
+                btn.removeAttribute('hidden');
+                btn.classList.add('is-visible');
+            } else {
+                btn.classList.remove('is-visible');
+                // Optional: set hidden after transition
+                // setTimeout(() => { if(!btn.classList.contains('is-visible')) btn.setAttribute('hidden', ''); }, 300);
+            }
+        };
+
+        window.addEventListener('scroll', updateVisibility, { passive: true });
+
+        btn.addEventListener('click', () => {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+            // Also blur button after click for better focus management (optional)
+            btn.blur();
+        });
+
+        // Initial check
+        updateVisibility();
+    }
+
     // --- Init & HTMX Support ---
     bindTabButtons();
     renderCandleCharts();
     initPatternModal();
+    initBackToTop();
 
     window.initCharts = () => {
         bindTabButtons();
         renderCandleCharts();
+        initBackToTop();
     };
 
     document.body.addEventListener('htmx:afterSwap', () => {

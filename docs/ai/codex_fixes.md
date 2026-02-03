@@ -304,3 +304,17 @@
     - Bumped `theme.css` to `v=5` in `base.html` to force reload.
 - **Verification**:
     - **Browser**: Verified corrected hierarchy and new visual elements.
+
+### Review Session 28 (Back to Top Button Implementation)
+- **Status**: **Success** (Executed 2026-02-04).
+- **Scope**: `templates/candle_patterns/index.html`, `static/css/theme.css`, `static/js/app.js`.
+- **Findings**:
+    1.  **UX Improvement**: Added a "Back to Top" button that appears after scrolling 100vh.
+    2.  **Accessibility**: Ensured `aria-label`, high contrast, and keyboard support.
+- **Action**:
+    - Appended fixed-position styles to `theme.css`.
+    - Added scroll listener and smooth-scroll logic to `app.js`.
+    - Integrated button element into `index.html`.
+    - Bumped `theme.css` to `v=6` and `app.js` to `v=10` for cache busting.
+- **Verification**:
+    - **Browser**: Verified appearance threshold (100vh), smooth scroll behavior, and responsive positioning.
