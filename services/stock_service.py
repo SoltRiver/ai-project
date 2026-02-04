@@ -1278,11 +1278,13 @@ def get_chart_tab(code: str, interval: str = "1d") -> Dict[str, Any]:
         "interval": interval,
         "interval_options": interval_options,
         "chart_summary": chart_summary,
-        "chart_summary": chart_summary,
         "trend_label": trend_label,
         "trend_desc": trend_desc,
-        "chart_payload": {"points": points, "support_levels": support_levels},
-        "chart_payload": {"points": points, "support_levels": support_levels},
+        "chart_payload": {
+            "points": points,
+            "support_levels": support_levels,
+            "candle_patterns": CANDLE_PATTERN_CARDS
+        },
         "support_levels": support_levels,
         "signals": signals,
         "risks": risks,

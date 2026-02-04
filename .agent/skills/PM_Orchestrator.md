@@ -14,6 +14,7 @@ description: プロジェクト全体を統括する PM / Release Orchestrator�
 - **設計フェーズ**: `Architect` と `UIUX_Guidelines` にプランをレビューさせ、実装前の手戻りを防ぎます。
 - **実装フェーズ**: `Architect`（設計準拠）と `QualityGate`（品質基準）の視点でセルフレビューを行いながらコードを書きます。
 - **テスト・検証フェーズ**: `RegressionCheck/Test` を実行し、デグレードがないことを保証します。
+- **レビュー・リリースフェーズ**: 全てのゲートを確認後、結果をユーザーに報告し、**commit & push の最終判断（リリース可否）を必ずユーザーに仰ぎます。**
 
 
 ### 1. ScopeManager
@@ -40,7 +41,7 @@ description: プロジェクト全体を統括する PM / Release Orchestrator�
 
 ## 実行フロー（厳守）
 
-以下の順序でプロセスを進め、すべてが **Green** である場合にのみ commit & push を許可します。
+以下の順序でプロセスを進め、詳細なレビュー結果をユーザーに報告します。**commit & push を実行する前に、必ずユーザーから「GO」の承諾を得てください。**
 
 1.  **Scope / Acceptance Criteria**: タスクの目的と完了条件を確認。
 2.  **Plan / Impact Map**: 変更計画と影響範囲の特定。
@@ -87,8 +88,9 @@ description: プロジェクト全体を統括する PM / Release Orchestrator�
 - **Release**: ✅ / ❌（理由）
 
 ### Decision
-- **GO / NO-GO**
+- **GO / NO-GO (Proposed)**
 - **Reason**: 結論に至った理由。
+- **Request to User**: レビュー結果に基づき、commit & push を実行してよいかユーザーに確認します。
 
 ### If GO: Commit & Push
 - **Commit message**: 

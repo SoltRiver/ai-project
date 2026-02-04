@@ -564,12 +564,21 @@
                 if (point.candle_name && point.candle_type) {
                     html += `<div class="tooltip-divider"></div>`;
                     html += `<div class="tooltip-row"><span class="t-label">形</span><span class="t-val">${point.candle_type}</span></div>`;
-                    html += `<div class="tooltip-row"><span class="t-label">種類</span><span class="t-val">${point.candle_name}</span></div>`;
+
+                    // Pattern Name Link
+                    let patternNameHtml = point.candle_name;
+                    if (payload.candle_patterns) {
+                        const pattern = payload.candle_patterns.find(p => p.name === point.candle_name);
+                        if (pattern) {
+                            patternNameHtml = `<a href="javascript:void(0)" class="t-pattern-link" onclick="window.showPatternCardModal('${pattern.id}')">${point.candle_name}</a>`;
+                        }
+                    }
+                    html += `<div class="tooltip-row"><span class="t-label">種類</span><span class="t-val">${patternNameHtml}</span></div>`;
                 }
 
                 tooltip.innerHTML = html;
                 tooltip.style.display = 'block';
-                tooltip.style.pointerEvents = 'none';
+                tooltip.style.pointerEvents = 'auto'; // Enable clicks inside tooltip
 
                 // Position
                 const tWidth = tooltip.offsetWidth || 180;
@@ -793,7 +802,6 @@
     function initPatternModal() {
         const overlay = document.querySelector('[data-modal-overlay]');
         if (!overlay) return;
-        const modal = overlay.querySelector('.pattern-modal');
         const closeBtn = overlay.querySelector('[data-close-modal]');
         const imgEl = overlay.querySelector('[data-modal-image]');
         const nameEl = overlay.querySelector('[data-modal-name]');
@@ -804,43 +812,87 @@
         const sceneEl = overlay.querySelector('[data-modal-scene]');
         const howtoEl = overlay.querySelector('[data-modal-howto]');
         const tipsEl = overlay.querySelector('[data-modal-tips]');
+        const detailWrapper = overlay.querySelector('[data-modal-detail-wrapper]');
 
         let lastFocus = null;
 
         const close = () => {
             overlay.classList.remove('is-open');
             overlay.hidden = true;
-            if (lastFocus) lastFocus.focus();
+            if (lastFocus) {
+                try { lastFocus.focus(); } catch (e) { }
+            }
         };
 
-        const open = (btn) => {
-            lastFocus = btn;
+        const open = (data, isFull = true) => {
             overlay.hidden = false;
             overlay.classList.add('is-open');
-            nameEl.textContent = btn.dataset.name || '';
-            actionEl.textContent = btn.dataset.action || btn.dataset.catch || '';
-            descLeadEl.textContent = btn.dataset.descLead || '';
-            descBodyEl.textContent = btn.dataset.descBody || '';
-            detailEl.textContent = btn.dataset.detail || '';
-            sceneEl.textContent = btn.dataset.scene || '';
-            howtoEl.textContent = btn.dataset.howto || '';
-            if (btn.dataset.svg) {
-                imgEl.src = btn.dataset.svg;
-                imgEl.alt = btn.dataset.name || '';
+
+            nameEl.textContent = data.name || '';
+            actionEl.textContent = data.action || data.catch || '';
+            descLeadEl.textContent = data.descLead || '';
+            descBodyEl.textContent = data.descBody || '';
+
+            if (data.svg) {
+                imgEl.src = data.svg.startsWith('/') ? data.svg : '/static/' + data.svg;
+                imgEl.alt = data.name || '';
             }
-            tipsEl.innerHTML = '';
-            const tipsSource = btn.dataset.tips || btn.dataset.notes || '';
-            const tips = tipsSource.split('||').filter(Boolean);
-            tips.forEach((t) => {
-                const li = document.createElement('li');
-                li.textContent = t;
-                tipsEl.appendChild(li);
-            });
+
+            if (isFull) {
+                if (detailWrapper) detailWrapper.hidden = false;
+                detailEl.textContent = data.detail || '';
+                sceneEl.textContent = data.scene || '';
+                howtoEl.textContent = data.howto || '';
+                tipsEl.innerHTML = '';
+                const tipsSource = data.tips || data.notes || '';
+                const tips = (typeof tipsSource === 'string') ? tipsSource.split('||').filter(Boolean) : (Array.isArray(tipsSource) ? tipsSource : []);
+                tips.forEach((t) => {
+                    const li = document.createElement('li');
+                    li.textContent = t;
+                    tipsEl.appendChild(li);
+                });
+            } else {
+                if (detailWrapper) detailWrapper.hidden = true;
+            }
+        };
+
+        // Export for Tooltip reference
+        window.showPatternCardModal = (patternId) => {
+            const chartWrappers = document.querySelectorAll('.chart-wrapper');
+            let pattern = null;
+            for (const wrap of chartWrappers) {
+                const script = wrap.querySelector('#chart-payload-json');
+                if (script) {
+                    try {
+                        const payload = JSON.parse(script.textContent);
+                        if (payload.candle_patterns) {
+                            pattern = payload.candle_patterns.find(p => p.id === patternId);
+                        }
+                    } catch (e) { }
+                }
+                if (pattern) break;
+            }
+
+            if (pattern) {
+                // Map fields to match the 'open' function expectations (dataset naming)
+                const data = {
+                    name: pattern.name,
+                    action: pattern.action,
+                    descLead: pattern.desc_lead,
+                    descBody: pattern.desc_body,
+                    svg: pattern.svg
+                };
+                open(data, false); // Card style only
+            }
         };
 
         document.querySelectorAll('.pattern-detail-trigger').forEach((btn) => {
-            btn.addEventListener('click', () => open(btn));
+            btn.addEventListener('click', () => {
+                lastFocus = btn;
+                open(btn.dataset, true);
+            });
         });
+
         overlay.addEventListener('click', (e) => {
             if (e.target === overlay) close();
         });
