@@ -1,0 +1,72 @@
+<!-- GC/DC Help Modal (Redesigned to match Pattern Modal) -->
+<div class="pattern-modal-overlay" data-modal-cross-overlay hidden>
+    <div class="pattern-modal" role="dialog" aria-modal="true" aria-labelledby="cross-modal-title">
+        <button class="modal-close" data-modal-cross-close aria-label="閉じる">&times;</button>
+
+        <div class="modal-body">
+            <!-- Left: Visual Symbol -->
+            <div class="modal-visual" id="modal-cross-visual"
+                style="font-size: 5rem; background: rgba(var(--accent-rgb), 0.05);">
+                <!-- ☀ or ☠ injected via JS -->
+            </div>
+
+            <!-- Right: Content -->
+            <div class="modal-text">
+                <h2 id="cross-modal-title" class="modal-title">信頼度評価詳細</h2>
+
+                <!-- Specific Result Section (Dynamic) -->
+                <div id="cross-details-section" style="display: none;">
+                    <div class="modal-sec">
+                        <h3>現在の評価</h3>
+                        <div class="badge-row" style="margin-bottom: 0.5rem;">
+                            <span id="modal-cross-badge" class="conf-badge"></span>
+                        </div>
+                        <p class="modal-desc"><b style="color: var(--muted);">理由：</b><span
+                                id="modal-cross-reason"></span></p>
+                    </div>
+                    <div class="tooltip-divider" style="margin: 1rem 0;"></div>
+                </div>
+
+                <div class="modal-sec">
+                    <h3>評価基準について</h3>
+                    <p class="modal-desc">
+                        基準線（短期・長期MA）の状態から、以下の要素を総合的に評価しています。
+                    </p>
+                    <ul class="modern-list" style="margin: 0.8rem 0;">
+                        <li>長期MAの傾き・トレンド方向</li>
+                        <li>現在値（終値）の乖離具合</li>
+                        <li>クロスの発生タイミング</li>
+                    </ul>
+                </div>
+
+                <div class="modal-sec">
+                    <h3>判定の目安</h3>
+                    <div class="modal-meta-grid" style="grid-template-columns: 1fr; gap: 0.5rem;">
+                        <div style="display: flex; align-items: start; gap: 0.8rem; margin-bottom: 0.5rem;">
+                            <span class="conf-badge conf-high" style="min-width: 60px; justify-content: center;">高
+                                ◎</span>
+                            <span
+                                style="font-size: 0.85rem; color: var(--text);">トレンドが強力で、価格がMAの優位方向にある安定した反発・反落サイン。</span>
+                        </div>
+                        <div style="display: flex; align-items: start; gap: 0.8rem; margin-bottom: 0.5rem;">
+                            <span class="conf-badge conf-medium" style="min-width: 60px; justify-content: center;">中
+                                〇</span>
+                            <span
+                                style="font-size: 0.85rem; color: var(--text);">クロスは成立しているが、MAの傾きや価格位置にわずかに懸念がある状態。</span>
+                        </div>
+                        <div style="display: flex; align-items: start; gap: 0.8rem; margin-bottom: 0.5rem;">
+                            <span class="conf-badge conf-low" style="min-width: 60px; justify-content: center;">低
+                                △</span>
+                            <span
+                                style="font-size: 0.85rem; color: var(--text);">逆張り的な位置でのクロスや、トレンドが不明確なもみ合い局面でのサイン。</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="alert alert-neutral" style="margin-top: 1rem; font-size: 0.75rem; padding: 0.8rem;">
+                    ※ 本評価は売買を推奨するものではなく、過去の統計的・技術的基準に基づくものです。最終判断はご自身で行ってください。
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -226,6 +226,7 @@
             let width, height;
             let yScale = null;
             let selectedDataIdx = null; // Sticky tooltip state
+            let selectedCrossIdx = null; // Sticky cross tooltip state
 
             function updateDimensions() {
                 const rect = wrapper.getBoundingClientRect();
@@ -462,20 +463,28 @@
 
                 // Sticky Tooltip Rendering
                 if (selectedDataIdx !== null && yScale) {
-                    // Check if in view
                     if (selectedDataIdx >= viewIndex && selectedDataIdx < viewIndex + viewCount) {
                         const i = selectedDataIdx - viewIndex;
                         const x = getX(i);
                         const point = allPoints[selectedDataIdx];
-                        // If sticky, where to position? slightly offset from candle center?
-                        // Or reuse mouse position? Mouse position is not available in draw().
-                        // Pin it relative to candle top/bottom or fixed.
-                        // Let's mimic "top right of candle".
                         const rect = canvas.getBoundingClientRect();
-                        const virtualY = rect.top + yScale(point.close); // Approximate Y
+                        const virtualY = rect.top + yScale(point.close);
                         showTooltip(point, x, virtualY, rect);
                     } else {
-                        // Off screen
+                        tooltip.style.display = 'none';
+                    }
+                }
+
+                // Sticky Cross Tooltip Rendering
+                if (selectedCrossIdx !== null) {
+                    const cross = crosses.find(c => c.index === selectedCrossIdx);
+                    if (cross && cross.index >= viewIndex && cross.index < viewIndex + viewCount) {
+                        const i = cross.index - viewIndex;
+                        const x = chartLeft + i * (chartWidth / viewCount) + (chartWidth / viewCount) / 2;
+                        const rect = canvas.getBoundingClientRect();
+                        const my = 40; // priceTop
+                        showCrossTooltip(cross, x, my, rect);
+                    } else if (selectedDataIdx === null) {
                         tooltip.style.display = 'none';
                     }
                 }
@@ -490,40 +499,59 @@
             canvas.addEventListener('click', (e) => {
                 const rect = canvas.getBoundingClientRect();
                 const x = e.clientX - rect.left;
+                const my = e.clientY - rect.top;
 
                 const chartLeft = 50;
                 const chartRight = width - 50;
                 const chartWidth = chartRight - chartLeft;
                 const step = chartWidth / viewCount;
+
+                // Check for Cross Icon Click
+                const priceTop = 40;
+                let clickedCross = null;
+                for (const c of crosses) {
+                    if (c.index >= viewIndex && c.index < viewIndex + viewCount) {
+                        const i = c.index - viewIndex;
+                        const cx = chartLeft + i * step + step / 2;
+                        const iconTop = priceTop - 25;
+                        const iconBottom = priceTop + 5;
+
+                        if (Math.abs(x - cx) < 20 && my >= iconTop && my <= iconBottom) {
+                            clickedCross = c;
+                            break;
+                        }
+                    }
+                }
+
+                if (clickedCross) {
+                    selectedCrossIdx = clickedCross.index;
+                    selectedDataIdx = null; // Clear candle sticky
+                    draw();
+                    return;
+                }
+
                 const idxInView = Math.floor((x - chartLeft) / step);
                 const dataIdx = Math.floor(viewIndex + idxInView);
 
                 if (dataIdx >= 0 && dataIdx < allPoints.length) {
-                    // Strict Check: Did we click CANDLE?
-                    // Sticky only locks if clicking the candle itself (or very close)
-                    // If clicking empty space (bg/volume/top), resets.
-
-                    if (!yScale) { selectedDataIdx = null; draw(); return; }
+                    if (!yScale) { selectedDataIdx = null; selectedCrossIdx = null; draw(); return; }
 
                     const point = allPoints[dataIdx];
                     const cHigh = yScale(point.high);
                     const cLow = yScale(point.low);
-                    const yClick = e.clientY - rect.top;
-                    const buffer = 10; // Generous buffer
+                    const buffer = 10;
 
-                    if (yClick >= cHigh - buffer && yClick <= cLow + buffer) {
-                        if (selectedDataIdx === dataIdx) {
-                            // Same clicked -> Do nothing
-                        } else {
-                            selectedDataIdx = dataIdx;
-                        }
+                    if (my >= cHigh - buffer && my <= cLow + buffer) {
+                        selectedDataIdx = dataIdx;
+                        selectedCrossIdx = null; // Clear cross sticky
                     } else {
-                        // Clicked inside column but NOT on candle -> Reset
                         selectedDataIdx = null;
+                        selectedCrossIdx = null;
                     }
                     draw();
                 } else {
-                    selectedDataIdx = null; // Click outside
+                    selectedDataIdx = null;
+                    selectedCrossIdx = null;
                     draw();
                 }
             });
@@ -596,6 +624,128 @@
                 tooltip.style.transform = 'none';
             }
 
+            function showCrossTooltip(cross, x, my, rect) {
+                const point = allPoints[cross.index];
+                const prevPoint = cross.index > 0 ? allPoints[cross.index - 1] : null;
+
+                const isGolden = cross.type === 'golden';
+                const crossTitle = isGolden ? 'ゴールデンクロス' : 'デッドクロス';
+                const crossColor = isGolden ? '#eab308' : '#3b82f6';
+
+                const shortKey = sortedSmaKeys[0] || '短期MA';
+                const longKey = sortedSmaKeys[1] || '長期MA';
+                const shortNum = shortKey.match(/\d+/) ? shortKey.match(/\d+/)[0] : '';
+                const longNum = longKey.match(/\d+/) ? longKey.match(/\d+/)[0] : '';
+
+                const isConfirmed = cross.index < allPoints.length - 1;
+                const res = calculateCrossConfidence(cross, prevPoint, point, shortKey, longKey);
+
+                // 1. Date
+                const formattedDate = (point.label || '').replace(/\//g, '-');
+                let html = `<div class="tooltip-header" style="border:none; padding-bottom:0;">${formattedDate}</div>`;
+
+                // 2. Status (Enhanced with color and icon)
+                const statusText = isConfirmed ? '確定' : '未確定';
+                const statusClass = isConfirmed ? 'status-confirmed' : 'status-unconfirmed';
+                const statusIcon = isConfirmed ? '✅' : '⏳';
+                html += `<div class="tooltip-row"><span class="t-label">状態</span><span class="t-val ${statusClass}"><span class="status-icon">${statusIcon}</span>${statusText}</span></div>`;
+
+                // 3. Line Type
+                html += `<div class="tooltip-row"><span class="t-label">線種</span><span class="t-val" style="color:${crossColor}; font-weight:700;">${crossTitle}</span></div>`;
+
+                // 4. Condition
+                const op = isGolden ? '>' : '<';
+                html += `<div class="tooltip-row"><span class="t-label">条件</span><span class="t-val" style="font-size:0.75rem;">短期(${shortNum}) ${op} 長期(${longNum})</span></div>`;
+
+                // 5. Confidence
+                const badgeContent = res.level + (res.icon ? ' ' + res.icon : '');
+                // Include cross type for the modal symbol
+                const resJson = JSON.stringify({ ...res, type: cross.type }).replace(/"/g, '&quot;');
+                html += `<div class="tooltip-row">
+                    <span class="t-label">信頼度評価 <span class="conf-help-icon" onclick="window.showCrossHelpModal(event, ${resJson})">?</span></span>
+                    <span class="conf-badge ${res.colorClass}">${badgeContent}</span>
+                </div>`;
+
+                // (Reason is now displayed only in the modal)
+
+                // 7. Short MA
+                html += `<div class="tooltip-row"><span class="t-label">短期MA(${shortNum})</span><span class="t-val">${fmtPrice(point[shortKey])}</span></div>`;
+
+                // 8. Long MA
+                html += `<div class="tooltip-row"><span class="t-label">長期MA(${longNum})</span><span class="t-val">${fmtPrice(point[longKey])}</span></div>`;
+
+                // 9. Close
+                html += `<div class="tooltip-row"><span class="t-label">終値</span><span class="t-val">${fmtPrice(point.close)}</span></div>`;
+
+                tooltip.innerHTML = html;
+                tooltip.style.display = 'block';
+                tooltip.style.pointerEvents = 'auto';
+
+                const tWidth = tooltip.offsetWidth || 200;
+                const tHeight = tooltip.offsetHeight || 250;
+                let left = x + 20;
+                let top = my - (tHeight / 2);
+                if (left + tWidth > width) left = x - tWidth - 20;
+                if (top + tHeight > height) top = height - tHeight - 10;
+                if (top < 0) top = 10;
+
+                tooltip.style.left = `${left}px`;
+                tooltip.style.top = `${top}px`;
+                tooltip.style.transform = 'none';
+            }
+
+            // Confidence Scoring for GC/DC
+            function calculateCrossConfidence(cross, prevPoint, currPoint, shortKey, longKey) {
+                if (!prevPoint || !currPoint) return { level: '未確定', icon: '', reason: 'データ不足', colorClass: 'conf-unconfirmed' };
+
+                const slope = currPoint[longKey] - prevPoint[longKey];
+                const isGC = cross.type === 'golden';
+                const close = currPoint.close;
+                const longMa = currPoint[longKey];
+
+                const isConfirmed = cross.index < allPoints.length - 1;
+
+                if (!isConfirmed) {
+                    const trendMatches = isGC ? (slope > 0) : (slope < 0);
+                    const priceDominant = isGC ? (close > longMa) : (close < longMa);
+                    let tempReason = '';
+                    if (trendMatches && priceDominant) {
+                        tempReason = isGC ? '長期MAが上昇、終値が長期MAの上' : '長期MAが下降、終値が長期MAの下';
+                    } else if (!trendMatches && !priceDominant) {
+                        tempReason = isGC ? '長期MAが下降、終値が長期MAの下' : '長期MAが上昇、終値が長期MAの上';
+                    } else if (trendMatches && !priceDominant) {
+                        tempReason = isGC ? '長期MAは上昇しているが、終値が長期MAの下' : '長期MAは下降しているが、終値が長期MAの上';
+                    } else {
+                        tempReason = isGC ? '終値は長期MAの上にあるが、長期MAが下降中' : '終値は長期MAの下にあるが、長期MAが上昇中';
+                    }
+                    return { level: '未確定', icon: '', reason: `未確定足のため。（暫定状態：${tempReason}）`, colorClass: 'conf-unconfirmed' };
+                }
+
+                // Trend matching direction
+                const trendMatches = isGC ? (slope > 0) : (slope < 0);
+                // Price position in favorable side
+                const priceDominant = isGC ? (close > longMa) : (close < longMa);
+
+                let level, icon, reason, colorClass;
+
+                if (trendMatches && priceDominant) {
+                    level = '高'; icon = '◎'; colorClass = 'conf-high';
+                    reason = isGC ? '長期MAが上昇、終値が長期MAの上' : '長期MAが下降、終値が長期MAの下';
+                } else if (!trendMatches && !priceDominant) {
+                    level = '低'; icon = '△'; colorClass = 'conf-low';
+                    reason = isGC ? '長期MAが下降、終値が長期MAの下' : '長期MAが上昇、終値が長期MAの上';
+                } else {
+                    level = '中'; icon = '〇'; colorClass = 'conf-medium';
+                    if (trendMatches && !priceDominant) {
+                        reason = isGC ? '長期MAは上昇しているが、終値が長期MAの下' : '長期MAは下降しているが、終値が長期MAの上';
+                    } else {
+                        reason = isGC ? '終値は長期MAの上にあるが、長期MAが下降中' : '終値は長期MAの下にあるが、長期MAが上昇中';
+                    }
+                }
+
+                return { level, icon, reason, colorClass };
+            }
+
 
 
             canvas.addEventListener('mousemove', (e) => {
@@ -659,36 +809,10 @@
 
                 if (hoveredCross) {
                     canvas.style.cursor = 'help';
-                    const p = allPoints[hoveredCross.index];
-                    const label = hoveredCross.type === 'golden' ? 'ゴールデンクロス' : 'デッドクロス';
-                    const color = hoveredCross.type === 'golden' ? '#eab308' : '#3b82f6';
-
-                    let html = `<div class="tooltip-header" style="color:${color}">${label}</div>`;
-                    html += `<div class="tooltip-time">${p.label}</div>`;
-                    html += `<div class="tooltip-divider"></div>`;
-
-                    if (sortedSmaKeys.length >= 2) {
-                        const shortKey = sortedSmaKeys[0];
-                        const longKey = sortedSmaKeys[1];
-                        const shortVal = p[shortKey];
-                        const longVal = p[longKey];
-                        html += `<div class="tooltip-row"><span class="t-label">${shortKey}</span><span class="t-val">${fmtPrice(shortVal)}</span></div>`;
-                        html += `<div class="tooltip-row"><span class="t-label">${longKey}</span><span class="t-val">${fmtPrice(longVal)}</span></div>`;
+                    const cx = chartLeft + (hoveredCross.index - viewIndex) * (chartWidth / viewCount) + (chartWidth / viewCount) / 2;
+                    if (selectedCrossIdx === null) {
+                        showCrossTooltip(hoveredCross, cx, my, rect);
                     }
-
-                    tooltip.innerHTML = html;
-                    tooltip.style.display = 'block';
-
-                    const tWidth = tooltip.offsetWidth || 180;
-                    const tHeight = tooltip.offsetHeight || 100;
-                    let left = x + 20;
-                    let top = my + 20;
-                    if (left + tWidth > width) left = x - tWidth - 20;
-                    if (top + tHeight > height) top = height - tHeight - 10;
-
-                    tooltip.style.left = `${left}px`;
-                    tooltip.style.top = `${top}px`;
-                    tooltip.style.transform = 'none';
                     return;
                 }
 
@@ -904,6 +1028,76 @@
         });
     }
 
+    function initCrossModal() {
+        const overlay = document.querySelector('[data-modal-cross-overlay]');
+        if (!overlay) return;
+        const closeBtn = overlay.querySelector('[data-modal-cross-close]');
+        const detailsSection = document.getElementById('cross-details-section');
+        const badge = document.getElementById('modal-cross-badge');
+        const reason = document.getElementById('modal-cross-reason');
+        const visual = document.getElementById('modal-cross-visual');
+
+        const close = () => {
+            overlay.classList.remove('is-open');
+            setTimeout(() => { if (!overlay.classList.contains('is-open')) overlay.hidden = true; }, 300);
+        };
+        const open = (data) => {
+            if (data && data.level) {
+                if (detailsSection) detailsSection.style.display = 'block';
+                if (badge) {
+                    badge.className = `conf-badge ${data.colorClass}`;
+                    badge.textContent = data.level + (data.icon ? ' ' + data.icon : '');
+                }
+                if (reason) reason.textContent = data.reason;
+                if (visual) {
+                    // Support both 'golden'/'dead' and 'gc'/'dc'
+                    const isGolden = data.type === 'golden' || data.type === 'gc';
+                    const isDead = data.type === 'dead' || data.type === 'dc';
+
+                    if (isGolden) {
+                        visual.textContent = '☀';
+                        visual.style.color = '#eab308';
+                    } else if (isDead) {
+                        visual.textContent = '☠';
+                        visual.style.color = '#3b82f6';
+                    } else {
+                        visual.textContent = '📈';
+                        visual.style.color = 'var(--accent)';
+                    }
+                }
+            } else {
+                if (detailsSection) detailsSection.style.display = 'none';
+                if (visual) {
+                    visual.textContent = '📊';
+                    visual.style.color = 'var(--accent)';
+                }
+            }
+            overlay.hidden = false;
+            // Force reflow
+            overlay.offsetHeight;
+            overlay.classList.add('is-open');
+        };
+
+        window.showCrossHelpModal = (e, data) => {
+            if (e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            open(data);
+        };
+
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) close();
+        });
+        if (closeBtn) closeBtn.addEventListener('click', close);
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && overlay.classList.contains('is-open')) {
+                close();
+            }
+        });
+    }
+
     function initBackToTop() {
         const btn = document.getElementById('backToTop');
         if (!btn) return;
@@ -939,6 +1133,7 @@
     bindTabButtons();
     renderCandleCharts();
     initPatternModal();
+    initCrossModal();
     initBackToTop();
 
     window.initCharts = () => {
