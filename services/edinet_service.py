@@ -35,6 +35,10 @@ class EdinetClient:
         retries = Retry(total=3, backoff_factor=1, status_forcelist=[500, 502, 503, 504])
         self.session.mount('https://', HTTPAdapter(max_retries=retries))
         
+        self.api_key = os.environ.get("EDINET_API_KEY")
+        if not self.api_key:
+            print("WARNING: EDINET_API_KEY not found in environment variables.")
+
         self.code_map = self._load_code_map()
 
     def _load_code_map(self) -> pd.DataFrame:
@@ -125,10 +129,12 @@ class EdinetClient:
         for _ in range(days): 
             date_str = check_date.strftime("%Y-%m-%d")
             url = f"{self.API_ENDPOINT}/documents.json"
-            params = {"date": date_str, "type": 2} 
+            headers = {}
+            if self.api_key:
+                headers["Ocp-Apim-Subscription-Key"] = self.api_key
             
             try:
-                res = self.session.get(url, params=params, timeout=5)
+                res = self.session.get(url, params=params, headers=headers, timeout=5)
                 if res.status_code == 200:
                     data = res.json()
                     docs = data.get("results", [])
@@ -155,9 +161,12 @@ class EdinetClient:
         # API v2 Document endpoint: /documents/{docID}?type=1 (XBRL)
         url = f"{self.API_ENDPOINT}/documents/{doc_id}"
         params = {"type": 1}
+        headers = {}
+        if self.api_key:
+            headers["Ocp-Apim-Subscription-Key"] = self.api_key
         
         print(f"Downloading DocID: {doc_id}")
-        res = self.session.get(url, params=params, stream=True)
+        res = self.session.get(url, params=params, headers=headers, stream=True)
         
         if res.status_code != 200:
             return {}
