@@ -4,7 +4,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from typing import Dict, Any, Optional
 import logging
-
+from services.edinet_client import EdinetClient
 from services.edinet_document_store import EdinetDocumentStore
 from services.edinet_xbrl_locator import EdinetXbrlLocator
 from services.edinet_fin_extract import EdinetFinancialExtractor
@@ -67,7 +67,17 @@ async def get_edinet_fundamental(doc_id: str, with_market: bool = False):
         try:
             unzipped_dir = store.extract_document(doc_id)
         except ValueError:
-            raise HTTPException(status_code=404, detail="Document not found. Please call /edinet/documents/{doc_id}/download first.")
+            # Document not found locally, try to download
+            client = EdinetClient()
+            try:
+                zip_bytes = await client.get_document_zip(doc_id)
+                store.save_document(doc_id, zip_bytes)
+                unzipped_dir = store.extract_document(doc_id, force=True)
+            except Exception as dl_err:
+                 logger.error(f"Auto-download failed for {doc_id}: {dl_err}")
+                 raise HTTPException(status_code=404, detail="Document not found and download failed.")
+            finally:
+                await client.close()
 
         locator = EdinetXbrlLocator()
         location_result = await locator.locate_xbrl_files(unzipped_dir)
