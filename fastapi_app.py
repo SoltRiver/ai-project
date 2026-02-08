@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
-from routers import stocks, fundamental, indices, news, ranking, edinet
+from routers import stocks, fundamental, indices, news, ranking, edinet, edinet_docs
 
 """
 メインのFastAPIアプリケーション定義ファイル。
@@ -21,6 +21,7 @@ app.include_router(indices.router)
 app.include_router(news.router)
 app.include_router(ranking.router)
 app.include_router(edinet.router, prefix="/api")
+app.include_router(edinet_docs.router, prefix="/api")
 
 
 @app.get("/", include_in_schema=False)

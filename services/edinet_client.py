@@ -98,3 +98,65 @@ class EdinetClient:
                 
         # If loop finishes without return (should satisfy retry limit logic above but for safety)
         raise EdinetAPIError("Max retries exceeded.", status_code=502)
+
+    async def get_document_zip(self, doc_id: str) -> bytes:
+        """
+        Fetch document ZIP from EDINET API v2.
+        
+        Args:
+            doc_id (str): Document ID
+            
+        Returns:
+            bytes: ZIP file content
+            
+        Raises:
+            EdinetAPIError: On failure
+        """
+        api_key = os.environ.get("EDINET_API_KEY")
+        if not api_key:
+            logger.error("EDINET_API_KEY is not set.")
+            raise EdinetAPIError("EDINET_API_KEY is missing.", status_code=503)
+
+        url = f"{self.BASE_URL}/documents/{doc_id}"
+        params = {
+            "type": 1,
+            "Subscription-Key": api_key
+        }
+        
+        log_params = params.copy()
+        log_params["Subscription-Key"] = "***"
+        logger.debug(f"Requesting EDINET ZIP: {url} with params {log_params}")
+        
+        retries = 3
+        backoff_base = 1.0
+        
+        for attempt in range(retries + 1):
+            try:
+                response = await self.client.get(url, params=params)
+                
+                if response.status_code == 200:
+                    logger.info(f"EDINET ZIP Download Success. Size: {len(response.content)} bytes")
+                    return response.content
+                
+                # Check for retryable errors
+                if response.status_code in [429, 500, 502, 503, 504]:
+                    if attempt < retries:
+                        sleep_time = (backoff_base * (2 ** attempt)) + random.uniform(0, 0.5)
+                        logger.warning(f"EDINET ZIP Error {response.status_code}. Retrying in {sleep_time:.2f}s... (Attempt {attempt + 1}/{retries})")
+                        await asyncio.sleep(sleep_time)
+                        continue
+                
+                logger.error(f"EDINET ZIP Failed. Status: {response.status_code}, Body: {response.text[:200]}")
+                raise EdinetAPIError(f"EDINET API responded with {response.status_code}", status_code=response.status_code)
+                
+            except httpx.RequestError as e:
+                if attempt < retries:
+                    sleep_time = (backoff_base * (2 ** attempt)) + random.uniform(0, 0.5)
+                    logger.warning(f"EDINET Connection Error: {e}. Retrying in {sleep_time:.2f}s...")
+                    await asyncio.sleep(sleep_time)
+                    continue
+                logger.error(f"EDINET Connection Failed: {e}")
+                raise EdinetAPIError(f"Connection failed: {str(e)}", status_code=502)
+                
+        raise EdinetAPIError("Max retries exceeded.", status_code=502)
+
