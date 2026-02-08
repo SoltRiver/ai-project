@@ -3,6 +3,11 @@ from __future__ import annotations
 import math
 from datetime import datetime
 from typing import Any, Dict, List, Optional
+from sqlalchemy.orm import Session
+from models import stock as stock_model
+import logging
+
+logger = logging.getLogger(__name__)
 
 import pandas as pd
 
@@ -39,21 +44,35 @@ from services.jquants_client import client as jquants_client
 # アナライザーの初期化
 analyzer = FinancialAnalyzer()
 
-# ウォッチリストのサンプル銘柄 (簡易的なインメモリ保存)
-_WATCHLIST_CODES = ["7203", "6758", "9984", "8306", "8035"]
+def get_watchlist_codes(db: Session) -> List[str]:
+    try:
+        stocks = db.query(stock_model.Stock).all()
+        return [s.code for s in stocks]
+    except Exception as e:
+        logger.error(f"Error fetching watchlist: {e}")
+        return []
 
-def get_watchlist_codes() -> List[str]:
-    return _WATCHLIST_CODES
-
-def add_stock_to_watchlist(code: str) -> bool:
-    if code not in _WATCHLIST_CODES:
-        _WATCHLIST_CODES.append(code)
+def add_stock_to_watchlist(db: Session, code: str) -> bool:
+    try:
+        existing = db.query(stock_model.Stock).filter(stock_model.Stock.code == code).first()
+        if existing:
+            return False
+        new_stock = stock_model.Stock(code=code)
+        db.add(new_stock)
+        db.commit()
         return True
-    return False
+    except Exception as e:
+        logger.error(f"Error adding stock {code}: {e}")
+        db.rollback()
+        return False
 
-def remove_stocks_from_watchlist(codes: List[str]):
-    global _WATCHLIST_CODES
-    _WATCHLIST_CODES = [c for c in _WATCHLIST_CODES if c not in codes]
+def remove_stocks_from_watchlist(db: Session, codes: List[str]):
+    try:
+        db.query(stock_model.Stock).filter(stock_model.Stock.code.in_(codes)).delete(synchronize_session=False)
+        db.commit()
+    except Exception as e:
+        logger.error(f"Error removing stocks {codes}: {e}")
+        db.rollback()
 
 def search_stocks(query: str) -> List[Dict[str, str]]:
     query = query.lower().strip()
@@ -1168,9 +1187,13 @@ def _build_positives(points: List[Dict[str, Any]]) -> List[str]:
     ]
 
 
-def get_stock_list() -> List[Dict[str, Any]]:
+def get_stock_list(db: Session) -> List[Dict[str, Any]]:
+    """
+    ウォッチリスト銘柄の最新情報を取得してリストで返す。
+    リアルタイムデータ取得を行い、失敗時はキャッシュまたはNoneを返す。
+    """
     stocks: List[Dict[str, Any]] = []
-    for code in get_watchlist_codes():
+    for code in get_watchlist_codes(db):
         symbol = format_symbol_for_yfinance(code)
         info = fetch_stock_info(symbol) or {}
         display_name = _jp_name(code, info.get("name"))

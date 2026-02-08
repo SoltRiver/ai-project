@@ -1,6 +1,8 @@
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, Depends
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
+from sqlalchemy.orm import Session
+from database import get_db
 
 from services import stock_service
 
@@ -24,8 +26,8 @@ router = APIRouter()
 
 
 @router.get("/stocks", response_class=HTMLResponse)
-async def list_stocks(request: Request):
-    stocks = stock_service.get_stock_list()
+async def list_stocks(request: Request, db: Session = Depends(get_db)):
+    stocks = stock_service.get_stock_list(db)
     timestamp = stock_service.get_timestamp_label()
     return templates.TemplateResponse(
         "stocks/list.html",
@@ -105,7 +107,7 @@ async def candle_patterns(request: Request):
 
 
 @router.post("/stocks/add")
-async def add_stock(request: Request):
+async def add_stock(request: Request, db: Session = Depends(get_db)):
     form = await request.form()
     code_input = form.get("code", "").strip()
 
@@ -136,19 +138,19 @@ async def add_stock(request: Request):
             target_code = code_input
 
         if target_code:
-            stock_service.add_stock_to_watchlist(target_code)
+            stock_service.add_stock_to_watchlist(db, target_code)
     
     from fastapi.responses import RedirectResponse
     return RedirectResponse(url="/stocks", status_code=303)
 
 
 @router.post("/stocks/delete")
-async def delete_stocks(request: Request):
+async def delete_stocks(request: Request, db: Session = Depends(get_db)):
     form = await request.form()
     # checkboxes with same name come as list
     codes = form.getlist("selected_stocks")
     if codes:
-        stock_service.remove_stocks_from_watchlist(codes)
+        stock_service.remove_stocks_from_watchlist(db, codes)
     
     from fastapi.responses import RedirectResponse
     return RedirectResponse(url="/stocks", status_code=303)
