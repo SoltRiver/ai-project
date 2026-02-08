@@ -59,6 +59,16 @@ def fetch_stock_info(symbol: str) -> Optional[Dict[str, Any]]:
             "exchange": info.get("exchange", ""),
             "sector": info.get("sector", ""),
             "industry": info.get("industry", ""),
+            # Financials for fallback
+            "total_revenue": info.get("totalRevenue"),
+            "net_income": info.get("netIncomeToCommon"),
+            "operating_margins": info.get("operatingMargins"),
+            "return_on_assets": info.get("returnOnAssets"),
+            "return_on_equity": info.get("returnOnEquity"),
+            "book_value": info.get("bookValue"),
+            "shares_outstanding": info.get("sharesOutstanding"),
+            "operating_cashflow": info.get("operatingCashflow"),
+            "free_cashflow": info.get("freeCashflow"),
         }
 
         if result["current_price"] and result["previous_close"]:

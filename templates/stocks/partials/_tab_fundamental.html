@@ -84,7 +84,14 @@
             <span class="icon">📑</span>
             <div>
                 <div class="panel-title">詳細分析 (EDINET連携)</div>
-
+                <div style="font-size: 0.85rem; color: #666; margin-top: 4px;">
+                    データ取得元： <strong>{{ analysis.source }}</strong>
+                    {% if analysis.fallback_reason %}
+                    <span style="color: #e67e22; margin-left: 10px;">
+                        (Reason: {{ analysis.fallback_reason }})
+                    </span>
+                    {% endif %}
+                </div>
             </div>
         </div>
     </div>

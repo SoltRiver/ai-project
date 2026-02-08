@@ -40,6 +40,13 @@ class EdinetClient:
             print("WARNING: EDINET_API_KEY not found in environment variables.")
 
         self.code_map = self._load_code_map()
+        self._api_access_denied = False
+
+    def _check_api_access(self) -> bool:
+        if self._api_access_denied:
+            print("EDINET API Access previously denied. Skipping.")
+            return False
+        return True
 
     def _load_code_map(self) -> pd.DataFrame:
         if os.path.exists(self.CODE_LIST_PATH):
@@ -77,6 +84,9 @@ class EdinetClient:
                 "8306": "E03606", # Mitsubishi UFJ
                 "8316": "E03614", # Sumitomo Mitsui
                 "8411": "E03615", # Mizuho
+                "8035": "E01913", # Tokyo Electron
+                "6861": "E02008", # Keyence
+                "6098": "E05617", # Recruit
             }
             return fallback_map.get(str(ticker))
         
@@ -106,35 +116,67 @@ class EdinetClient:
         if not reference_date:
             reference_date = datetime.now()
 
-        # Phase 1: Look back 30 days from reference date (useful if we are in filing season)
+        # Optimization: Fixed filing dates for major companies to avoid scanning
+        # Dates are for 2024 filings (FY2023). 
+        # In a real app, this should be a DB or dynamic lookup.
+        FIXED_FILING_DATES = {
+            "E02144": "2024-06-25", # Toyota
+            "E00561": "2024-06-26", # Sony
+            "E02778": "2024-06-21", # Softbank Group
+            "E03606": "2024-06-25", # MUFG
+            "E03614": "2024-06-21", # Sumitomo Mitsui
+            "E03615": "2024-06-20", # Mizuho
+            "E01913": "2024-06-21", # Tokyo Electron
+            "E02367": "2024-06-27", # Nintendo
+            "E02008": "2024-06-14", # Keyence
+            "E05617": "2024-06-20", # Recruit
+        }
+
+        if edinet_code in FIXED_FILING_DATES:
+            print(f"Using fixed filing date for {edinet_code}")
+            fixed_date = datetime.strptime(FIXED_FILING_DATES[edinet_code], "%Y-%m-%d")
+            # Start 5 days after and scan back 10 days to cover a range around the date
+            start_date = fixed_date + timedelta(days=5)
+            found = self._scan_period(edinet_code, start_date, days=10)
+            if found:
+                return found
+
+        # Phase 1: Look back 30 days from reference date (useful if logic is run in filing season)
         print(f"Searching documents for {edinet_code} (Phase 1: Recent)...")
-        found = self._scan_period(edinet_code, reference_date, days=30)
+        found = self._scan_period(edinet_code, reference_date, days=5) # Reduced from 30
         if found:
             return found
             
-        # Phase 2: If we are not in filing season (e.g. Jan), look at last June (Peak for March-end companies)
-        # Verify current month. If < 6, look at previous year's June. If > 6, look at this year's June.
+        # Phase 2: Look at last June
         current_year = reference_date.year
         target_year = current_year if reference_date.month > 6 else current_year - 1
         
-        # Search late June (June 30 backwards for 45 days -> mid May)
+        # Search late June (June 30 backwards)
         print(f"Searching documents for {edinet_code} (Phase 2: June {target_year})...")
         june_date = datetime(target_year, 6, 30)
-        found = self._scan_period(edinet_code, june_date, days=45) 
+        found = self._scan_period(edinet_code, june_date, days=14) # Reduced from 45
         
         return found
 
     def _scan_period(self, edinet_code: str, start_date: datetime, days: int) -> Optional[str]:
+        if not self._check_api_access():
+            return None
+
         check_date = start_date
         for _ in range(days): 
             date_str = check_date.strftime("%Y-%m-%d")
             url = f"{self.API_ENDPOINT}/documents.json"
-            headers = {}
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+            }
             if self.api_key:
                 headers["Ocp-Apim-Subscription-Key"] = self.api_key
             
+            params = {"date": date_str, "type": 1} 
             try:
-                res = self.session.get(url, params=params, headers=headers, timeout=5)
+                # print(f"DEBUG: Requesting {url} with params={params}")
+                res = self.session.get(url, params=params, headers=headers, timeout=10)
+                
                 if res.status_code == 200:
                     data = res.json()
                     docs = data.get("results", [])
@@ -145,8 +187,20 @@ class EdinetClient:
                                 # 120: Annual Securities Report
                                 if doc_type == "120":
                                     return doc.get("docID")
+                    else:
+                        if "statusCode" in res.text and "401" in res.text:
+                            print("WARNING: EDINET API Access Denied (Missing/Invalid Key). Switching to fallback mode.")
+                            self._api_access_denied = True
+                            return None
+                elif res.status_code == 401:
+                    print(f"WARNING: EDINET API Returned 401 Unauthorized.")
+                    self._api_access_denied = True
+                    return None
+                else:
+                    print(f"WARNING: EDINET API Error: {res.status_code}")
+
             except Exception as e:
-                print(f"Error fetching {date_str}: {e}")
+                print(f"Error checking {date_str}: {e}")
 
             check_date -= timedelta(days=1)
             # Sleep slightly less to look fast

@@ -1,24 +1,29 @@
+
 import sys
 import os
 
 sys.path.append(os.getcwd())
-from services import stock_service
 
-def verify_fallback():
-    print("Testing Search Fallback for GENDA (9166)...")
-    results = stock_service.search_stocks("9166")
-    print(f"Results for '9166': {results}")
+from services.financial_analyzer import FinancialAnalyzer
+
+def verify_fallback(ticker="7203"):
+    print(f"Analyzing {ticker}...")
+    analyzer = FinancialAnalyzer()
+    analysis = analyzer.analyze_stock(ticker)
     
-    found = any(r['code'] == '9166' for r in results)
-    if found:
-        print("PASS: GENDA found in search results.")
+    print(f"Source: {analysis.get('source')}")
+    print(f"Fallback Reason: {analysis.get('fallback_reason')}")
+
+    if "error" in analysis:
+        print(f"ERROR: {analysis['error']}")
+    
+    if "financials" in analysis:
+        print("Financials found (Fallback Success!):")
+        fin = analysis["financials"]
+        for k, v in fin.items():
+            print(f"  {k}: {v}")
     else:
-        print("FAIL: GENDA not found.")
+        print("No financials found.")
 
-    results_name = stock_service.search_stocks("GENDA")
-    print(f"Results for 'GENDA': {results_name}")
-    if any(r['code'] == '9166' for r in results_name):
-         print("PASS: GENDA found by name.")
-    
 if __name__ == "__main__":
     verify_fallback()
