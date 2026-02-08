@@ -332,3 +332,35 @@
     - Bumped `app.js` version to `v=11` in `base.html`.
 - **Verification**:
     - **Browser**: Confirmed gold color, date formatting, volume units, and hover detection.
+
+### Review Session 30 (EDINET Document Processing - Plan B)
+- **Status**: **Success** (Executed 2026-02-08).
+- **Scope**: `services/edinet_*.py`, `routers/edinet_docs.py`, `fastapi_app.py`.
+- **Findings**:
+    1.  **Inline XBRL Support**: Initial implementation assumed `.xbrl` file presence. Modern EDINET reports use Inline XBRL (`.htm`).
+    2.  **Async/Await Error**: `routers/edinet_docs.py` called `locator.locate_xbrl_files` without `await`, causing a `coroutine object is not subscriptable` error.
+    3.  **BeautifulSoup Warning**: `edinet-xbrl` parser emitted warnings when parsing HTML.
+- **Action**:
+    - **Locator**: Updated `locate_xbrl_files` to find `.htm` files.
+    - **Extractor**: Updated `extract_financials` to gracefully handle Inline XBRL (warn instead of block) and suppress warnings.
+    - **Router**: Added `await` to async locator calls.
+- **Verification**:
+    - **Script**: `scripts/test_edinet_docs.py` confirmed successful download and extraction of financial data from Godo Steel (S100TK3X) Inline XBRL report.
+    - **Security**: Confirmed Zip-slip protection and API key masking.
+
+### Review Session 31 (J-Quants Integration & Security Code Extraction)
+- **Status**: **Success** (Executed 2026-02-08).
+- **Scope**: `services/edinet_fin_extract.py`, `services/jquants_client.py`, `routers/fundamentals.py`.
+- **Findings**:
+    1.  **Security Code Helper**: `EdinetFinancialExtractor` failed to extract `sec_code` from XBRL.
+    2.  **Namespace Mismatch**: The extraction logic only checked `jppfs_cor` and `jpcrp_cor` namespaces. `SecurityCodeDEI` is defined in `jpdei_cor` (Document and Entity Information).
+    3.  **Library Path**: `debug_sec_code.py` failed due to `edinet-xbrl` not being found initially (fixed environment) and incorrect import path (`parser` vs `edinet_xbrl_parser`).
+- **Action**:
+    - **Extractor**: Updated `extract_financials` to include `jpdei_cor:` in potential namespaces for header tags.
+    - **Debug**: Verified extraction logic using updated debug scripts.
+    - **Env**: Installed missing `edinet-xbrl` package in `.venv`.
+- **Verification**:
+    - **Script**: `scripts/verify_jquants_integration.py` successfully extracted `SecCode: 54100` and calculated `ROE` (11.8%) from Godo Steel (S100TK3X) data.
+    - **Market Data**: Helper handles `sec_code` correctly, though market data returns `None` as expected without live credentials in the test environment.
+
+

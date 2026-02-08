@@ -2,69 +2,80 @@
 
 {% block content %}
 <div class="container" style="max-width: 1200px; margin: 0 auto; padding: 20px;">
-    <h2><a href="/stocks/{{ symbol }}">{{ symbol }}</a> ファンダメンタル分析 (EDINET版)</h2>
+    <h2><a href="#">{{ analysis.sec_code if analysis else doc_id }}</a> ファンダメンタル分析 (EDINET版)</h2>
+    <p><small>Document ID: {{ doc_id }}</small></p>
 
-    {% if analysis.error %}
+    {% if error or (analysis and analysis.error) %}
     <div class="alert alert-error" style="color: red; border: 1px solid red; padding: 10px; margin-bottom: 20px;">
-        <p>エラーが発生しました: {{ analysis.error }}</p>
+        <p>エラーが発生しました: {{ error or analysis.error }}</p>
         <p>EDINETコードが見つからないか、データが取得できませんでした。</p>
     </div>
-    {% else %}
-    
+    {% elif analysis %}
+
     <!-- Market Overview -->
+    {% set market = analysis.market or {} %}
     <div class="card" style="margin-bottom: 2rem; padding: 1rem; border: 1px solid #ddd; border-radius: 8px;">
-        <h3>株価情報</h3>
+        <h3>株価情報 <small style="font-size: 0.8rem; font-weight: normal;">(基準日: {{ market.price_date or '-' }})</small>
+        </h3>
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem;">
             <div>
-                <small>現在値</small>
-                <div style="font-size: 1.5rem; font-weight: bold;">{{ analysis.market.current_price | round(1) if analysis.market.current_price else 'N/A' }} 円</div>
+                <small>現在値 (終値)</small>
+                <div style="font-size: 1.5rem; font-weight: bold;">{{ market.price | round(1) if market.price else 'N/A'
+                    }} 円</div>
             </div>
             <div>
                 <small>時価総額</small>
-                <div>{{ (analysis.market.market_cap / 100000000) | int if analysis.market.market_cap else 'N/A' }} 億円</div>
+                <div>{{ (market.market_cap / 100000000) | int if market.market_cap else 'N/A' }} 億円</div>
+            </div>
+            <div>
+                <small>発行済株式数</small>
+                <div>{{ market.shares_outstanding | int | format_currency if market.shares_outstanding else 'N/A' }} 株
+                </div>
             </div>
         </div>
+        {% if analysis.meta.warning %}
+        <div style="color: orange; margin-top: 0.5rem; font-size: 0.9rem;">⚠ {{ analysis.meta.warning }}</div>
+        {% endif %}
     </div>
 
     <!-- Key Indicators -->
     <div class="grid-section" style="margin-bottom: 2rem;">
         <h3>主要指標</h3>
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 1rem;">
-            {% set indicators = analysis.indicators %}
+            {% set ratios = analysis.ratios or {} %}
+
             <div class="kpi-card" style="background: #f8f9fa; padding: 1rem; border-radius: 8px; text-align: center;">
                 <div style="color: #666;">ROE</div>
-                <div style="font-size: 1.25rem; font-weight: bold; color: {{ 'green' if (indicators.ROE or 0) > 8 else 'black' }};">
-                    {{ indicators.ROE | round(2) if indicators.ROE else '-' }}%
+                <div
+                    style="font-size: 1.25rem; font-weight: bold; color: {{ 'green' if (ratios.roe or 0) * 100 > 8 else 'black' }};">
+                    {{ (ratios.roe * 100) | round(2) if ratios.roe is not none else '-' }}%
                 </div>
             </div>
+
             <div class="kpi-card" style="background: #f8f9fa; padding: 1rem; border-radius: 8px; text-align: center;">
-                <div style="color: #666;">ROA</div>
+                <div style="color: #666;">PER</div>
                 <div style="font-size: 1.25rem; font-weight: bold;">
-                    {{ indicators.ROA | round(2) if indicators.ROA else '-' }}%
+                    {{ ratios.per | round(2) if ratios.per else '-' }}倍
                 </div>
             </div>
-            <div class="kpi-card" style="background: #f8f9fa; padding: 1rem; border-radius: 8px; text-align: center;">
-                <div style="color: #666;">PER (予)</div>
-                <div style="font-size: 1.25rem; font-weight: bold;">
-                    {{ indicators.PER | round(1) if indicators.PER else '-' }}倍
-                </div>
-            </div>
+
             <div class="kpi-card" style="background: #f8f9fa; padding: 1rem; border-radius: 8px; text-align: center;">
                 <div style="color: #666;">PBR</div>
                 <div style="font-size: 1.25rem; font-weight: bold;">
-                    {{ indicators.PBR | round(2) if indicators.PBR else '-' }}倍
+                    {{ ratios.pbr | round(2) if ratios.pbr else '-' }}倍
+                </div>
+            </div>
+
+            <div class="kpi-card" style="background: #f8f9fa; padding: 1rem; border-radius: 8px; text-align: center;">
+                <div style="color: #666;">EPS</div>
+                <div style="font-size: 1.25rem; font-weight: bold;">
+                    {{ ratios.eps | round(1) if ratios.eps else '-' }}
                 </div>
             </div>
             <div class="kpi-card" style="background: #f8f9fa; padding: 1rem; border-radius: 8px; text-align: center;">
-                <div style="color: #666;">自己資本比率</div>
+                <div style="color: #666;">BPS</div>
                 <div style="font-size: 1.25rem; font-weight: bold;">
-                    {{ indicators.EquityRatio | round(1) if indicators.EquityRatio else '-' }}%
-                </div>
-            </div>
-            <div class="kpi-card" style="background: #f8f9fa; padding: 1rem; border-radius: 8px; text-align: center;">
-                <div style="color: #666;">配当利回り</div>
-                <div style="font-size: 1.25rem; font-weight: bold;">
-                    {{ (indicators.DividendYield * 100) | round(2) if indicators.DividendYield else '-' }}%
+                    {{ ratios.bps | round(1) if ratios.bps else '-' }}
                 </div>
             </div>
         </div>
@@ -72,7 +83,7 @@
 
     <!-- Charts and Tables -->
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
-        
+
         <!-- Financial Statements Table -->
         <div class="financials-table">
             <h3>財務数値 (単位: 百万円)</h3>
@@ -83,28 +94,44 @@
                     <th style="text-align: right; padding: 8px;">金額</th>
                 </tr>
                 <tr>
-                    <td style="padding: 8px;">売上高</td>
-                    <td style="text-align: right;">{{ (fin.sales / 1000000) | int | format_currency if fin.sales else '-' }}</td>
+                    <td style="padding: 8px;">売上高/収益</td>
+                    <td style="text-align: right;">{{ (fin.revenue / 1000000) | int | format_currency if fin.revenue
+                        else '-' }}</td>
                 </tr>
                 <tr>
                     <td style="padding: 8px;">営業利益</td>
-                    <td style="text-align: right;">{{ (fin.operating_profit / 1000000) | int | format_currency if fin.operating_profit else '-' }}</td>
+                    <td style="text-align: right;">{{ (fin.operating_profit / 1000000) | int | format_currency if
+                        fin.operating_profit else '-' }}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px;">経常利益</td>
+                    <td style="text-align: right;">{{ (fin.ordinary_profit / 1000000) | int | format_currency if
+                        fin.ordinary_profit else '-' }}</td>
                 </tr>
                 <tr>
                     <td style="padding: 8px;">当期純利益</td>
-                    <td style="text-align: right;">{{ (fin.net_profit / 1000000) | int | format_currency if fin.net_profit else '-' }}</td>
+                    <td style="text-align: right;">{{ (fin.net_profit / 1000000) | int | format_currency if
+                        fin.net_profit else '-' }}</td>
                 </tr>
                 <tr style="border-top: 2px solid #eee;">
                     <td style="padding: 8px;">総資産</td>
-                    <td style="text-align: right;">{{ (fin.total_assets / 1000000) | int | format_currency if fin.total_assets else '-' }}</td>
+                    <td style="text-align: right;">{{ (fin.total_assets / 1000000) | int | format_currency if
+                        fin.total_assets else '-' }}</td>
                 </tr>
                 <tr>
                     <td style="padding: 8px;">純資産</td>
-                    <td style="text-align: right;">{{ (fin.net_assets / 1000000) | int | format_currency if fin.net_assets else '-' }}</td>
+                    <td style="text-align: right;">{{ (fin.net_assets / 1000000) | int | format_currency if
+                        fin.net_assets else '-' }}</td>
                 </tr>
                 <tr>
-                    <td style="padding: 8px;">株主資本</td>
-                    <td style="text-align: right;">{{ (fin.equity / 1000000) | int | format_currency if fin.equity else '-' }}</td>
+                    <td style="padding: 8px;">株主資本等</td>
+                    <td style="text-align: right;">{{ (fin.equity / 1000000) | int | format_currency if fin.equity else
+                        '-' }}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px;">現金及び現金同等物</td>
+                    <td style="text-align: right;">{{ (fin.cash_and_equivalents / 1000000) | int | format_currency if
+                        fin.cash_and_equivalents else '-' }}</td>
                 </tr>
             </table>
         </div>
@@ -113,17 +140,25 @@
         <div>
             <h3>資産・資本構成</h3>
             <div id="assetsChart" style="width: 100%; height: 300px;"></div>
+            <!-- Financial Data for JS -->
+            <div id="financial-data" data-equity="{{ analysis.financials.equity or 0 }}"
+                data-total="{{ analysis.financials.total_assets or 0 }}" style="display: none;">
+            </div>
         </div>
     </div>
 
     <!-- Plotly Script -->
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             // Asset Composition
-            var equity = {{ analysis.financials.equity or 0 }};
-            var liabilities = ({{ analysis.financials.total_assets or 0 }} - equity);
-            
+            var dataDiv = document.getElementById('financial-data');
+            var equity = parseFloat(dataDiv.getAttribute('data-equity'));
+            var total = parseFloat(dataDiv.getAttribute('data-total'));
+
+            var liabilities = total - equity;
+            if (liabilities < 0) liabilities = 0;
+
             var data = [{
                 values: [equity, liabilities],
                 labels: ['純資産(株主資本)', '負債'],
@@ -135,7 +170,7 @@
 
             var layout = {
                 height: 300,
-                margin: {t: 0, b: 0, l: 0, r: 0}
+                margin: { t: 0, b: 0, l: 0, r: 0 }
             };
 
             Plotly.newPlot('assetsChart', data, layout);

@@ -26,7 +26,9 @@ class EdinetFinancialExtractor:
             "cash_flows_financing": None,
             "cash_and_equivalents": None,
             "period_start": None,
-            "period_end": None
+            "period_end": None,
+            "sec_code": None,
+            "filer_name": None
         }
         
         if xbrl_path.endswith(".htm") or xbrl_path.endswith(".html"):
@@ -40,7 +42,7 @@ class EdinetFinancialExtractor:
             # Helper to find value from list of candidate tags
             def find_value(tags: List[str], context_ref: str) -> Optional[float]:
                 for tag in tags:
-                    namespaces = ["jppfs_cor:", "jpcrp_cor:", ""]
+                    namespaces = ["jppfs_cor:", "jpcrp_cor:", "jpdei_cor:", ""]
                     for ns in namespaces:
                         full_key = f"{ns}{tag}"
                         
@@ -111,6 +113,43 @@ class EdinetFinancialExtractor:
             # Equity = NetAssets (Simplified)
             if financials["equity"] is None and financials["net_assets"] is not None:
                 financials["equity"] = financials["net_assets"]
+
+            # Extract Header Info (Security Code, Filer Name)
+            # Context: "DocumentInfo" (or similar, usually explicit tags exist without strict context or specifically in DocumentInfo)
+            # Tag: jpcrp_cor:SecurityCodeDEI, jpcrp_cor:FilerNameDEI or similar. 
+            # Note: Context might just be None or 'DocumentInfo'. Let's try searching first valid.
+
+            header_tags = {
+                "sec_code": ["SecurityCodeDEI"],
+                "filer_name": ["FilerNameInJapaneseDEI", "FilerNameDEI"],
+                "period_end": ["CurrentPeriodEndDateDEI"]
+            }
+            # Often context is 'DocumentInfo' or 'FilingDateInstant'
+            # We can try a few contexts or just None if get_value handles it
+
+            
+            # Helper to find without context if possible, or try standard contexts
+            contexts_header = ["DocumentInfo", "FilingDateInstant", "CurrentYearInstant"]
+            
+            for key, tags in header_tags.items():
+                val = None
+                for ctx in contexts_header:
+                    val = find_value(tags, ctx)
+                    if val is not None: break
+                
+                # If still None, maybe try without context ref if library supports? 
+                # (edinet-xbrl usually requires context)
+                
+                if val:
+                    # Security code often comes as "54100" (5 digits). J-Quants needs 4 or 5?
+                    # valid stock code is usually 4 digits in J-Quants V1 for 'daily_quotes' unless recent 5 digit change.
+                    # We will store as is.
+                     # Format if it's float (find_value returns float)
+                     if isinstance(val, float):
+                         val = str(int(val))
+                     
+                     financials[key] = val
+
 
         except Exception as e:
             logger.error(f"Failed to extract financials from {xbrl_path}: {e}")

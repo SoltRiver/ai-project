@@ -1,5 +1,6 @@
 
-from fastapi import APIRouter, HTTPException, Query, BackgroundTasks
+from fastapi import APIRouter, HTTPException, Query, BackgroundTasks, Request
+from fastapi.templating import Jinja2Templates
 from typing import Dict, Any
 import os
 import logging
@@ -9,7 +10,65 @@ from services.edinet_xbrl_locator import EdinetXbrlLocator
 from services.edinet_fin_extract import EdinetFinancialExtractor
 
 router = APIRouter(prefix="/edinet/documents", tags=["edinet_docs"])
+
+templates = Jinja2Templates(directory="templates")
 logger = logging.getLogger(__name__)
+
+@router.get("/ui/search", include_in_schema=False)
+async def search_documents_ui(request: Request, date: str = Query(None), sec_code: str = Query(None)):
+    """
+    UI for searching EDINET documents.
+    """
+    if not date:
+        return templates.TemplateResponse("edinet_search.html", {"request": request, "date": "", "documents": []})
+    
+    try:
+        client = EdinetClient()
+        try:
+            # Type 2 = List of documents
+            data = await client.get_documents(date, type_code=2)
+            results = data.get("results", [])
+            
+            filtered = []
+            for doc in results:
+                # Filter for Annual Securities Report (120) mainly, 
+                # but let's allow users to see what's there if needed? 
+                # For now strict to 120 as per plan to reduce noise.
+                # Actually, strictly 120 might be too limited if they want 'Correction Reports' etc.
+                # Let's keep it simple: Code 120 (Annual)
+                
+                # Filter by Sec Code if provided
+                doc_sec_code = doc.get("secCode")
+                if sec_code:
+                    # Input 5410 -> Match 54100
+                    if not doc_sec_code or not doc_sec_code.startswith(sec_code):
+                        continue
+                
+                # Filter by Doc Type (Annual Report = 120, 130=Quarterly, 140=Semi)
+                # Let's show 120, 130, 140 for now so it's useful.
+                dtype = doc.get("docTypeCode")
+                if dtype not in ["120"]: # Plan said Annual search
+                     continue
+                     
+                filtered.append(doc)
+            
+            return templates.TemplateResponse("edinet_search.html", {
+                "request": request, 
+                "date": date, 
+                "sec_code": sec_code,
+                "documents": filtered
+            })
+            
+        finally:
+            await client.close()
+            
+    except Exception as e:
+        logger.error(f"Search failed: {e}")
+        return templates.TemplateResponse("edinet_search.html", {
+            "request": request, 
+            "date": date, 
+            "error": str(e)
+        })
 
 @router.get("/{doc_id}/download")
 async def download_document(doc_id: str, force: bool = False) -> Dict[str, Any]:

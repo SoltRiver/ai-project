@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container" style="max-width: 1200px; margin: 0 auto; padding: 20px;">
+    <h2>EDINET 書類検索</h2>
+
+    <div class="card" style="margin-bottom: 2rem; padding: 1.5rem; background: #f8f9fa; border-radius: 8px;">
+        <form method="get" action="/api/edinet/documents/ui/search" class="search-form"
+            style="display: flex; gap: 1rem; align-items: end;">
+            <div>
+                <label for="date" style="display: block; margin-bottom: 0.5rem; font-weight: bold;">日付
+                    (YYYY-MM-DD)</label>
+                <input type="date" id="date" name="date" value="{{ date }}" required
+                    style="padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px;">
+            </div>
+            <div>
+                <label for="sec_code" style="display: block; margin-bottom: 0.5rem; font-weight: bold;">証券コード
+                    (任意)</label>
+                <input type="text" id="sec_code" name="sec_code" value="{{ sec_code or '' }}" placeholder="例: 5410"
+                    style="padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; width: 120px;">
+            </div>
+            <button type="submit"
+                style="padding: 0.5rem 1.5rem; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">
+                検索
+            </button>
+        </form>
+    </div>
+
+    {% if error %}
+    <div class="alert alert-error"
+        style="color: #721c24; background-color: #f8d7da; border-color: #f5c6cb; padding: 1rem; margin-bottom: 1rem; border-radius: 4px;">
+        {{ error }}
+    </div>
+    {% endif %}
+
+    {% if documents %}
+    <h3>検索結果 ({{ documents|length }}) <small style="font-weight: normal; font-size: 0.9rem;">※有価証券報告書 (コード:120)
+            のみ表示</small></h3>
+    <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
+            <thead>
+                <tr style="background: #e9ecef;">
+                    <th style="padding: 10px; text-align: left; border-bottom: 2px solid #dee2e6;">提出日</th>
+                    <th style="padding: 10px; text-align: left; border-bottom: 2px solid #dee2e6;">提出者名</th>
+                    <th style="padding: 10px; text-align: left; border-bottom: 2px solid #dee2e6;">証券コード</th>
+                    <th style="padding: 10px; text-align: left; border-bottom: 2px solid #dee2e6;">書類種別</th>
+                    <th style="padding: 10px; text-align: center; border-bottom: 2px solid #dee2e6;">アクション</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for doc in documents %}
+                <tr style="border-bottom: 1px solid #dee2e6;">
+                    <td style="padding: 10px;">{{ date }}</td>
+                    <td style="padding: 10px;">{{ doc.filerName }}</td>
+                    <td style="padding: 10px;">{{ doc.secCode or '-' }}</td>
+                    <td style="padding: 10px;">{{ doc.docDescription }}</td>
+                    <td style="padding: 10px; text-align: center;">
+                        <a href="/api/fundamentals/reports/{{ doc.docID }}" class="btn-analyze"
+                            style="display: inline-block; padding: 6px 12px; background: #28a745; color: white; text-decoration: none; border-radius: 4px; font-size: 0.9rem;">
+                            分析
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% elif date %}
+    <p>該当する書類は見つかりませんでした。</p>
+    {% endif %}
+</div>
+{% endblock %}
