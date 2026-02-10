@@ -2,7 +2,9 @@
 import os
 import requests
 import logging
+import time
 from datetime import datetime, timedelta
+
 from typing import Optional, Dict, List, Any
 from dotenv import load_dotenv
 
@@ -12,91 +14,23 @@ load_dotenv()
 logger = logging.getLogger(__name__)
 
 class JQuantsClient:
-    BASE_URL = "https://api.jquants.com/v1"
+    BASE_URL = "https://api.jquants.com/v2"
     
     def __init__(self):
-        self.email = os.environ.get("JQUANTS_EMAIL")
-        self.password = os.environ.get("JQUANTS_PASSWORD")
-        self._refresh_token: Optional[str] = None
-        self._id_token: Optional[str] = None
-        self._id_token_expires_at: Optional[datetime] = None
+        self.api_key = os.environ.get("JQUANTS_API_KEY")
         
-        if not self.email or not self.password:
-             logger.warning("JQUANTS_EMAIL or JQUANTS_PASSWORD not set. J-Quants features will be unavailable.")
-
-    def _get_refresh_token(self) -> str:
-        """
-        Get refresh token using email/password.
-        POST /token/auth_user
-        """
-        if self._refresh_token:
-            return self._refresh_token
-            
-        url = f"{self.BASE_URL}/token/auth_user"
-        payload = {"mailaddress": self.email, "password": self.password}
-        
-        try:
-            resp = requests.post(url, json=payload, timeout=10)
-            resp.raise_for_status()
-            data = resp.json()
-            self._refresh_token = data.get("refreshToken")
-            logger.info("J-Quants: Acquired Refresh Token")
-            return self._refresh_token
-        except Exception as e:
-            logger.error(f"Failed to get J-Quants refresh token: {e}")
-            raise
-
-    def get_id_token(self) -> str:
-        """
-        Get ID token. Use cache if valid, else refresh.
-        POST /token/auth_refresh
-        """
-        now = datetime.now()
-        # Check cache (buffer 5 mins)
-        if self._id_token and self._id_token_expires_at and now < self._id_token_expires_at:
-            return self._id_token
-
-        refresh_token = self._get_refresh_token()
-        url = f"{self.BASE_URL}/token/auth_refresh"
-        
-        try:
-            # Note: J-Quants v1 auth_refresh takes refreshtoken as query param
-            resp = requests.post(url, params={"refreshtoken": refresh_token}, timeout=10)
-            
-            if resp.status_code == 401 or resp.status_code == 403:
-                # Refresh token might be expired (it lasts 1 week usually), retry login once
-                logger.warning("J-Quants refresh token expired or invalid. Re-authenticating...")
-                self._refresh_token = None
-                refresh_token = self._get_refresh_token()
-                resp = requests.post(url, params={"refreshtoken": refresh_token}, timeout=10)
-
-            resp.raise_for_status()
-            data = resp.json()
-            self._id_token = data.get("idToken")
-            
-            # ID Token usually lasts 24h. Set expiry.
-            # We don't parse JWT here to keep it simple, just assume 23 hours to be safe.
-            self._id_token_expires_at = now + timedelta(hours=23)
-            logger.info("J-Quants: Acquired ID Token")
-            return self._id_token
-            
-        except Exception as e:
-            # If we fail, clear refresh token to force re-login next time
-            self._refresh_token = None 
-            logger.error(f"Failed to get J-Quants ID token: {e}")
-            raise
+        if not self.api_key:
+             logger.warning("JQUANTS_API_KEY not set. J-Quants features will be unavailable.")
 
     def get(self, endpoint: str, params: Dict[str, Any] = None) -> Dict[str, Any]:
         """
-        Authenticated GET request.
+        Authenticated GET request using x-api-key.
         """
-        try:
-            token = self.get_id_token()
-        except:
-            return {} # Return empty on auth failure to avoid crashing app
+        if not self.api_key:
+            return {}
             
         url = f"{self.BASE_URL}{endpoint}"
-        headers = {"Authorization": f"Bearer {token}"}
+        headers = {"x-api-key": self.api_key}
         
         try:
             resp = requests.get(url, headers=headers, params=params, timeout=20)
@@ -108,7 +42,7 @@ class JQuantsClient:
 
     def get_daily_quotes(self, code: str, date: str = None, from_date: str = None, to_date: str = None) -> Dict[str, Any]:
         """
-        /prices/daily_quotes
+        /equities/bars/daily
         """
         params = {"code": code}
         if date:
@@ -118,21 +52,88 @@ class JQuantsClient:
         if to_date:
             params["to"] = to_date.replace("-", "")
             
-        return self.get("/prices/daily_quotes", params)
+        resp = self.get("/equities/bars/daily", params)
+        
+        if "data" in resp:
+            # Map keys O->Open, H->High, etc.
+            standardized = []
+            for item in resp["data"]:
+                new_item = item.copy()
+                mapping = {
+                    "O": "Open", "H": "High", "L": "Low", "C": "Close", "Vo": "Volume",
+                    "AdjO": "AdjOpen", "AdjH": "AdjHigh", "AdjL": "AdjLow", "AdjC": "AdjClose", "AdjVo": "AdjVolume"
+                }
+                for old_k, new_k in mapping.items():
+                    if old_k in new_item:
+                         new_item[new_k] = new_item.pop(old_k)
+                standardized.append(new_item)
+            
+            resp["daily_quotes"] = standardized
+            
+        return resp
 
-    def get_listed_info(self, code: str) -> Dict[str, Any]:
-        """
-        /listed/info
-        """
-        # User note: prioritizes /listed/info for shares outstanding
-        params = {"code": code}
-        return self.get("/listed/info", params)
     def get_listed_issues(self) -> List[Dict[str, Any]]:
         """
-        Get listed issues list from /listed/info
+        Get listed issues master.
+        Strategy:
+        1. Try today (Optimistic).
+        2. If fails, try 13 weeks ago (Likely Free Plan).
+        3. If fails, try last 7 days (Maybe just holiday/weekend for Premium).
+        4. Deep fallback.
         """
-        resp = self.get_listed_info("")
-        return resp.get("info", [])
+        # 1. Try Today
+        try:
+            today = datetime.now().strftime("%Y%m%d")
+            resp = self.get("/equities/master", {"date": today})
+            if isinstance(resp, dict) and "data" in resp and resp["data"]:
+                 logger.info(f"J-Quants: Loaded master data for {today}")
+                 return resp["data"]
+        except Exception:
+            pass
+        
+        time.sleep(1) # Avoid rate limit
+
+        # 2. Free Plan Fallback (13 weeks ago approx 90 days)
+        # J-Quants Free Plan often has 12-week delay for some data, though Master data is usually open.
+        # But "400 Subscription covers..." suggests date restriction.
+        try:
+            target_date = datetime.now() - timedelta(weeks=13)
+            date_str = target_date.strftime("%Y%m%d")
+            resp = self.get("/equities/master", {"date": date_str})
+            if isinstance(resp, dict) and "data" in resp and resp["data"]:
+                 logger.info(f"J-Quants: Loaded master data for {date_str} (Fallback 13w)")
+                 return resp["data"]
+        except Exception:
+            pass
+            
+        time.sleep(1)
+
+        # 3. Last 7 days (in case it was just a holiday and user HAS premium)
+        for i in range(1, 8):
+            target_date = datetime.now() - timedelta(days=i)
+            date_str = target_date.strftime("%Y%m%d")
+            try:
+                resp = self.get("/equities/master", {"date": date_str})
+                if isinstance(resp, dict) and "data" in resp and resp["data"]:
+                     logger.info(f"J-Quants: Loaded master data for {date_str}")
+                     return resp["data"]
+            except Exception:
+                pass
+            time.sleep(1)
+        
+        # 4. Deep Fallback
+        try:
+             date_str = "20240104"
+             resp = self.get("/equities/master", {"date": date_str})
+             if isinstance(resp, dict) and "data" in resp and resp["data"]:
+                 logger.info(f"J-Quants: Loaded master data for {date_str} (Deep Fallback)")
+                 return resp["data"]
+        except Exception as e:
+             logger.error(f"J-Quants: Deep fallback failed: {e}")
+
+        logger.error("J-Quants: Could not find valid master data.")
+        return []
 
 # Global instance
 client = JQuantsClient()
+

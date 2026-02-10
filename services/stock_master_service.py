@@ -212,22 +212,25 @@ class StockMasterService:
             # 2. Normalize
             items = []
             for issue in raw_issues:
-                # "Code": "72030" -> "7203"
+                # V2: "Code": "72030" -> "7203"
                 raw_code = issue.get("Code", "")
                 if len(raw_code) == 5 and raw_code.endswith("0"):
                     code = raw_code[:4]
                 else:
                     code = raw_code
 
-                name = issue.get("CompanyName") or issue.get("CoName") or ""
-                market = issue.get("MarketCodeName") or issue.get("Market") or ""
+                # V2 Mapping
+                # CoName -> CompanyName
+                # MktNm -> MarketName/Segment
+                name = issue.get("CoName", "") or issue.get("CompanyName", "")
+                market = issue.get("MktNm", "") or issue.get("MarketCodeName", "")
 
                 if code and name:
                     items.append({"code": code, "name": name, "market": market})
 
             # 3. Upsert
             if items:
-                self.upsert_stocks(items, "jquants")
+                self.upsert_stocks(items, "jquants_v2")
             
         except Exception as e:
             logger.error(f"J-Quants Sync Failed: {e}")
