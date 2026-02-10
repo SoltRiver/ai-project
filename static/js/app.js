@@ -669,10 +669,10 @@
                 // (Reason is now displayed only in the modal)
 
                 // 7. Short MA
-                html += `<div class="tooltip-row"><span class="t-label">短期MA(${shortNum})</span><span class="t-val">${fmtPrice(point[shortKey])}</span></div>`;
+                html += `<div class="tooltip-row"><span class="t-label">短期(${shortNum})</span><span class="t-val">${fmtPrice(point[shortKey])}</span></div>`;
 
                 // 8. Long MA
-                html += `<div class="tooltip-row"><span class="t-label">長期MA(${longNum})</span><span class="t-val">${fmtPrice(point[longKey])}</span></div>`;
+                html += `<div class="tooltip-row"><span class="t-label">長期(${longNum})</span><span class="t-val">${fmtPrice(point[longKey])}</span></div>`;
 
                 // 9. Close
                 html += `<div class="tooltip-row"><span class="t-label">終値</span><span class="t-val">${fmtPrice(point.close)}</span></div>`;

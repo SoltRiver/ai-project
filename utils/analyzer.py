@@ -216,7 +216,7 @@ def analyze_candlestick(open_price: float, high: float, low: float, close: float
     range_len = high - low
     
     if range_len == 0:
-        return {'name': '一本値', 'type': candle_type}
+        return {'name': '寄引同時線', 'type': candle_type}
     
     body_ratio = body / range_len
     upper_shadow = (high - close) if is_up else (high - open_price)
@@ -230,9 +230,9 @@ def analyze_candlestick(open_price: float, high: float, low: float, close: float
     elif body_ratio > 0.8:
         name = "大" + candle_type
     elif lower_shadow > body * 2 and upper_shadow < body:
-        name = "下ヒゲ" + ("陽線" if is_up else "陰線") # カラカサなど
+        name = "下影" + ("陽線" if is_up else "陰線") # カラカサなど -> 下影陽線/陰線
     elif upper_shadow > body * 2 and lower_shadow < body:
-        name = "上ヒゲ" + ("陽線" if is_up else "陰線") # トンカチなど
+        name = "上影" + ("陽線" if is_up else "陰線") # トンカチなど -> 上影陽線/陰線
     
     return {'name': name, 'type': candle_type}
 
