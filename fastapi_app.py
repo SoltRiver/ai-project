@@ -19,13 +19,17 @@ app = FastAPI(
 from database import engine, SessionLocal
 from models import stock
 
-stock.Base.metadata.create_all(bind=engine)
-
 @app.on_event("startup")
 def startup_event():
+    # 1. Create Tables
+    from database import engine
+    from models import stock, master
+    stock.Base.metadata.create_all(bind=engine)
+    master.Base.metadata.create_all(bind=engine)
+
+    # 2. Seed Initial Watchlist (if empty)
     db = SessionLocal()
     try:
-        # Seed initial data if empty
         if db.query(stock.Stock).count() == 0:
             initial_codes = ["7203", "6758", "9984", "8306", "8035"]
             for code in initial_codes:
@@ -33,10 +37,21 @@ def startup_event():
                 db.add(db_item)
             db.commit()
     except Exception as e:
-        print(f"Error seeding data: {e}")
+        print(f"Error seeding watchlist: {e}")
     finally:
         db.close()
+    
+    # 3. Initialize Stock Master (Async Background)
+    from services.stock_master_service import stock_master_service
+    import threading
+    
+    def run_sync():
+        stock_master_service.initialize_and_sync()
 
+    thread = threading.Thread(target=run_sync, daemon=True)
+    thread.start()
+
+# Mount Static Files
 app.mount("/static", StaticFiles(directory="static"), name="static")
 app.include_router(stocks.router)
 app.include_router(fundamental.router)

@@ -127,6 +127,12 @@ class JQuantsClient:
         # User note: prioritizes /listed/info for shares outstanding
         params = {"code": code}
         return self.get("/listed/info", params)
+    def get_listed_issues(self) -> List[Dict[str, Any]]:
+        """
+        Get listed issues list from /listed/info
+        """
+        resp = self.get_listed_info("")
+        return resp.get("info", [])
 
 # Global instance
 client = JQuantsClient()

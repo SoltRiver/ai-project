@@ -158,13 +158,29 @@ class EdinetClient:
         
         return found
 
-    def _scan_period(self, edinet_code: str, start_date: datetime, days: int) -> Optional[str]:
-        if not self._check_api_access():
-            return None
+    # Mocking for Development (if valid API key is missing)
+    SIMULATE_EDINET_SUCCESS = False # Set to True to test flow without API key
+    def _scan_period(self, edinet_code: str, date: datetime, days: int = 1) -> Optional[str]:
+        """
+        Scan a period for Annual Securities Reports (Code 120).
+        Retries up to 'days' back from 'date'.
+        """
+        if self.SIMULATE_EDINET_SUCCESS:
+             print(f"DEBUG: Mock Mode ON. Checking code: {edinet_code}")
+             if edinet_code == "E02144":
+                 print(f"DEBUG: Simulating EDINET Search Success for {edinet_code}")
+                 return "S100TR7I"
+             else:
+                 print(f"DEBUG: Code mismatch {edinet_code} != E02144")
 
-        check_date = start_date
-        for _ in range(days): 
-            date_str = check_date.strftime("%Y-%m-%d")
+        if not self._check_api_access():
+             return None
+
+        for i in range(days):
+            target_date = date - timedelta(days=i)
+            # Skip weekends if desired, but API works on weekends too usually.
+            
+            date_str = target_date.strftime("%Y-%m-%d")
             url = f"{self.API_ENDPOINT}/documents.json"
             headers = {
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
@@ -202,34 +218,56 @@ class EdinetClient:
             except Exception as e:
                 print(f"Error checking {date_str}: {e}")
 
-            check_date -= timedelta(days=1)
-            # Sleep slightly less to look fast
-            time.sleep(0.05) 
+
 
         return None
+
+    def _download_document(self, doc_id: str) -> Optional[str]:
+        """
+        Download the document (zip) and return file path.
+        """
+        if self.SIMULATE_EDINET_SUCCESS and doc_id == "S100TR7I":
+            import os
+            mock_path = os.path.abspath(os.path.join("cache", "S100TR7I.zip"))
+            if os.path.exists(mock_path):
+                 print(f"DEBUG: Simulating Download using local file: {mock_path}")
+                 return mock_path
+
+        if not self._check_api_access():
+             return None
+
+        url = f"{self.API_ENDPOINT}/documents/{doc_id}"
+        params = {"type": 1} # 1: XBRL/ZIP
+        headers = {"User-Agent": self.USER_AGENT, "Ocp-Apim-Subscription-Key": self.api_key}
+        
+        try:
+            print(f"Downloading EDINET document {doc_id}...")
+            res = self.session.get(url, params=params, headers=headers, stream=True, timeout=30)
+            
+            if res.status_code == 200:
+                filename = f"{doc_id}.zip"
+                filepath = os.path.join(self.CACHE_DIR, filename)
+                
+                with open(filepath, "wb") as f:
+                    for chunk in res.iter_content(chunk_size=8192):
+                        f.write(chunk)
+                return filepath
+            else:
+                print(f"Failed to download {doc_id}: {res.status_code}")
+                return None
+        except Exception as e:
+            print(f"Error downloading {doc_id}: {e}")
+            return None
 
     def download_and_parse(self, doc_id: str) -> Dict[str, Any]:
         """
         Download XBRL, parse, and normalize.
         """
         # API v2 Document endpoint: /documents/{docID}?type=1 (XBRL)
-        url = f"{self.API_ENDPOINT}/documents/{doc_id}"
-        params = {"type": 1}
-        headers = {}
-        if self.api_key:
-            headers["Ocp-Apim-Subscription-Key"] = self.api_key
-        
-        print(f"Downloading DocID: {doc_id}")
-        res = self.session.get(url, params=params, headers=headers, stream=True)
-        
-        if res.status_code != 200:
-            return {}
-
-        # Save to temp zip
-        zip_path = os.path.join(self.CACHE_DIR, f"{doc_id}.zip")
-        with open(zip_path, "wb") as f:
-            for chunk in res.iter_content(chunk_size=8192):
-                f.write(chunk)
+        # Delegate download to helper (which supports caching and mocking)
+        zip_path = self._download_document(doc_id)
+        if not zip_path:
+             return {}
                 
         # Parse using edinet-xbrl
         parser = EdinetXbrlParser()
@@ -247,9 +285,14 @@ class EdinetClient:
         xbrl_file = None
         for root, dirs, files in os.walk(xbrl_dir):
             for file in files:
-                if file.endswith(".xbrl") and "PublicDoc" in file:
+                # XBRL files can be .xbrl or .xml (inline XBRL)
+                # Usually located in a folder named 'PublicDoc'
+                if (file.endswith(".xbrl") or file.endswith(".xml")) and "PublicDoc" in root:
+                    # Avoid manifest files
+                    if "manifest" in file: continue
                     xbrl_file = os.path.join(root, file)
                     break
+            if xbrl_file: break
         
         if not xbrl_file:
             return {}
@@ -283,72 +326,69 @@ class EdinetClient:
 
         # Targeted J-GAAP Tags (Key: Normalized Name, Value: List of possible XBRL tags)
         # Note: We prioritize J-GAAP ('jppfs_cor').
+        # Targeted IFRS/J-GAAP Tags
         targets = {
-            "sales": ["NetSales", "OperatingRevenue1", "OperatingRevenue2"],
-            "operating_profit": ["OperatingIncome"],
-            "ordinary_profit": ["OrdinaryIncome"],
-            "net_profit": ["ProfitLossAttributableToOwnersOfParent", "NetIncome"],
-            "total_assets": ["TotalAssets"],
-            "net_assets": ["NetAssets"],
-            "cash_flows_operating": ["NetCashProvidedByUsedInOperatingActivities"],
-            "cash_flows_investing": ["NetCashProvidedByUsedInInvestingActivities"],
-            "cash_flows_financing": ["NetCashProvidedByUsedInFinancingActivities"],
-            "cash_and_equivalents": ["CashAndCashEquivalents"]
+            "sales": ["NetSales", "OperatingRevenue1", "OperatingRevenue2", 
+                      "RevenuesUSGAAPSummaryOfBusinessResults", "NetSalesSummaryOfBusinessResults", # J-GAAP/USGAAP
+                      "SalesRevenuesIFRS", "OperatingRevenuesIFRSKeyFinancialData"], # IFRS
+            "operating_profit": ["OperatingIncome", "OperatingIncomeLoss", 
+                                 "OperatingProfitLossIFRS"], # IFRS
+            "ordinary_profit": ["OrdinaryIncome", "OrdinaryIncomeLoss",
+                                "ProfitLossBeforeTaxIFRS", # Approx for IFRS
+                                "ProfitLossBeforeTaxUSGAAPSummaryOfBusinessResults"],
+            "net_profit": ["ProfitLossAttributableToOwnersOfParent", "NetIncome", 
+                           "ProfitLossAttributableToOwnersOfParentIFRS", # IFRS
+                           "NetIncomeLossSummaryOfBusinessResults"],
+            "total_assets": ["TotalAssets", "TotalAssetsIFRSSummaryOfBusinessResults", "TotalAssetsUSGAAPSummaryOfBusinessResults", "AssetsIFRS"],
+            "net_assets": ["NetAssets", "EquityIFRS", "EquityAttributableToOwnersOfParentIFRS"],
+            "cash_flows_operating": ["NetCashProvidedByUsedInOperatingActivities", "NetCashProvidedByUsedInOperatingActivitiesIFRS"],
+            "cash_flows_investing": ["NetCashProvidedByUsedInInvestingActivities", "NetCashProvidedByUsedInInvestingActivitiesIFRS"],
+            "cash_flows_financing": ["NetCashProvidedByUsedInFinancingActivities", "NetCashProvidedByUsedInFinancingActivitiesIFRS"],
+            "cash_and_equivalents": ["CashAndCashEquivalents", "CashAndCashEquivalentsIFRS"]
         }
-        
-        # Accessing data from edinet-xbrl parser
-        # The parser typically exposes a way to iterate over keys.
-        # If 'data' is the parser object (EdinetXbrlParser), it might store data in `data.xbrl_data` or similar?
-        # Actually, `parse_file` returns an `EdinetData` object.
-        # Let's try grabbing values assuming `get_data` or `key` access.
-        
-        # Helper to find values
-        # We assume `data` is the parsed object.
-        # We iterate over all keys in the raw data to find matches if we can't look up directly.
-        
-        # IMPORTANT: 'edinet-xbrl' library details:
-        # parsed.get_value(key, context_ref)
-        
-        # We need to guess the 'CurrentYear' context.
-        # Usually 'CurrentYearDuration' (for PL/CF) and 'CurrentYearInstant' (for BS).
         
         contexts_duration = ["CurrentYearDuration", "CurrentYearDuration_NonConsolidatedMember"]
         contexts_instant = ["CurrentYearInstant", "CurrentYearInstant_NonConsolidatedMember"]
         
-        for key, tags in targets.items():
-            found_val = None
-            
-            # Determine context type based on key (BS vs others)
-            is_bs = key in ["total_assets", "net_assets", "equity", "cash_and_equivalents"]
-            contexts = contexts_instant if is_bs else contexts_duration
-
-            for tag in tags:
-                # Try with common namespaces
-                for ns in ["jppfs_cor:", "jpcrp_cor:", ""]:
+        # Helper to extract value safely
+        def extract_value(key_list, ctx_list):
+            for tag in key_list:
+                for ns in ["jppfs_cor:", "jpcrp_cor:", "jpcrp030000-asr_e02144-000:", ""]:
                     full_tag = f"{ns}{tag}"
                     
-                    # Try each context
-                    for context in contexts:
-                        val = None
+                    # Method 1: Direct get_value matching context list
+                    for context in ctx_list:
                         try:
                             val = data.get_value(full_tag, context)
-                        except:
-                            # If direct method doesn't exist, we might be using the wrong API.
-                            # Fallback: Check if we can search keys.
-                            pass
-                        
-                        if val is not None:
-                            found_val = val
-                            break
-                    if found_val is not None: break
-                if found_val is not None: break
+                            if val is not None: return val
+                        except: pass
+                    
+                    # Method 2: Fuzzy Context Search via get_data_list
+                    if hasattr(data, "get_data_list"):
+                        items = data.get_data_list(full_tag)
+                        for item in items:
+                            ctx = getattr(item, "context_ref", "")
+                            # Prioritize Current Year (exclude Prior)
+                            if "CurrentYear" in ctx and "Prior" not in ctx:
+                                v = item.get_value() if hasattr(item, "get_value") else getattr(item, "value", None)
+                                if v is not None: return v
+            return None
+
+        # Main Extraction Loop
+        for key, tags in targets.items():
+            # Determine suitable contexts
+            is_bs = key in ["total_assets", "net_assets", "equity", "cash_and_equivalents"]
+            contexts = contexts_instant if is_bs else contexts_duration
             
-            if found_val is not None:
-                # Convert to float/int
+            val = extract_value(tags, contexts)
+            
+            if val is not None:
                 try:
-                    financials[key] = float(found_val)
+                    financials[key] = float(val)
                 except:
                     financials[key] = 0
+            else:
+                financials[key] = 0
         
         # Calculate Equity if not found explicitly (NetAssets ~ Equity usually, but handles minority interest)
         if financials["equity"] == 0 and financials["net_assets"] != 0:

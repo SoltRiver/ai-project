@@ -81,53 +81,9 @@ def search_stocks(query: str) -> List[Dict[str, str]]:
     
     results = []
     
-    results = []
-    
-    # Try fetching from J-Quants
-    issues = jquants_client.get_listed_issues()
-    if issues:
-        # Search in J-Quants data
-        for issue in issues:
-            code = issue.get("Code", "")
-            # Normalize J-Quants V2 5-digit code (e.g. 72030 -> 7203)
-            if len(code) == 5 and code.endswith("0"):
-                code = code[:4]
-
-            # V2: CoName, V1: CompanyName
-            name = issue.get("CoName") or issue.get("CompanyName") or ""
-            # V2: CoNameEn, V1: CompanyNameEnglish
-            name_en = issue.get("CoNameEn") or issue.get("CompanyNameEnglish") or ""
-            
-            # 接頭辞一致 (コードまたは名称)
-            # ユーザー要件: "前方一致"
-            code_match = code.lower().startswith(query)
-            name_match = name.lower().startswith(query)
-            name_en_match = name_en.lower().startswith(query)
-
-            if code_match or name_match or name_en_match:
-                results.append({"code": code, "name": name})
-                
-            # Note: We need to sort ALL results, so we can't break early easily if we want global sort.
-            # But getting ALL matches might be heavy if query is just "1".
-            # Let's cap at a higher number then sort? Or just sort all matches.
-            # Japanese market has ~4000 stocks. Iterating all is fast in Python.
-            
-    else:
-        # Fallback to static map
-        for code, name in STOCK_NAME_MAP.items():
-            if code.endswith('.T'):
-                continue
-                
-            # Prefix match
-            if code.lower().startswith(query) or name.lower().startswith(query):
-                results.append({"code": code, "name": name})
-
-    # Sort results by code (Ascending)
-    # Filter duplicates just in case
-    unique_results = {r['code']: r for r in results}.values()
-    sorted_results = sorted(unique_results, key=lambda x: x['code'])
-
-    return sorted_results[:10]  # Limit results after sorting
+    # Use Stock Master Service for DB-based search
+    from services.stock_master_service import stock_master_service
+    return stock_master_service.search_stocks(query)
 
 
 # interval に対応する取得期間
