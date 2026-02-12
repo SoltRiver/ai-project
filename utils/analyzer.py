@@ -228,11 +228,28 @@ def analyze_candlestick(open_price: float, high: float, low: float, close: float
     if body_ratio < 0.1:
         name = "十字線"
     elif body_ratio > 0.8:
-        name = "大" + candle_type
+        # 大陽線・大陰線の詳細判定（丸坊主系）
+        shadow_tol = range_len * 0.01 # 許容誤差
+        no_upper = upper_shadow <= shadow_tol
+        no_lower = lower_shadow <= shadow_tol
+        
+        if no_upper and no_lower:
+            name = "丸坊主"
+        elif is_up and no_upper:
+            name = "大引け坊主"
+        elif is_up and no_lower:
+            name = "寄付き坊主"
+        elif (not is_up) and no_lower:
+            name = "大引け坊主"
+        elif (not is_up) and no_upper:
+            name = "寄付き坊主"
+        else:
+            name = "陽線" if is_up else "陰線"
+
     elif lower_shadow > body * 2 and upper_shadow < body:
-        name = "下影" + ("陽線" if is_up else "陰線") # カラカサなど -> 下影陽線/陰線
+        name = "カラカサ"
     elif upper_shadow > body * 2 and lower_shadow < body:
-        name = "上影" + ("陽線" if is_up else "陰線") # トンカチなど -> 上影陽線/陰線
+        name = "トンカチ"
     
     return {'name': name, 'type': candle_type}
 

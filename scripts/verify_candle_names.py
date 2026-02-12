@@ -21,19 +21,48 @@ if __name__ == "__main__":
     # Range 10, Body 0
     test_pattern("Doji", 100, 105, 95, 100, "十字線")
     
-    # Marubozu / Big Candle (Body > 80% range)
-    # Range 10, Body 9
-    test_pattern("Big Bull", 100, 110, 100, 109, "大陽線")
-    
-    # Upper Shadow Bull (Upper > Body*2, Lower < Body)
-    # Body 2, Upper 5, Lower 0
-    # O=100, C=102. H=107 (Upp=5), L=100 (Low=0)
-    test_pattern("Upper Shadow Bull", 100, 107, 100, 102, "上影陽線")
-    
-    # Lower Shadow Bull
-    # Body 2, Lower 5, Upper 0
-    # O=105, C=107. H=107 (Upp=0), L=100 (Low=5)
-    test_pattern("Lower Shadow Bull", 105, 107, 100, 107, "下影陽線")
+    # --- Marubozu Tests ---
+    # Marubozu Bull (No shadows)
+    # Range 10, Body 10. O=100, C=110, H=110, L=100
+    test_pattern("Marubozu Bull", 100, 110, 100, 110, "丸坊主")
+
+    # Closing Marubozu Bull (No Upper)
+    # Range 11, Body 10. O=100, C=110, H=110, L=99
+    test_pattern("Closing Marubozu Bull", 100, 110, 99, 110, "大引け坊主")
+
+    # Opening Marubozu Bull (No Lower)
+    # Range 11, Body 10. O=100, C=110, H=111, L=100
+    test_pattern("Opening Marubozu Bull", 100, 111, 100, 110, "寄付き坊主")
+
+    # Marubozu Bear (No shadows)
+    # Range 10, Body 10. O=110, C=100, H=110, L=100
+    test_pattern("Marubozu Bear", 110, 110, 100, 100, "丸坊主")
+
+    # Closing Marubozu Bear (No Lower)
+    # Range 11, Body 10. O=109, C=100, H=110, L=100
+    test_pattern("Closing Marubozu Bear", 109, 110, 100, 100, "大引け坊主")
+
+    # Opening Marubozu Bear (No Upper)
+    # Range 11, Body 10. O=110, C=100, H=110, L=99
+    test_pattern("Opening Marubozu Bear", 110, 110, 99, 100, "寄付き坊主")
+
+
+    # --- Karakasa / Tonkachi Tests ---
+    # Karakasa Bull (Long Lower)
+    # Range 6, Body 1. O=105, C=106, H=106 (Up=0), L=100 (Lo=5)
+    test_pattern("Karakasa Bull", 105, 106, 100, 106, "カラカサ")
+
+    # Tonkachi Bull (Long Upper)
+    # Range 6, Body 1. O=100, C=101, H=106 (Up=5), L=100 (Lo=0)
+    test_pattern("Tonkachi Bull", 100, 106, 100, 101, "トンカチ")
+
+    # Karakasa Bear (Long Lower)
+    # Range 6, Body 1. O=106, C=105, H=106 (Up=0), L=100 (Lo=5)
+    test_pattern("Karakasa Bear", 106, 106, 100, 105, "カラカサ")
+
+    # Tonkachi Bear (Long Upper)
+    # Range 6, Body 1. O=101, C=100, H=106 (Up=5), L=100 (Lo=0)
+    test_pattern("Tonkachi Bear", 101, 106, 100, 100, "トンカチ")
 
     # One Price (Range 0)
     test_pattern("One Price", 100, 100, 100, 100, "寄引同時線")
