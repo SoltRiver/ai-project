@@ -1360,6 +1360,9 @@ a:hover {
     font-size: 0.95rem;
     line-height: 1.6;
     padding-left: 0.6rem;
+    /* 日本語の単語が途中で改行されないようにする */
+    word-break: keep-all;
+    overflow-wrap: break-word;
 }
 
 .pattern-info-text .desc-body {
