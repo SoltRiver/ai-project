@@ -593,10 +593,15 @@
                     html += `<div class="tooltip-divider"></div>`;
                     html += `<div class="tooltip-row"><span class="t-label">形</span><span class="t-val">${point.candle_type}</span></div>`;
 
-                    // Pattern Name Link
+                    // パターン名リンク：名前とカテゴリ（陽線/陰線）の両方で一致させる
                     let patternNameHtml = point.candle_name;
                     if (payload.candle_patterns) {
-                        const pattern = payload.candle_patterns.find(p => p.name === point.candle_name);
+                        // まず名前＋カテゴリで完全一致を試行
+                        let pattern = payload.candle_patterns.find(p => p.name === point.candle_name && p.category === point.candle_type);
+                        // 見つからなければ名前のみで検索（十字線・コマ等のカテゴリ「迷い」用）
+                        if (!pattern) {
+                            pattern = payload.candle_patterns.find(p => p.name === point.candle_name);
+                        }
                         if (pattern) {
                             patternNameHtml = `<a href="javascript:void(0)" class="t-pattern-link" onclick="window.showPatternCardModal('${pattern.id}')">${point.candle_name}</a>`;
                         }

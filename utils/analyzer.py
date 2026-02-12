@@ -226,7 +226,13 @@ def analyze_candlestick(open_price: float, high: float, low: float, close: float
     
     # 判定ロジック
     if body_ratio < 0.1:
-        name = "十字線"
+        # 十字線系の詳細判定
+        if upper_shadow > lower_shadow * 2:
+            name = "トンボ"  # 上影が長い十字線（墓石に近い形）
+        elif lower_shadow > upper_shadow * 2:
+            name = "トンボ"  # 下影が長い十字線
+        else:
+            name = "十字線"
     elif body_ratio > 0.8:
         # 大陽線・大陰線の詳細判定（丸坊主系）
         shadow_tol = range_len * 0.01 # 許容誤差
@@ -244,12 +250,27 @@ def analyze_candlestick(open_price: float, high: float, low: float, close: float
         elif (not is_up) and no_upper:
             name = "寄付き坊主"
         else:
-            name = "陽線" if is_up else "陰線"
+            # ヒゲ付き大陽線/大陰線 → 上ヒゲ or 下ヒゲで判定
+            if upper_shadow > lower_shadow:
+                name = "上ヒゲ" + candle_type
+            elif lower_shadow > upper_shadow:
+                name = "下ヒゲ" + candle_type
+            else:
+                name = "小" + candle_type
 
     elif lower_shadow > body * 2 and upper_shadow < body:
         name = "カラカサ"
     elif upper_shadow > body * 2 and lower_shadow < body:
         name = "トンカチ"
+    elif body_ratio < 0.3 and (upper_shadow > body and lower_shadow > body):
+        # 実体が小さく上下にヒゲが長い → コマ
+        name = "コマ"
+    elif upper_shadow > body * 1.5 and lower_shadow < body * 0.5:
+        # 上ヒゲが目立つ
+        name = "上ヒゲ" + candle_type
+    elif lower_shadow > body * 1.5 and upper_shadow < body * 0.5:
+        # 下ヒゲが目立つ
+        name = "下ヒゲ" + candle_type
     
     return {'name': name, 'type': candle_type}
 
