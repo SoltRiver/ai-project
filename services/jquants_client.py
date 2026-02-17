@@ -24,7 +24,8 @@ class JQuantsClient:
 
     def get(self, endpoint: str, params: Dict[str, Any] = None) -> Dict[str, Any]:
         """
-        Authenticated GET request using x-api-key.
+        V2 API 用の認証済み GET リクエスト。
+        x-api-key ヘッダーで認証する。
         """
         if not self.api_key:
             return {}
@@ -36,9 +37,41 @@ class JQuantsClient:
             resp = requests.get(url, headers=headers, params=params, timeout=20)
             resp.raise_for_status()
             return resp.json()
+        except requests.exceptions.HTTPError as e:
+            # Free プラン制限 (403) はwarningレベルでログ出力
+            if e.response is not None and e.response.status_code == 403:
+                logger.warning(f"J-Quants API 403 Forbidden ({endpoint}): Free プランでは利用不可")
+            else:
+                logger.error(f"J-Quants API Request Failed ({endpoint}): {e}")
+            return {}
         except Exception as e:
             logger.error(f"J-Quants API Request Failed ({endpoint}): {e}")
             return {}
+
+    def get_all(self, endpoint: str, params: Dict[str, Any] = None) -> List[Dict[str, Any]]:
+        """
+        ページネーション対応の全件取得。
+        V2 API は "pagination_key" でページ分割する。
+        """
+        all_data: List[Dict[str, Any]] = []
+        current_params = dict(params) if params else {}
+
+        while True:
+            resp = self.get(endpoint, current_params)
+            if not resp:
+                break
+            data = resp.get("data", [])
+            all_data.extend(data)
+
+            # 次ページがあれば継続
+            pagination_key = resp.get("pagination_key")
+            if pagination_key:
+                current_params["pagination_key"] = pagination_key
+                time.sleep(0.5)  # レートリミット対策
+            else:
+                break
+
+        return all_data
 
     def get_daily_quotes(self, code: str, date: str = None, from_date: str = None, to_date: str = None) -> Dict[str, Any]:
         """
@@ -72,68 +105,107 @@ class JQuantsClient:
             
         return resp
 
+    def get_dividend(self, code: str) -> List[Dict[str, Any]]:
+        """
+        /fins/dividend エンドポイントから配当情報を取得する。
+        ※ Free プランでは 403 エラー（Light 以上が必要）
+
+        Returns:
+            配当レコードのリスト。V2 レスポンスの "data" キーから取得。
+            取得失敗時は空リストを返す。
+        """
+        if not self.api_key:
+            return []
+        # V2 API は5桁コードを要求する場合がある
+        code = self._normalize_code(code)
+        params = {"code": code}
+        resp = self.get("/fins/dividend", params)
+        # V2 レスポンス: {"data": [...]} を優先
+        if isinstance(resp, dict):
+            return resp.get("data", [])
+        return []
+
+    def get_listed_info(self, code: str = None, date: str = None) -> Dict[str, Any]:
+        """
+        /equities/master から銘柄情報を取得する。
+        code を指定すると単一銘柄、未指定で全銘柄を返す。
+
+        Returns:
+            V2 レスポンス: {"data": [{...}, ...]} 形式
+        """
+        if not self.api_key:
+            return {}
+        params = {}
+        if code:
+            params["code"] = self._normalize_code(code)
+        if date:
+            params["date"] = date.replace("-", "")
+        else:
+            # Free プラン対応: 12週前の日付を使用
+            target_date = datetime.now() - timedelta(weeks=13)
+            params["date"] = target_date.strftime("%Y%m%d")
+
+        resp = self.get("/equities/master", params)
+        return resp
+
+    def get_financial_summary(self, code: str) -> List[Dict[str, Any]]:
+        """
+        /fins/summary から財務サマリーを取得する。
+        Free プランでも利用可能。
+
+        Returns:
+            財務サマリーレコードのリスト。
+        """
+        if not self.api_key:
+            return []
+        code = self._normalize_code(code)
+        return self.get_all("/fins/summary", {"code": code})
+
+    @staticmethod
+    def _normalize_code(code: str) -> str:
+        """
+        銘柄コードを J-Quants V2 用に正規化する。
+        4桁コード → 5桁（末尾0付加）、.T サフィックス除去。
+        """
+        code = code.replace(".T", "").strip()
+        # 4桁の場合は5桁に拡張（J-Quants V2は5桁コードを使用）
+        if len(code) == 4 and code.isdigit():
+            code = code + "0"
+        return code
+
     def get_listed_issues(self) -> List[Dict[str, Any]]:
         """
-        Get listed issues master.
-        Strategy:
-        1. Try today (Optimistic).
-        2. If fails, try 13 weeks ago (Likely Free Plan).
-        3. If fails, try last 7 days (Maybe just holiday/weekend for Premium).
-        4. Deep fallback.
+        上場銘柄一覧を取得する（/equities/master）。
+        Free プランの日付制限に対応したフォールバック戦略:
+        1. 当日（Premium/Standard）
+        2. 13週前（Free プラン対応）
+        3. 直近7日間（祝日・週末対応）
+        4. 固定日付フォールバック
         """
-        # 1. Try Today
-        try:
-            today = datetime.now().strftime("%Y%m%d")
-            resp = self.get("/equities/master", {"date": today})
-            if isinstance(resp, dict) and "data" in resp and resp["data"]:
-                 logger.info(f"J-Quants: Loaded master data for {today}")
-                 return resp["data"]
-        except Exception:
-            pass
-        
-        time.sleep(1) # Avoid rate limit
-
-        # 2. Free Plan Fallback (13 weeks ago approx 90 days)
-        # J-Quants Free Plan often has 12-week delay for some data, though Master data is usually open.
-        # But "400 Subscription covers..." suggests date restriction.
-        try:
-            target_date = datetime.now() - timedelta(weeks=13)
-            date_str = target_date.strftime("%Y%m%d")
-            resp = self.get("/equities/master", {"date": date_str})
-            if isinstance(resp, dict) and "data" in resp and resp["data"]:
-                 logger.info(f"J-Quants: Loaded master data for {date_str} (Fallback 13w)")
-                 return resp["data"]
-        except Exception:
-            pass
-            
-        time.sleep(1)
-
-        # 3. Last 7 days (in case it was just a holiday and user HAS premium)
+        strategies = [
+            # (説明, 日付)
+            ("today", datetime.now().strftime("%Y%m%d")),
+            ("13w_ago", (datetime.now() - timedelta(weeks=13)).strftime("%Y%m%d")),
+        ]
+        # 直近7日間を追加
         for i in range(1, 8):
-            target_date = datetime.now() - timedelta(days=i)
-            date_str = target_date.strftime("%Y%m%d")
+            d = (datetime.now() - timedelta(days=i)).strftime("%Y%m%d")
+            strategies.append((f"day_minus_{i}", d))
+        # 固定日付フォールバック
+        strategies.append(("deep_fallback", "20240104"))
+
+        for label, date_str in strategies:
             try:
                 resp = self.get("/equities/master", {"date": date_str})
                 if isinstance(resp, dict) and "data" in resp and resp["data"]:
-                     logger.info(f"J-Quants: Loaded master data for {date_str}")
-                     return resp["data"]
+                    logger.info(f"J-Quants: マスターデータ取得成功 date={date_str} ({label})")
+                    return resp["data"]
             except Exception:
                 pass
-            time.sleep(1)
-        
-        # 4. Deep Fallback
-        try:
-             date_str = "20240104"
-             resp = self.get("/equities/master", {"date": date_str})
-             if isinstance(resp, dict) and "data" in resp and resp["data"]:
-                 logger.info(f"J-Quants: Loaded master data for {date_str} (Deep Fallback)")
-                 return resp["data"]
-        except Exception as e:
-             logger.error(f"J-Quants: Deep fallback failed: {e}")
+            time.sleep(0.5)  # レートリミット対策（Free: 5req/min）
 
-        logger.error("J-Quants: Could not find valid master data.")
+        logger.error("J-Quants: マスターデータを取得できませんでした")
         return []
 
 # Global instance
 client = JQuantsClient()
-

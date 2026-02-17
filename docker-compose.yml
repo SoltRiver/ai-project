@@ -1,0 +1,39 @@
+
+version: '3.8'
+
+services:
+  app:
+    build: .
+    container_name: edinet_app
+    volumes:
+      - .:/app
+      - D:\edinet_data:/edinet_data # Map host D:\edinet_data to container /edinet_data
+    environment:
+      - EDINET_STORAGE_DIR=/edinet_data
+      - DATABASE_URL=postgresql://user:password@db:5432/edinet_db
+      - EDINET_API_KEY=${EDINET_API_KEY}
+    depends_on:
+      - db
+    command: ["python", "app.py"] # or keep default
+    networks:
+      - edinet_net
+
+  db:
+    image: postgres:15-alpine
+    container_name: edinet_db
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=edinet_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - edinet_net
+
+volumes:
+  postgres_data:
+
+networks:
+  edinet_net:

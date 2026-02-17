@@ -23,9 +23,11 @@ from models import stock
 def startup_event():
     # 1. Create Tables
     from database import engine
-    from models import stock, master
+    from models import stock, master, edinet_file, company_info
     stock.Base.metadata.create_all(bind=engine)
     master.Base.metadata.create_all(bind=engine)
+    edinet_file.Base.metadata.create_all(bind=engine)
+    company_info.Base.metadata.create_all(bind=engine)
 
     # 2. Seed Initial Watchlist (if empty)
     db = SessionLocal()

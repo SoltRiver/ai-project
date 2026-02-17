@@ -1,0 +1,47 @@
+metrics:
+  - metric_key: net_sales
+    metric_label: 売上高
+    concept_candidates:
+      # J-GAAP
+      - "jppfs_cor:NetSales"
+      - "jppfs_cor:OperatingRevenue1"
+      - "jppfs_cor:OperatingRevenue2"
+      # IFRS
+      - "ifrs-full:Revenue"
+      # JP-CR
+      - "jpcrp_cor:NetSales"
+      - "jpcrp_cor:OperatingRevenue1"
+    prefer_duration_days_range: [300, 400]
+
+  - metric_key: operating_profit
+    metric_label: 営業利益
+    concept_candidates:
+      # J-GAAP
+      - "jppfs_cor:OperatingIncome"
+      # IFRS
+      - "ifrs-full:ProfitFromOperatingActivities"
+      # JP-CR
+      - "jpcrp_cor:OperatingIncome"
+    prefer_duration_days_range: [300, 400]
+
+  - metric_key: ordinary_profit
+    metric_label: 経常利益
+    concept_candidates:
+      # J-GAAP
+      - "jppfs_cor:OrdinaryIncome"
+      # JP-CR
+      - "jpcrp_cor:OrdinaryIncome"
+      # IFRS (No direct equivalent, usually PreTaxProfit or similar, but for safety keep strict)
+    prefer_duration_days_range: [300, 400]
+
+  - metric_key: net_income
+    metric_label: 当期純利益
+    concept_candidates:
+      # J-GAAP
+      - "jppfs_cor:NetIncome"
+      - "jppfs_cor:CurrentNetIncome"
+      # IFRS
+      - "ifrs-full:ProfitLoss"
+      # JP-CR
+      - "jpcrp_cor:NetIncome"
+    prefer_duration_days_range: [300, 400]

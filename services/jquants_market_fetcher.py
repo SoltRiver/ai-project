@@ -26,21 +26,17 @@ class JQuantsMarketFetcher:
         }
 
         try:
-            # 1. Get Shares Outstanding from /listed/info
-            # Note: This API returns list. We filter by code. 
-            # In free tier, we might assume it returns valid data for the requested code.
-            # However, /listed/info with code param is efficient.
+            # 1. /equities/master から発行株式数を取得
+            # V2 レスポンス: {"data": [{...}, ...]}
             info_resp = self.client.get_listed_info(code=sec_code)
             shares = None
-            if info_resp and "info" in info_resp:
-                # info is list
-                items = info_resp["info"]
+            if info_resp and "data" in info_resp:
+                # V2 API は "data" キーにリストを返す
+                items = info_resp["data"]
                 if items:
-                    # Take the latest record if multiple? Usually 1 per code if specific code queried
-                    latest_info = items[0] 
-                    # Key might be "NumberOfIssuedShares" (Common)
-                    # Let's try to parse
-                    val = latest_info.get("NumberOfIssuedShares")
+                    latest_info = items[0]
+                    # V2 カラム名: "IssuedShares" または "NumberOfIssuedShares"
+                    val = latest_info.get("IssuedShares") or latest_info.get("NumberOfIssuedShares")
                     if val:
                         shares = float(val)
                         market_data["shares_outstanding"] = shares

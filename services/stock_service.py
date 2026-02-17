@@ -21,6 +21,7 @@ from utils.analyzer import (
 )
 from utils.candle_classify import get_candle_info
 from services.data_fetcher import (
+    fetch_dividend_details,
     fetch_dividends,
     fetch_realtime_data,
     fetch_stock_data,
@@ -1372,28 +1373,270 @@ def get_fundamental_tab(code: str) -> Dict[str, Any]:
 
 
 def get_dividend_tab(code: str) -> Dict[str, Any]:
+    """配当タブ用の全データを構築する。"""
     symbol = format_symbol_for_yfinance(code)
-    dividends = fetch_dividends(symbol, limit=5)
-    rows = []
-    for item in dividends:
-        date_val = item.get("date")
-        if hasattr(date_val, "strftime"):
-            date_str = date_val.strftime("%Y/%m/%d")
-        else:
-            date_str = str(date_val)
-        rows.append({"date": date_str, "amount": _fmt_price(item.get("amount"), decimals=1)})
 
+    # --- データ取得 ---
+    details = fetch_dividend_details(symbol)
+    records = details.get("records", [])
+    current_price = details.get("current_price")
+    trailing_eps = details.get("trailing_eps")
 
-    # 利回りの追加情報を取得
-    info = fetch_stock_info(symbol) or {}
-    yield_val = info.get("dividend_yield")
-    formatted_yield = f"{yield_val:.2%}" if yield_val is not None else "データなし"
+    # ------------------------------------------------------------------
+    # 1) 権利日情報
+    # ------------------------------------------------------------------
+    ex_div = details.get("ex_dividend_date") or "—"
+    rec_date = details.get("record_date") or "—"
 
-    yield_info = {
-        "yield": formatted_yield,
-        "policy": "安定配当を目標（参考値）",
+    # 権利付き最終日 = 権利落ち日の1営業日前（簡易: 1日前）
+    last_trading_day = "—"
+    if ex_div != "—":
+        try:
+            from datetime import timedelta
+            ex_dt = datetime.strptime(ex_div, "%Y/%m/%d")
+            ltd = ex_dt - timedelta(days=1)
+            last_trading_day = ltd.strftime("%Y/%m/%d")
+        except Exception:
+            pass
+
+    rights_dates = {
+        "last_trading_day": last_trading_day,
+        "ex_dividend_date": ex_div,
+        "record_date": rec_date,
     }
-    return {"dividends": rows, "yield_info": yield_info}
+
+    # ------------------------------------------------------------------
+    # 2) 年度別集計（通常配当 / 特別配当）
+    # ------------------------------------------------------------------
+    yearly: Dict[int, Dict[str, float]] = {}  # {year: {"ordinary": x, "special": y}}
+    for r in records:
+        dt = r["date"]
+        year = dt.year if hasattr(dt, "year") else None
+        if year is None:
+            continue
+        if year not in yearly:
+            yearly[year] = {"ordinary": 0.0, "special": 0.0}
+        dtype = r.get("type", "通常")
+        if dtype == "特別":
+            yearly[year]["special"] += r["amount"]
+        else:
+            yearly[year]["ordinary"] += r["amount"]
+
+    sorted_years = sorted(yearly.keys())
+
+    # 直近年度 / 前年度
+    latest_year = sorted_years[-1] if sorted_years else None
+    prev_year = sorted_years[-2] if len(sorted_years) >= 2 else None
+
+    annual_ordinary = yearly[latest_year]["ordinary"] if latest_year else None
+    annual_special = yearly[latest_year]["special"] if latest_year else None
+    annual_total = (annual_ordinary or 0) + (annual_special or 0) if latest_year else None
+    has_special = (annual_special or 0) > 0
+
+    prev_ordinary = yearly[prev_year]["ordinary"] if prev_year else None
+
+    # ------------------------------------------------------------------
+    # 3) 増配/減配判定（通常配当ベース）
+    # ------------------------------------------------------------------
+    growth_status = "判定不可"
+    growth_pct_val = None
+    if annual_ordinary is not None and prev_ordinary is not None and prev_ordinary > 0:
+        diff = annual_ordinary - prev_ordinary
+        growth_pct_val = (diff / prev_ordinary) * 100
+        if diff > 0:
+            growth_status = "増配"
+        elif diff < 0:
+            growth_status = "減配"
+        else:
+            growth_status = "据置"
+
+    # ------------------------------------------------------------------
+    # 4) KPI計算
+    # ------------------------------------------------------------------
+    # 配当利回り
+    yield_pct = "—"
+    if annual_total is not None and current_price and current_price > 0:
+        y = annual_total / current_price * 100
+        yield_pct = f"{y:.1f}%"
+
+    # 増配/減配率
+    growth_pct_str = "—"
+    if growth_pct_val is not None:
+        sign = "+" if growth_pct_val > 0 else ""
+        growth_pct_str = f"{sign}{growth_pct_val:.1f}%"
+
+    # 配当性向
+    payout_ratio_str = "—"
+    if annual_total is not None and trailing_eps and trailing_eps > 0:
+        pr = annual_total / trailing_eps * 100
+        payout_ratio_str = f"{pr:.1f}%"
+
+    # 連続増配年数（通常配当ベース）
+    continuous_years = 0
+    if len(sorted_years) >= 2:
+        for i in range(len(sorted_years) - 1, 0, -1):
+            cur_y = sorted_years[i]
+            prv_y = sorted_years[i - 1]
+            if yearly[cur_y]["ordinary"] > yearly[prv_y]["ordinary"]:
+                continuous_years += 1
+            else:
+                break
+
+    kpi = {
+        "annual_total": f"¥{annual_total:,.1f}" if annual_total is not None else "—",
+        "annual_ordinary": f"¥{annual_ordinary:,.1f}" if annual_ordinary is not None else "—",
+        "annual_special": f"¥{annual_special:,.1f}" if annual_special is not None else "—",
+        "has_special": has_special,
+        "growth_status": growth_status,
+        "yield_pct": yield_pct,
+        "growth_pct": growth_pct_str,
+        "payout_ratio_pct": payout_ratio_str,
+        "continuous_years": continuous_years if sorted_years else "—",
+    }
+
+    # ------------------------------------------------------------------
+    # 5) SVGグラフ用データ（年間配当推移）
+    # ------------------------------------------------------------------
+    chart = {
+        "has_data": False,
+        "svg_points_ordinary": "",
+        "svg_points_special": "",
+        "y_labels": [],
+        "x_labels": [],
+        "viewbox": "0 0 600 260",
+        "width": 600,
+        "height": 260,
+    }
+    if len(sorted_years) >= 2:
+        chart["has_data"] = True
+        all_values = []
+        for y in sorted_years:
+            all_values.append(yearly[y]["ordinary"])
+            if yearly[y]["special"] > 0:
+                all_values.append(yearly[y]["ordinary"] + yearly[y]["special"])
+
+        max_val = max(all_values) if all_values else 1
+        min_val = 0  # Y軸は0始まり
+        val_range = max_val - min_val if max_val > min_val else 1
+
+        # グラフ描画エリア（パディング込み）
+        pad_left = 60
+        pad_right = 20
+        pad_top = 20
+        pad_bottom = 30
+        draw_w = chart["width"] - pad_left - pad_right
+        draw_h = chart["height"] - pad_top - pad_bottom
+
+        n = len(sorted_years)
+        x_step = draw_w / max(n - 1, 1)
+
+        pts_ordinary = []
+        pts_special = []
+
+        for i, y in enumerate(sorted_years):
+            x = pad_left + i * x_step
+            # 通常配当
+            ord_val = yearly[y]["ordinary"]
+            y_ord = pad_top + draw_h - (ord_val - min_val) / val_range * draw_h
+            pts_ordinary.append(f"{x:.1f},{y_ord:.1f}")
+            # 特別配当（通常＋特別の合計として描画）
+            if yearly[y]["special"] > 0:
+                total_val = ord_val + yearly[y]["special"]
+                y_sp = pad_top + draw_h - (total_val - min_val) / val_range * draw_h
+                pts_special.append(f"{x:.1f},{y_sp:.1f}")
+
+        chart["svg_points_ordinary"] = " ".join(pts_ordinary)
+        chart["svg_points_special"] = " ".join(pts_special)
+        chart["x_labels"] = [{"x": pad_left + i * x_step, "label": str(y)} for i, y in enumerate(sorted_years)]
+
+        # Y軸ラベル（5段階）
+        y_step_val = val_range / 4
+        for j in range(5):
+            val = min_val + j * y_step_val
+            y_pos = pad_top + draw_h - j / 4 * draw_h
+            chart["y_labels"].append({"y": y_pos, "label": f"¥{val:,.0f}"})
+
+        chart["pad_left"] = pad_left
+        chart["pad_top"] = pad_top
+        chart["draw_w"] = draw_w
+        chart["draw_h"] = draw_h
+
+    # ------------------------------------------------------------------
+    # 6) 減配履歴（直近5年・通常配当ベース）
+    # ------------------------------------------------------------------
+    reduction_history = []
+    if len(sorted_years) >= 2:
+        recent_years = sorted_years[-6:]  # 最大6年分で5年間の比較
+        for i in range(1, len(recent_years)):
+            cur_y = recent_years[i]
+            prv_y = recent_years[i - 1]
+            cur_ord = yearly[cur_y]["ordinary"]
+            prv_ord = yearly[prv_y]["ordinary"]
+            if prv_ord > 0 and cur_ord < prv_ord:
+                pct = (cur_ord - prv_ord) / prv_ord * 100
+                reduction_history.append({
+                    "year": cur_y,
+                    "from_val": f"¥{prv_ord:,.1f}",
+                    "to_val": f"¥{cur_ord:,.1f}",
+                    "pct": f"{pct:.1f}%",
+                })
+
+    # ------------------------------------------------------------------
+    # 7) 配当イベント一覧（直近10件）
+    # ------------------------------------------------------------------
+    dividend_events = []
+    for r in records[-10:]:
+        dt = r["date"]
+        if hasattr(dt, "strftime"):
+            date_str = dt.strftime("%Y/%m/%d")
+        else:
+            date_str = str(dt)
+        dividend_events.append({
+            "date": date_str,
+            "record_date": r.get("record_date") or "—",
+            "amount": f"¥{r['amount']:,.1f}",
+            "type": r.get("type", "不明"),
+        })
+    # 最新順に表示
+    dividend_events.reverse()
+
+    # ------------------------------------------------------------------
+    # 8) XBRLデータ統合（最新の現地保存ファイルがあれば）
+    # ------------------------------------------------------------------
+    xbrl_info = None
+    try:
+        # Avoid circular import at top level if necessary, or just import here
+        from services.edinet_document_store import EdinetDocumentStore
+        store = EdinetDocumentStore()
+        
+        # Try to find latest XBRL for this code
+        xbrl_data = store.find_latest_local_xbrl(code)
+        if xbrl_data:
+            xbrl_info = {
+                "doc_id": xbrl_data.get("doc_id"),
+                "period_end": xbrl_data.get("period_end"),
+                "dividend_total": xbrl_data.get("dividend_total"),
+                "dividend_per_share": xbrl_data.get("dividend_per_share"),
+                "filer_name": xbrl_data.get("filer_name"),
+            }
+            # Format numbers
+            if xbrl_info["dividend_total"] is not None:
+                try:
+                    val = float(xbrl_info["dividend_total"])
+                    xbrl_info["dividend_total_fmt"] = f"¥{val:,.0f}"
+                except:
+                    pass
+    except Exception as e:
+        logger.error(f"XBRL integration failed for {code}: {e}")
+
+    return {
+        "rights_dates": rights_dates,
+        "kpi": kpi,
+        "chart": chart,
+        "reduction_history": reduction_history,
+        "dividend_events": dividend_events,
+        "xbrl_info": xbrl_info,
+    }
 
 
 def get_shareholder_tab(code: str) -> Dict[str, Any]:

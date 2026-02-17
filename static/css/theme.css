@@ -2095,3 +2095,220 @@ a:hover {
         height: 56px;
     }
 }
+
+/* ============================================================
+   配当タブ専用スタイル
+   ============================================================ */
+
+/* --- 権利日情報グリッド（3カラム → モバイル1カラム） --- */
+.dividend-rights-card {
+    border-left: 3px solid var(--accent);
+}
+
+.dividend-rights-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.75rem;
+    margin-top: 0.5rem;
+}
+
+.dividend-rights-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+.dividend-rights-label {
+    color: var(--muted);
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.dividend-rights-value {
+    font-size: 1.15rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 600px) {
+    .dividend-rights-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* --- KPIカードグリッド（3列 → 2列 → 1列） --- */
+.dividend-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.75rem;
+}
+
+@media (max-width: 900px) {
+    .dividend-kpi-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 500px) {
+    .dividend-kpi-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.dividend-kpi-card {
+    position: relative;
+}
+
+.dividend-kpi-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 0.4rem;
+}
+
+.dividend-breakdown {
+    margin-top: 0.25rem;
+}
+
+/* --- バッジ共通 --- */
+.dividend-badge {
+    display: inline-block;
+    padding: 0.15rem 0.55rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    line-height: 1.4;
+    white-space: nowrap;
+}
+
+/* 4.1 状態バッジ（増配/減配/据置/判定不可） */
+.dividend-badge-increase {
+    background: rgba(34, 197, 94, 0.15);
+    color: var(--positive);
+    border: 1px solid var(--positive);
+}
+
+.dividend-badge-decrease {
+    background: rgba(239, 68, 68, 0.15);
+    color: var(--negative);
+    border: 1px solid var(--negative);
+}
+
+.dividend-badge-hold {
+    background: rgba(148, 163, 184, 0.12);
+    color: var(--neutral);
+    border: 1px solid var(--neutral);
+}
+
+.dividend-badge-unknown {
+    background: transparent;
+    color: var(--muted);
+    border: 1px dashed var(--muted);
+}
+
+/* 4.2 特別配当バッジ */
+.dividend-badge-special {
+    background: rgba(245, 158, 11, 0.15);
+    color: #f59e0b;
+    border: 1px solid rgba(245, 158, 11, 0.5);
+    margin-top: 0.3rem;
+    cursor: help;
+}
+
+.dividend-badge-special-small {
+    display: inline-block;
+    padding: 0.1rem 0.45rem;
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    background: rgba(245, 158, 11, 0.15);
+    color: #f59e0b;
+    border: 1px solid rgba(245, 158, 11, 0.5);
+}
+
+/* --- SVGグラフコンテナ --- */
+.dividend-chart-card {
+    overflow: hidden;
+}
+
+.dividend-chart-container {
+    width: 100%;
+    height: 260px;
+    overflow: hidden;
+}
+
+.dividend-chart-container svg {
+    display: block;
+}
+
+/* --- グラフ凡例 --- */
+.dividend-chart-legend {
+    display: flex;
+    gap: 1.5rem;
+    padding: 0.5rem 0 0;
+    justify-content: center;
+}
+
+.dividend-legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.85rem;
+    color: var(--muted);
+}
+
+.dividend-legend-line {
+    display: inline-block;
+    width: 24px;
+    height: 3px;
+    border-radius: 2px;
+}
+
+.dividend-legend-solid {
+    background: var(--accent);
+}
+
+.dividend-legend-dashed {
+    background: repeating-linear-gradient(90deg,
+            #f59e0b 0px,
+            #f59e0b 6px,
+            transparent 6px,
+            transparent 10px);
+    height: 2px;
+}
+
+/* --- 減配履歴リスト --- */
+.dividend-reduction-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.dividend-reduction-item {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    padding: 0.4rem 0.6rem;
+    background: rgba(239, 68, 68, 0.05);
+    border-radius: 8px;
+    border: 1px solid rgba(239, 68, 68, 0.15);
+}
+
+.dividend-reduction-year {
+    font-weight: 700;
+    min-width: 4rem;
+}
+
+/* --- イベント一覧行 --- */
+.dividend-event-row {
+    grid-template-columns: 1fr 1fr 1fr 0.7fr;
+}
+
+/* --- テキスト色ユーティリティ --- */
+.text-positive {
+    color: var(--positive);
+}
+
+.text-negative {
+    color: var(--negative);
+}

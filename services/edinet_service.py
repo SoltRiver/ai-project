@@ -39,6 +39,15 @@ class EdinetClient:
         if not self.api_key:
             print("WARNING: EDINET_API_KEY not found in environment variables.")
 
+        # Integration with Storage Service
+        from services.edinet_storage import EdinetStorageService
+        try:
+             self.storage = EdinetStorageService()
+        except Exception as e:
+             # Fallback if DB not ready (e.g. during tests)
+             print(f"EdinetStorageService init failed: {e}")
+             self.storage = None
+
         self.code_map = self._load_code_map()
         self._api_access_denied = False
 
@@ -222,6 +231,39 @@ class EdinetClient:
 
         return None
 
+    def get_documents_by_date(self, date_obj: datetime, type_code: int = 2) -> List[Dict[str, Any]]:
+        """
+        Public wrapper for /documents.json endpoint.
+        Returns list of document objects.
+        """
+        if not self._check_api_access():
+             return []
+
+        date_str = date_obj.strftime("%Y-%m-%d")
+        url = f"{self.API_ENDPOINT}/documents.json"
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+        }
+        if self.api_key:
+            headers["Ocp-Apim-Subscription-Key"] = self.api_key
+        
+        params = {"date": date_str, "type": type_code} 
+        try:
+            res = self.session.get(url, params=params, headers=headers, timeout=10)
+            if res.status_code == 200:
+                data = res.json()
+                return data.get("results", [])
+            elif res.status_code == 401:
+                print(f"WARNING: EDINET API Returned 401 Unauthorized.")
+                self._api_access_denied = True
+                return []
+            else:
+                print(f"WARNING: EDINET API Error: {res.status_code}")
+                return []
+        except Exception as e:
+            print(f"Error getting documents for {date_str}: {e}")
+            return []
+
     def _download_document(self, doc_id: str) -> Optional[str]:
         """
         Download the document (zip) and return file path.
@@ -257,6 +299,69 @@ class EdinetClient:
                 return None
         except Exception as e:
             print(f"Error downloading {doc_id}: {e}")
+            return None
+
+    def fetch_document_content_zip(self, doc_id: str) -> Optional[bytes]:
+        """
+        Fetch ZIP content (type=1) for a doc_id.
+        Returns binary content or None.
+        """
+        if self.SIMULATE_EDINET_SUCCESS and doc_id == "S100TR7I":
+            import os
+            mock_path = os.path.abspath(os.path.join("cache", "S100TR7I.zip"))
+            if os.path.exists(mock_path):
+                 with open(mock_path, "rb") as f:
+                     return f.read()
+
+        if not self._check_api_access():
+             return None
+
+        url = f"{self.API_ENDPOINT}/documents/{doc_id}"
+        params = {"type": 1} # 1: XBRL/ZIP
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+        }
+        if self.api_key:
+             headers["Ocp-Apim-Subscription-Key"] = self.api_key
+        
+        try:
+            print(f"Fetching content for {doc_id}...")
+            res = self.session.get(url, params=params, headers=headers, timeout=60)
+            if res.status_code == 200:
+                return res.content
+            else:
+                print(f"Failed to fetch content {doc_id}: {res.status_code}")
+                return None
+        except Exception as e:
+            print(f"Error fetching content {doc_id}: {e}")
+            return None
+
+    def fetch_document_content_pdf(self, doc_id: str) -> Optional[bytes]:
+        """
+        Fetch PDF content (type=2) for a doc_id.
+        Returns binary content or None.
+        """
+        if not self._check_api_access():
+             return None
+
+        url = f"{self.API_ENDPOINT}/documents/{doc_id}"
+        params = {"type": 2} # 2: PDF
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+        }
+        if self.api_key:
+             headers["Ocp-Apim-Subscription-Key"] = self.api_key
+        
+        try:
+            print(f"Fetching PDF content for {doc_id}...")
+            res = self.session.get(url, params=params, headers=headers, timeout=60)
+            if res.status_code == 200:
+                return res.content
+            else:
+                print(f"Failed to fetch PDF {doc_id}: {res.status_code}")
+                return None
+        except Exception as e:
+            print(f"Error fetching PDF {doc_id}: {e}")
             return None
 
     def download_and_parse(self, doc_id: str) -> Dict[str, Any]:
@@ -414,3 +519,92 @@ class EdinetClient:
             return None
             
         return self.download_and_parse(doc_id)
+
+    def fetch_edinet_code_list(self) -> Optional[str]:
+        """
+        Fetch EdinetCodeDlInfo.csv.
+        Uses EdinetStorageService to save as 'CODE_LIST_{YYYYMMDD}'
+        Returns absolute path to the extracted CSV file.
+        """
+        # Determine DocID based on today (or recent static URL)
+        # We use today's date for versioning.
+        now = datetime.now()
+        doc_id = f"CODE_LIST_{now.strftime('%Y%m%d')}"
+        
+        # Check if already exists in storage
+        if self.storage:
+            record = self.storage.get_file_record(doc_id, "ZIP_TYPE5")
+            if record and record.status == "OK":
+                # Already downloaded, check extracted
+                # We need to find where it is extracted.
+                # Since EdinetStorageService only handles RAW, we need to handle extraction.
+                # Reconstruct path
+                raw_zip = self.storage.get_absolute_path(record.storage_path)
+                extract_dir = raw_zip.parent.parent / "extracted" / "type5"
+                csv_path = extract_dir / "EdinetcodeDlInfo.csv"
+                if csv_path.exists():
+                    return str(csv_path)
+
+        # Download
+        url = self.CODE_LIST_URL
+        try:
+            print(f"Downloading EDINET Code List from {url}...")
+            # For MVP, if URL is protected, we might need to mock or use alternative
+            # Just try standard download.
+            res = self.session.get(url, timeout=60)
+            if res.status_code != 200:
+                print(f"Failed to download Code List: {res.status_code}")
+                return None
+            
+            content = res.content
+            print(f"Downloaded content size: {len(content)} bytes")
+            print(f"First 10 bytes: {content[:10]}")
+            
+            # Check for HTML error page
+            if content.strip().startswith(b"<!DOCTYPE") or b"<html" in content[:100].lower():
+                print("Downloaded content appears to be HTML (likely error page). Skipping.")
+                return None
+            
+            # Check if it is a ZIP (Magic bytes PK)
+            import io
+            import zipfile
+            
+            is_zip = content.startswith(b'PK')
+            print(f"is_zip: {is_zip}")
+            
+            if not is_zip:
+                # It's likely raw CSV. We must ZIP it to comply with "edinet_type5.zip" spec.
+                # Create in-memory zip
+                print("Content is not ZIP, creating ZIP wrapper...")
+                mem_zip = io.BytesIO()
+                with zipfile.ZipFile(mem_zip, 'w', zipfile.ZIP_DEFLATED) as zf:
+                    # Determine filename inside zip
+                    zf.writestr('EdinetcodeDlInfo.csv', content)
+                content = mem_zip.getvalue()
+                print(f"Created ZIP wrapper size: {len(content)} bytes")
+            
+            # Save using Storage Service
+            if self.storage:
+                self.storage.save_raw_file(doc_id, now, "ZIP_TYPE5", content)
+                
+                # Extract
+                # Get path again to be safe
+                record = self.storage.get_file_record(doc_id, "ZIP_TYPE5")
+                raw_zip = self.storage.get_absolute_path(record.storage_path)
+                
+                extract_dir = raw_zip.parent.parent / "extracted" / "type5"
+                extract_dir.mkdir(parents=True, exist_ok=True)
+                
+                import zipfile
+                with zipfile.ZipFile(raw_zip, 'r') as zip_ref:
+                    zip_ref.extractall(extract_dir)
+                    
+                csv_path = extract_dir / "EdinetcodeDlInfo.csv"
+                if csv_path.exists():
+                    logger.info(f"EDINET Code List saved to {csv_path}")
+                    return str(csv_path)
+            
+        except Exception as e:
+            print(f"Error fetching code list: {e}")
+            return None
+        return None

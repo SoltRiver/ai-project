@@ -1,0 +1,32 @@
+Root Tag: xbrl
+Total Tags: 2206
+
+--- First 20 Content Tags (Non-System) ---
+Tag: NumberOfSubmissionDEI (prefix=jpdei_cor) | Ref: FilingDateInstant | Val: 1
+Tag: NetSalesSummaryOfBusinessResults (prefix=jpcrp_cor) | Ref: Prior4YearDuration_NonConsolidatedMember | Val: 1549753000
+Tag: NetSalesSummaryOfBusinessResults (prefix=jpcrp_cor) | Ref: Prior3YearDuration_NonConsolidatedMember | Val: 1557656000
+Tag: NetSalesSummaryOfBusinessResults (prefix=jpcrp_cor) | Ref: Prior2YearDuration_NonConsolidatedMember | Val: 1794254000
+Tag: NetSalesSummaryOfBusinessResults (prefix=jpcrp_cor) | Ref: Prior1YearDuration_NonConsolidatedMember | Val: 1761235000
+Tag: NetSalesSummaryOfBusinessResults (prefix=jpcrp_cor) | Ref: CurrentYearDuration_NonConsolidatedMember | Val: 1832731000
+Tag: OrdinaryIncomeLossSummaryOfBusinessResults (prefix=jpcrp_cor) | Ref: Prior4YearDuration_NonConsolidatedMember | Val: 171065000
+Tag: OrdinaryIncomeLossSummaryOfBusinessResults (prefix=jpcrp_cor) | Ref: Prior3YearDuration_NonConsolidatedMember | Val: 201068000
+Tag: OrdinaryIncomeLossSummaryOfBusinessResults (prefix=jpcrp_cor) | Ref: Prior2YearDuration_NonConsolidatedMember | Val: 187114000
+Tag: OrdinaryIncomeLossSummaryOfBusinessResults (prefix=jpcrp_cor) | Ref: Prior1YearDuration_NonConsolidatedMember | Val: 183876000
+Tag: OrdinaryIncomeLossSummaryOfBusinessResults (prefix=jpcrp_cor) | Ref: CurrentYearDuration_NonConsolidatedMember | Val: 201726000
+Tag: NetIncomeLossSummaryOfBusinessResults (prefix=jpcrp_cor) | Ref: Prior4YearDuration_NonConsolidatedMember | Val: 114216000
+Tag: NetIncomeLossSummaryOfBusinessResults (prefix=jpcrp_cor) | Ref: Prior3YearDuration_NonConsolidatedMember | Val: 143314000
+Tag: NetIncomeLossSummaryOfBusinessResults (prefix=jpcrp_cor) | Ref: Prior2YearDuration_NonConsolidatedMember | Val: 126612000
+Tag: NetIncomeLossSummaryOfBusinessResults (prefix=jpcrp_cor) | Ref: Prior1YearDuration_NonConsolidatedMember | Val: 132316000
+Tag: NetIncomeLossSummaryOfBusinessResults (prefix=jpcrp_cor) | Ref: CurrentYearDuration_NonConsolidatedMember | Val: 138644000
+Tag: EquityInEarningsLossesOfAffiliatesIfEquityMethodIsAppliedSummaryOfBusinessResults (prefix=jpcrp_cor) | Ref: Prior4YearDuration_NonConsolidatedMember | Val: 
+Tag: EquityInEarningsLossesOfAffiliatesIfEquityMethodIsAppliedSummaryOfBusinessResults (prefix=jpcrp_cor) | Ref: Prior3YearDuration_NonConsolidatedMember | Val: 
+Tag: EquityInEarningsLossesOfAffiliatesIfEquityMethodIsAppliedSummaryOfBusinessResults (prefix=jpcrp_cor) | Ref: Prior2YearDuration_NonConsolidatedMember | Val: 
+Tag: EquityInEarningsLossesOfAffiliatesIfEquityMethodIsAppliedSummaryOfBusinessResults (prefix=jpcrp_cor) | Ref: Prior1YearDuration_NonConsolidatedMember | Val: 
+
+--- Context Definitions ---
+Found 134 contexts
+ID: CurrentYearInstant_OrdinarySharesTreasurySharesSharesWithFullVotingRightsTreasurySharesEtcMember
+ID: CurrentYearInstant_SharesWithFullVotingRightsOtherMember
+ID: CurrentYearInstant_OrdinarySharesSharesWithFullVotingRightsOtherMember
+ID: CurrentYearInstant_SharesLessThanOneUnitMember
+ID: CurrentYearInstant_OrdinarySharesSharesLessThanOneUnitMember
