@@ -1,39 +1,98 @@
-# 株価チャートアシスタント (FastAPI + htmx)
 
- FastAPI + Jinja2 + htmx で株価リスト/詳細をサーバーサイドレンダリングする構成です。既存のデータ取得・分析ロジック (yfinance, pandas, analyzer など) を再利用し、最小限の JS でタブ切り替えを実装しています。Streamlit 版は廃止し、`app.py` は FastAPI 版への案内のみとなっています。
+# AI Investment Assistant (Stock Chart & EDINET Analysis)
 
-## セットアップ
-1. Python 環境を用意し、`pip install -r requirements.txt`
-2. (任意) AI コメントを使う場合は `OPENAI_API_KEY` を設定
+FastAPI + htmx + Python で構築された株式投資分析アシスタント。
+J-Quants API からの株価・財務情報の取得に加え、EDINET からの有価証券報告書（XBRL/PDF）の自動取得・解析・全文検索機能を備えています。
 
-## 起動
+## Key Features
+
+### 1. Stock Analysis (Basic)
+- **Interactive Charts**: TradingView-like candlesticks (Lightweight Charts).
+- **Technical Indicators**: SMA, EMA, RSI, MACD, Bollinger Bands, etc.
+- **Pattern Recognition**: Automated candlestick pattern detection (Doji, Engulfing, etc.).
+
+### 2. EDINET Data Pipeline (Advanced)
+- **Automated Ingestion**: `fetch_daily_documents.py` retrieves all filings from EDINET API v2.
+- **XBRL Parsing**: Extracts 25,000+ financial facts per document, normalizing namespaces.
+- **Financial Highlights**: Automatically maps XBRL facts to key metrics (Sales, Operating Profit, Net Income).
+- **PDF Search**: Full-text search engine for Annual Reports with Japanese semantic search (TRGM) and query guards.
+
+### 3. Architecture
+- **Backend**: FastAPI (Python 3.11)
+- **Frontend**: Jinja2 Templates + htmx (No complex SPA build)
+- **Database**: 
+    - **SQLite**: Local development (default)
+    - **PostgreSQL**: Production/Docker (recommended for PDF Search)
+- **Container**: Full Docker support (`docker-compose`)
+
+## Quick Start (Docker) - Recommended
+
+Requires: Docker & Docker Compose
+
 ```bash
-uvicorn fastapi_app:app --reload --port 8000
+# 1. Start Services (App + Postgres)
+docker-compose up -d --build
+
+# 2. Wait for DB check
+# (The app container waits for postgres:5432 automatically)
+
+# 3. Access
+http://localhost:8000
 ```
-ブラウザで `http://localhost:8000/stocks` にアクセスします。
 
-## 画面構成
-- `/stocks` : 株価リスト。銘柄名(コード) / 現在値 / 変動額(率) / 最高値・最安値の4列。
-- `/stocks/{code}` : 株価詳細。タブで「チャート / ファンダメンタル分析 / 配当 / 株主優待」を切替。初期表示でチャートタブを自動ロード。
-- `/glossary` : 用語辞典。PER, PBR, トレンドなど一般用語を初心者向けコメント付きで掲載。
-- `/candle-patterns` : ローソク足パターン。ローソク足パターンを独立したページで解説。
+## Quick Start (Local)
 
-## 実装メモ
-- SSR: Jinja2 Templates (`templates/`)
-- タブ更新: htmx (base で読み込み) / `hx-target="#tab-content"`
-- データ: `services/stock_service.py` が yfinance ベースの取得を集約。`data_fetcher.py` / `fundamental_fetcher.py` / `candle_classify.py` を利用。
-- テーマ: `static/css/theme.css` + `static/js/app.js` でライト/ダーク切り替え。
-- 静的資産: `static/js/htmx.min.js` を同梱。
-- ルーター: `routers/stocks.py` に `/stocks`, `/stocks/{code}`, `/stocks/{code}/tab/{tab_name}` を集約。
+Requires: Python 3.11+, SQLite (or Postgres)
 
-## テスト/確認
-- `uvicorn fastapi_app:app --reload` で起動し、リスト→詳細タブの遷移を確認。
-- yfinance へのネットワークが届かない場合は画面上で "N/A" 表示になります。
+```bash
+# 1. Install dependencies
+pip install -r requirements.txt
+pip install pdfminer.six
 
-## �f�B���N�g���\��
-�ڍׂ� [docs/architecture/directory_structure.md](docs/architecture/directory_structure.md) ���Q�Ƃ��Ă��������B
+# 2. Setup Database
+python scripts/reinit_db.py
+python scripts/init_financial_highlight.py
+python scripts/init_pdf_search.py
 
-- **data/**: �萔�����f�[�^
-- **services/**: �r�W�l�X���W�b�N
-- **utils/**: �ėp���W�b�N
-- **scripts/**: ���؃f�o�b�O�p�X�N���v�g
+# 3. Run Server
+uvicorn app:app --reload
+```
+
+## Data Ingestion Workflows
+
+### Phase 1: Fetch Data
+Fetch documents for a specific date (e.g., 2024-06-26).
+```bash
+python scripts/fetch_daily_documents.py --date 2024-06-26
+```
+
+### Phase 2: Process XBRL
+Parse XBRL files to extract financial facts.
+```bash
+python scripts/process_xbrl.py
+```
+
+### Phase 3: Map Financials
+Map extracted facts to utilizing financial highlights.
+```bash
+python scripts/process_financial_highlights.py
+```
+
+### Phase 4: PDF Search Indexing
+Extract text from PDFs for the search engine.
+```bash
+python scripts/process_pdf.py --limit 100
+```
+
+## Development & Testing
+
+- **Verify Real Data**: `python scripts/verify_real_data.py`
+- **Verify PDF Search**: `python scripts/verify_pdf_search.py`
+
+## Directory Structure
+- `app.py`: Main entry point
+- `services/`: Business logic (EDINET, Stock, Search, etc.)
+- `models/`: SQLAlchemy ORM models
+- `scripts/`: CLI tools for batch processing
+- `sql/`: Raw DDL for specific schemas
+- `templates/`: Jinja2 HTML templates

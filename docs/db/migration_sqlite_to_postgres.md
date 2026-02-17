@@ -30,8 +30,12 @@ sqlite> .headers on
 sqlite> .mode csv
 sqlite> .output edinet_documents.csv
 sqlite> SELECT * FROM edinet_documents;
-sqlite> .output edinet_files.csv
 sqlite> SELECT * FROM edinet_files;
+sqlite> .output edinet_financial_highlight.csv
+sqlite> SELECT * FROM edinet_financial_highlight;
+sqlite> -- Optional: Large tables (XBRL/PDF)
+sqlite> -- .output edinet_xbrl_fact.csv
+sqlite> -- SELECT * FROM edinet_xbrl_fact;
 sqlite> .quit
 ```
 *Note: Check boolean fields (0/1 vs t/f). SQLite stores them as 0/1 usually. Postgres accepts 0/1 for BOOLEAN type sometimes, or cast to INTEGER.*
@@ -48,6 +52,9 @@ psql -d ai_project
 
 -- Import Files
 \COPY edinet_files FROM 'edinet_files.csv' WITH (FORMAT csv, HEADER true);
+
+-- Import Financial Highlights
+\COPY edinet_financial_highlight FROM 'edinet_financial_highlight.csv' WITH (FORMAT csv, HEADER true);
 ```
 
 ## 5. Validation Check
@@ -57,6 +64,10 @@ Run the following queries on both DBs to compare.
 ```sql
 SELECT count(*) FROM edinet_documents;
 SELECT count(*) FROM edinet_files;
+-- Post Phase 4/6 Tables
+SELECT count(*) FROM edinet_xbrl_fact; -- May be large
+SELECT count(*) FROM edinet_financial_highlight;
+SELECT count(*) FROM edinet_pdf_text; -- Large
 ```
 
 ### 5-2. Idempotency Check
