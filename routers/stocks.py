@@ -60,7 +60,7 @@ async def stock_detail(code: str, request: Request):
 
 
 @router.get("/stocks/{code}/tab/{tab_name}", response_class=HTMLResponse)
-async def stock_tab(code: str, tab_name: str, request: Request):
+async def stock_tab(code: str, tab_name: str, request: Request, db: Session = Depends(get_db)):
     header = stock_service.get_stock_header(code)
     if header is None:
         raise HTTPException(status_code=404, detail="銘柄が見つかりません")
@@ -73,6 +73,15 @@ async def stock_tab(code: str, tab_name: str, request: Request):
     elif tab_name == "fundamental":
         data = stock_service.get_fundamental_tab(code)
         template = "stocks/partials/_tab_fundamental.html"
+        # Impact Bias データを注入（Phase 11）
+        try:
+            from services.impact_bias_service import ImpactBiasService
+            impact_service = ImpactBiasService(db)
+            data["impact_bias"] = impact_service.get_impact_bias(code)
+        except Exception as e:
+            import logging
+            logging.error(f"Impact bias fetch error for {code}: {e}")
+            data["impact_bias"] = None
     elif tab_name == "dividend":
         data = stock_service.get_dividend_tab(code)
         template = "stocks/partials/_tab_dividend.html"

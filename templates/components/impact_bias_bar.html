@@ -1,0 +1,124 @@
+<!-- Impact Bias Bar Component -->
+{% if impact_bias and impact_bias.meta and impact_bias.meta.total_count > 0 %}
+<div class="impact-bias-section"
+    style="margin-bottom: 2rem; padding: 1rem; border: 1px solid #ddd; border-radius: 8px;">
+    <h3>インパクトニュース/イベント（直近{{ impact_bias.meta.lookback_days }}日間の情報偏り）</h3>
+
+    <div class="alert alert-warning"
+        style="background: #fff3cd; color: #856404; padding: 10px; border: 1px solid #ffeeba; border-radius: 4px; margin-bottom: 15px; font-size: 0.9rem;">
+        <strong>本表示は直近公開情報の分類結果に基づく"情報インパクトの偏り"を示すものであり、株価の上昇確率や投資成果を保証するものではありません。</strong><br>
+        <span style="font-size: 0.8em; color: #666;">分類はAIによる自動判定を含みます。</span>
+    </div>
+
+    <!-- Labels on Top -->
+    <div
+        style="display: flex; justify-content: space-between; font-size: 0.8rem; font-weight: bold; margin-bottom: 2px;">
+        <span style="color: #4caf50;">[POSITIVE]</span>
+        <span style="color: #f44336;">[NEGATIVE]</span>
+    </div>
+
+    <!-- Bar Container -->
+    <div
+        style="position: relative; height: 30px; background: #eee; border-radius: 15px; overflow: hidden; display: flex; margin-bottom: 5px;">
+        <!-- Positive -->
+        {% if impact_bias.stats.pos_count > 0 %}
+        <div
+            style="width: {{ impact_bias.stats.pos_ratio_pct }}%; background: #4caf50; display: flex; align-items: center; justify-content: flex-start; padding-left: 10px; color: white; font-weight: bold; font-size: 0.8rem; white-space: nowrap; overflow: hidden;">
+            POS {{ impact_bias.stats.pos_ratio_pct }}% ({{ impact_bias.stats.pos_count }}件)
+        </div>
+        {% endif %}
+        <!-- Negative -->
+        {% if impact_bias.stats.neg_count > 0 %}
+        <div
+            style="width: {{ impact_bias.stats.neg_ratio_pct }}%; background: #f44336; display: flex; align-items: center; justify-content: flex-end; padding-right: 10px; color: white; font-weight: bold; font-size: 0.8rem; white-space: nowrap; overflow: hidden; margin-left: auto;">
+            NEG {{ impact_bias.stats.neg_ratio_pct }}% ({{ impact_bias.stats.neg_count }}件)
+        </div>
+        {% endif %}
+
+        <!-- Center Label -->
+        <div
+            style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); background: rgba(255,255,255,0.8); padding: 0 8px; border-radius: 10px; font-size: 0.7rem; color: #333; font-weight: bold; z-index: 10;">
+            Information Bias
+        </div>
+    </div>
+
+
+    <!-- Lists -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 15px;">
+        <!-- Positive List -->
+        <div>
+            <h4 style="border-bottom: 2px solid #4caf50; padding-bottom: 5px; margin-bottom: 10px; font-size: 1rem;">
+                POSITIVE ({{ impact_bias.stats.pos_count }})</h4>
+            {% for item in impact_bias.items.positive %}
+            <div style="border-bottom: 1px solid #eee; padding: 10px 0;">
+                <div style="font-size: 0.9rem; font-weight: bold; margin-bottom: 4px;">
+                    {% if item.url %}
+                    <a href="{{ item.url }}" target="_blank" style="text-decoration: none; color: #007bff;">{{
+                        item.title }}</a>
+                    {% else %}
+                    {{ item.title }}
+                    {% endif %}
+                    <span
+                        style="background: {{ '#d4edda' if item.strength == 'HIGH' else '#e2e3e5' }}; color: {{ '#155724' if item.strength == 'HIGH' else '#383d41' }}; padding: 2px 5px; border-radius: 4px; font-size: 0.7rem; margin-left: 5px; vertical-align: middle;">{{
+                        item.strength }}</span>
+                </div>
+                <div style="font-size: 0.8rem; color: #666; margin-bottom: 4px;">
+                    {{ item.source }} | {{ item.date.strftime('%Y-%m-%d') if item.date else '-' }}
+                </div>
+                {% if item.summary %}
+                <div style="font-size: 0.85rem; color: #333; line-height: 1.4;">
+                    {{ item.summary }}
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Negative List -->
+        <div>
+            <h4 style="border-bottom: 2px solid #f44336; padding-bottom: 5px; margin-bottom: 10px; font-size: 1rem;">
+                NEGATIVE ({{ impact_bias.stats.neg_count }})</h4>
+            {% for item in impact_bias.items.negative %}
+            <div style="border-bottom: 1px solid #eee; padding: 10px 0;">
+                <div style="font-size: 0.9rem; font-weight: bold; margin-bottom: 4px;">
+                    {% if item.url %}
+                    <a href="{{ item.url }}" target="_blank" style="text-decoration: none; color: #007bff;">{{
+                        item.title }}</a>
+                    {% else %}
+                    {{ item.title }}
+                    {% endif %}
+                    <span
+                        style="background: {{ '#f8d7da' if item.strength == 'HIGH' else '#e2e3e5' }}; color: {{ '#721c24' if item.strength == 'HIGH' else '#383d41' }}; padding: 2px 5px; border-radius: 4px; font-size: 0.7rem; margin-left: 5px; vertical-align: middle;">{{
+                        item.strength }}</span>
+                </div>
+                <div style="font-size: 0.8rem; color: #666; margin-bottom: 4px;">
+                    {{ item.source }} | {{ item.date.strftime('%Y-%m-%d') if item.date else '-' }}
+                </div>
+                {% if item.summary %}
+                <div style="font-size: 0.85rem; color: #333; line-height: 1.4;">
+                    {{ item.summary }}
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+</div>
+{% else %}
+<!-- No Data / Zero Total -->
+<div class="impact-bias-section"
+    style="margin-bottom: 2rem; padding: 1rem; border: 1px solid #ddd; border-radius: 8px;">
+    <h3>インパクトニュース/イベント（直近90日間の情報偏り）</h3>
+
+    <div class="alert alert-warning"
+        style="background: #fff3cd; color: #856404; padding: 10px; border: 1px solid #ffeeba; border-radius: 4px; margin-bottom: 15px; font-size: 0.9rem;">
+        <strong>本表示は直近公開情報の分類結果に基づく"情報インパクトの偏り"を示すものであり、株価の上昇確率や投資成果を保証するものではありません。</strong><br>
+        <span style="font-size: 0.8em; color: #666;">分類はAIによる自動判定を含みます。</span>
+    </div>
+
+    <div style="padding: 20px; text-align: center; color: #666; background: #f9f9f9; border-radius: 8px;">
+        直近90日間に分類対象となるニュース/イベントはありません。
+    </div>
+</div>
+{% endif %}

@@ -363,4 +363,19 @@
     - **Script**: `scripts/verify_jquants_integration.py` successfully extracted `SecCode: 54100` and calculated `ROE` (11.8%) from Godo Steel (S100TK3X) data.
     - **Market Data**: Helper handles `sec_code` correctly, though market data returns `None` as expected without live credentials in the test environment.
 
-
+### Review Session 32 (Phase 11: Impact Bias テンプレート修正)
+- **Status**: **Success** (Executed 2026-02-19).
+- **Scope**: `templates/components/impact_bias_bar.html`, `routers/stocks.py`, `routers/fundamental.py`, `fastapi_app.py`, `templates/stocks/partials/_tab_fundamental.html`.
+- **Findings**:
+    1. **Null Access Crash**: テンプレートの `else` ブランチで `impact_bias.meta.lookback_days` にアクセスし、`impact_bias` が `None` の場合にクラッシュ。
+    2. **統合先の誤り**: Impact Bias を `fundamental_analysis.html`（スタンドアロンページ用）にのみ統合していたが、ユーザーが実際に見るのはhtmxタブの `_tab_fundamental.html`。
+    3. **テーブル未作成**: `stock_impact` モデルが `fastapi_app.py` の startup で `create_all` されていなかった。
+    4. **doc_id 安全性**: `routers/fundamental.py` で `financials` が `None` の場合に `AttributeError`。
+- **Action**:
+    - テンプレート `else` でハードコード `90` を使用。
+    - `routers/stocks.py` の `stock_tab` に `ImpactBiasService` 注入追加。
+    - `_tab_fundamental.html` に `{% include "components/impact_bias_bar.html" %}` 追加。
+    - `fastapi_app.py` に `stock_impact.Base.metadata.create_all` 追加。
+- **Verification**:
+    - **Browser**: ファンダメンタル分析タブの最下部にインパクトバイアスセクションが正常に表示。
+    - **Empty State**: 「直近90日間に分類対象となるニュース/イベントはありません。」メッセージ表示確認。
