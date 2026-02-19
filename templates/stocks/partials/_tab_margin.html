@@ -1,0 +1,135 @@
+<!-- 需給タブ：信用残の構成と相対サイズ -->
+<div class="tab-panel">
+
+    {% if not margin_available %}
+    <!-- データ取得不可時のフォールバック表示 -->
+    <div class="card margin-notice-card">
+        <p class="muted" style="text-align: center; padding: 2rem 0;">
+            {{ error_message or "需給データを取得できませんでした" }}
+        </p>
+    </div>
+    {% else %}
+
+    <!-- ===== (1) 需給サイズ（相対） ===== -->
+    <div class="card">
+        <div class="section-title margin-section-header">
+            需給サイズ（相対）
+            <span class="margin-tooltip-trigger" tabindex="0" aria-label="需給サイズの説明">
+                ?
+                <span class="margin-tooltip-content">
+                    総残高 ÷ 20日平均出来高（ADV20）を基準とした相対目安です。<br>
+                    価格変動を保証するものではありません。
+                </span>
+            </span>
+            <span class="margin-size-badge margin-size-{{ margin.size_label | replace('（暫定）', '') | trim }}">
+                {{ margin.size_label }}
+            </span>
+        </div>
+        <div class="margin-sub-info">
+            総残高/ADV20：{{ margin.size_days }} 日分
+        </div>
+        {% if margin.size_reason %}
+        <div class="margin-reason muted small">{{ margin.size_reason }}</div>
+        {% endif %}
+    </div>
+
+    <!-- ===== (2) 構成比表示（100%横分割バー） ===== -->
+    <div class="card">
+        <div class="section-title">構成比</div>
+        <!-- 100%横分割バー（バー内に数字は表示しない） -->
+        <div class="margin-bar-container">
+            <div class="margin-bar-buy" style="width: {{ margin.buy_pct }}%;" aria-label="信用買い残 {{ margin.buy_pct }}%">
+            </div>
+            <div class="margin-bar-sell" style="width: {{ margin.sell_pct }}%;"
+                aria-label="信用売り残 {{ margin.sell_pct }}%"></div>
+        </div>
+        <!-- バーの外に%表示 -->
+        <div class="margin-bar-labels">
+            <span class="margin-bar-label-buy">買い {{ margin.buy_pct }}%</span>
+            <span class="margin-bar-label-sell">売り {{ margin.sell_pct }}%</span>
+        </div>
+    </div>
+
+    <!-- ===== (3) 絶対量表示 ===== -->
+    <div class="card">
+        <div class="section-title">残高詳細</div>
+        <div class="mini-table">
+            <div class="mini-row">
+                <span>信用買い残</span>
+                <span class="margin-value">{{ "{:,}".format(margin.buy) }} 株</span>
+            </div>
+            <div class="mini-row">
+                <span>信用売り残</span>
+                <span class="margin-value">{{ "{:,}".format(margin.sell) }} 株</span>
+            </div>
+            <div class="mini-row" style="border-top: 2px solid var(--border);">
+                <span><strong>総残高</strong></span>
+                <span class="margin-value"><strong>{{ "{:,}".format(margin.total) }} 株</strong></span>
+            </div>
+        </div>
+        <div class="muted small" style="margin-top: 0.5rem;">データ日付：{{ margin.date }}</div>
+    </div>
+
+    <!-- ===== (4) 前週比 ===== -->
+    {% if margin.has_previous %}
+    <div class="card">
+        <div class="section-title">前週比</div>
+        <div class="grid two">
+            <div class="stat-card">
+                <div class="label">買い残 増減</div>
+                <div class="value change-{{ margin.week_change_buy.direction }}">
+                    {{ margin.week_change_buy.delta }} 株
+                </div>
+                <div class="muted small">{{ margin.week_change_buy.pct }}</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">売り残 増減</div>
+                <div class="value change-{{ margin.week_change_sell.direction }}">
+                    {{ margin.week_change_sell.delta }} 株
+                </div>
+                <div class="muted small">{{ margin.week_change_sell.pct }}</div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ===== (5) 偏り分類（5段階） ===== -->
+    <div class="card">
+        <div class="section-title">偏り分類</div>
+        <div class="margin-bias-display">
+            <span class="margin-bias-badge {{ margin.bias_css }}">{{ margin.bias_label }}</span>
+        </div>
+        {% if margin.bias_reason %}
+        <div class="margin-reason muted small">{{ margin.bias_reason }}</div>
+        {% endif %}
+    </div>
+
+    <!-- ===== (6) 信頼度 ===== -->
+    <div class="card">
+        <div class="section-title margin-section-header">
+            信頼度評価
+            <span class="margin-tooltip-trigger" tabindex="0" aria-label="信頼度の説明">
+                ?
+                <span class="margin-tooltip-content">
+                    信頼度は分類の安定度を示すものであり、予測ではありません。
+                </span>
+            </span>
+        </div>
+        <div class="margin-reliability-display">
+            <span class="margin-reliability-badge {{ margin.reliability_css }}">
+                {{ margin.reliability_icon }} {{ margin.reliability_label }}
+            </span>
+        </div>
+    </div>
+
+    <!-- ===== (7) 注意文（固定） ===== -->
+    <div class="card margin-notice-card">
+        <div class="section-title">📝 注記</div>
+        <p class="margin-notice-text">
+            本タブは信用残の構成と相対サイズを示す情報です。<br>
+            価格の将来を保証するものではありません。
+        </p>
+    </div>
+
+    {% endif %}
+</div>

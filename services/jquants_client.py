@@ -207,5 +207,27 @@ class JQuantsClient:
         logger.error("J-Quants: マスターデータを取得できませんでした")
         return []
 
+    def get_margin_interest(self, code: str) -> List[Dict[str, Any]]:
+        """
+        /markets/margin-interest から信用取引週末残高を取得する。
+        前週比の算出に必要な直近データを返す。
+        Free プランでは取得制限の可能性あり。
+
+        Returns:
+            信用残レコードのリスト（日付降順）。
+            取得失敗時は空リストを返す。
+        """
+        if not self.api_key:
+            return []
+        code = self._normalize_code(code)
+        # 直近の信用残データを取得（前週比計算のため複数件）
+        resp = self.get("/markets/margin-interest", {"code": code})
+        if isinstance(resp, dict):
+            data = resp.get("data", [])
+            # 日付降順にソート（最新が先頭）
+            data.sort(key=lambda x: x.get("Date", ""), reverse=True)
+            return data
+        return []
+
 # Global instance
 client = JQuantsClient()

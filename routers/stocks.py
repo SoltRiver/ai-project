@@ -45,6 +45,7 @@ async def stock_detail(code: str, request: Request):
         {"name": "chart", "label": "テクニカル分析", "icon": "📈"},
         {"name": "fundamental", "label": "ファンダメンタル分析", "icon": "📊"},
         {"name": "dividend", "label": "配当", "icon": "💰"},
+        {"name": "margin", "label": "需給", "icon": "⚖️"},
         {"name": "shareholder", "label": "株主優待", "icon": "🎁"},
     ]
 
@@ -85,6 +86,11 @@ async def stock_tab(code: str, tab_name: str, request: Request, db: Session = De
     elif tab_name == "dividend":
         data = stock_service.get_dividend_tab(code)
         template = "stocks/partials/_tab_dividend.html"
+    elif tab_name == "margin":
+        # 需給タブ: 信用残の構成と相対サイズを表示
+        from services.margin_service import get_margin_tab
+        data = get_margin_tab(code)
+        template = "stocks/partials/_tab_margin.html"
     elif tab_name == "shareholder":
         data = stock_service.get_shareholder_tab(code)
         template = "stocks/partials/_tab_shareholder.html"

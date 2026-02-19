@@ -2312,3 +2312,258 @@ a:hover {
 .text-negative {
     color: var(--negative);
 }
+
+/* ===================================================================
+   需給タブ用スタイル
+   - 淡色を基調とし、派手な原色は使わない
+   - CSS変数ベースでテーマ対応
+   =================================================================== */
+
+/* --- セクションヘッダー（ラベル + ? + バッジ） --- */
+.margin-section-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+/* --- ツールチップ --- */
+.margin-tooltip-trigger {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.3rem;
+    height: 1.3rem;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--muted);
+    cursor: help;
+    flex-shrink: 0;
+}
+
+.margin-tooltip-content {
+    display: none;
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.75rem 1rem;
+    font-size: 0.82rem;
+    font-weight: 400;
+    line-height: 1.5;
+    color: var(--text);
+    width: max-content;
+    max-width: 280px;
+    box-shadow: var(--shadow-soft);
+    z-index: 10;
+    white-space: normal;
+}
+
+.margin-tooltip-trigger:hover .margin-tooltip-content,
+.margin-tooltip-trigger:focus .margin-tooltip-content {
+    display: block;
+}
+
+/* --- 需給サイズバッジ --- */
+.margin-size-badge {
+    display: inline-block;
+    padding: 0.2rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border: 1px solid var(--border);
+    background: rgba(148, 163, 184, 0.1);
+    color: var(--text);
+}
+
+.margin-size-badge.margin-size-低 {
+    background: rgba(148, 163, 184, 0.12);
+    color: var(--muted);
+    border-color: var(--muted);
+}
+
+.margin-size-badge.margin-size-中 {
+    background: rgba(14, 165, 233, 0.1);
+    color: var(--accent);
+    border-color: var(--accent);
+}
+
+.margin-size-badge.margin-size-高 {
+    background: rgba(245, 158, 11, 0.12);
+    color: #f59e0b;
+    border-color: #f59e0b;
+}
+
+/* --- 補助情報テキスト --- */
+.margin-sub-info {
+    font-size: 0.9rem;
+    color: var(--muted);
+    margin-top: 0.5rem;
+}
+
+.margin-reason {
+    margin-top: 0.4rem;
+    font-style: italic;
+}
+
+/* --- 構成比バー（100%横分割） --- */
+.margin-bar-container {
+    display: flex;
+    width: 100%;
+    height: 22px;
+    border-radius: 6px;
+    overflow: hidden;
+    margin: 0.75rem 0 0.5rem;
+}
+
+.margin-bar-buy {
+    /* 落ち着いた緑（opacity低め） */
+    background: rgba(34, 197, 94, 0.35);
+    height: 100%;
+    transition: width 0.4s ease;
+}
+
+[data-theme="dark"] .margin-bar-buy {
+    background: rgba(158, 206, 106, 0.3);
+}
+
+.margin-bar-sell {
+    /* 落ち着いた赤（opacity低め） */
+    background: rgba(239, 68, 68, 0.3);
+    height: 100%;
+    transition: width 0.4s ease;
+}
+
+[data-theme="dark"] .margin-bar-sell {
+    background: rgba(247, 118, 142, 0.25);
+}
+
+.margin-bar-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.88rem;
+    color: var(--muted);
+}
+
+.margin-bar-label-buy {
+    color: var(--positive);
+    font-weight: 600;
+}
+
+.margin-bar-label-sell {
+    color: var(--negative);
+    font-weight: 600;
+}
+
+/* --- 残高の数値表示 --- */
+.margin-value {
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+}
+
+/* --- 偏り分類バッジ --- */
+.margin-bias-display {
+    margin-top: 0.5rem;
+}
+
+.margin-bias-badge {
+    display: inline-block;
+    padding: 0.25rem 0.8rem;
+    border-radius: 999px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    border: 1px solid var(--border);
+}
+
+/* 偏りバッジの色（淡色・控えめ） */
+.bias-strong-buy {
+    background: rgba(34, 197, 94, 0.12);
+    color: var(--positive);
+    border-color: var(--positive);
+}
+
+.bias-weak-buy {
+    background: rgba(34, 197, 94, 0.08);
+    color: var(--positive);
+    border-color: rgba(34, 197, 94, 0.4);
+}
+
+.bias-neutral {
+    background: rgba(148, 163, 184, 0.1);
+    color: var(--muted);
+    border-color: var(--muted);
+}
+
+.bias-weak-sell {
+    background: rgba(239, 68, 68, 0.08);
+    color: var(--negative);
+    border-color: rgba(239, 68, 68, 0.4);
+}
+
+.bias-strong-sell {
+    background: rgba(239, 68, 68, 0.12);
+    color: var(--negative);
+    border-color: var(--negative);
+}
+
+.bias-pending {
+    background: rgba(245, 158, 11, 0.1);
+    color: #f59e0b;
+    border-color: #f59e0b;
+}
+
+/* --- 信頼度バッジ --- */
+.margin-reliability-display {
+    margin-top: 0.5rem;
+}
+
+.margin-reliability-badge {
+    display: inline-block;
+    padding: 0.25rem 0.8rem;
+    border-radius: 999px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    border: 1px solid var(--border);
+}
+
+.reliability-high {
+    background: rgba(34, 197, 94, 0.1);
+    color: var(--positive);
+    border-color: var(--positive);
+}
+
+.reliability-mid {
+    background: rgba(14, 165, 233, 0.1);
+    color: var(--accent);
+    border-color: var(--accent);
+}
+
+.reliability-low {
+    background: rgba(245, 158, 11, 0.1);
+    color: #f59e0b;
+    border-color: #f59e0b;
+}
+
+.reliability-unknown {
+    background: rgba(148, 163, 184, 0.08);
+    color: var(--muted);
+    border-color: var(--muted);
+}
+
+/* --- 注意文カード --- */
+.margin-notice-card {
+    border-left: 3px solid var(--border);
+}
+
+.margin-notice-text {
+    color: var(--muted);
+    font-size: 0.88rem;
+    line-height: 1.6;
+    margin: 0;
+}
