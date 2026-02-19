@@ -30,12 +30,25 @@ class StockNewsAnalysis(Base):
 
 
 class StockEvent(Base):
+    """
+    イベントテーブル
+    EDINET APIから抽出されたイベント情報を格納する。
+    doc_id + event_type の組み合わせで重複防止（冪等設計）。
+    """
     __tablename__ = "stock_event"
 
     id = Column(Integer, primary_key=True, index=True)
     sec_code = Column(CHAR(5), index=True, nullable=False)
     event_type = Column(String(50), nullable=False)
     title = Column(Text, nullable=False)
+    # EDINET文書ID（冪等管理用）
+    doc_id = Column(String(100), nullable=True, index=True)
+    # ソース名: EDINET_API / RSS / MANUAL / TDNET_API
+    source_name = Column(String(100), nullable=True, default="MANUAL")
+    # 抽出方法: RULE / CONTEXT / MANUAL
+    extraction_method = Column(String(20), nullable=True, default="MANUAL")
+    # イベントURL（任意）
+    url = Column(Text, nullable=True)
     announced_at = Column(DateTime(timezone=True), server_default=func.now())
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 

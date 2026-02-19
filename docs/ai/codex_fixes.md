@@ -379,3 +379,14 @@
 - **Verification**:
     - **Browser**: ファンダメンタル分析タブの最下部にインパクトバイアスセクションが正常に表示。
     - **Empty State**: 「直近90日間に分類対象となるニュース/イベントはありません。」メッセージ表示確認。
+
+### Review Session 33 (Phase 12: イベント自動抽出)
+- **Status**: **Success** (Executed 2026-02-20).
+- **Scope**: `models/event_source_policy.py`, `models/stock_impact.py`, `services/event_source_checker.py`, `services/event_extractor.py`, `services/event_crawler.py`, `scripts/run_event_extraction.py`, `fastapi_app.py`.
+- **Findings**: 初回実装のため重大バグなし。
+- **Verification**:
+    - **2段階抽出テスト**: 5文書テスト → 4イベント正常抽出、1非イベント正常スキップ。
+    - **否定語テスト**: TOB+中止 → NEGATIVE/CONTEXT に正しく反転。
+    - **テーブル作成**: event_source_policy, event_ingest_state 正常作成。
+    - **ポリシーシード**: EDINET_API(有効), TDNET_API(無効), MANUAL(有効) 投入確認。
+    - **Regression**: 全主要ページ・タブ HTTP 200 確認。

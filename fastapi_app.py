@@ -24,11 +24,14 @@ def startup_event():
     # 1. Create Tables
     from database import engine
     from models import stock, master, edinet_file, company_info, stock_impact
+    from models import event_source_policy
     stock.Base.metadata.create_all(bind=engine)
     master.Base.metadata.create_all(bind=engine)
     edinet_file.Base.metadata.create_all(bind=engine)
     company_info.Base.metadata.create_all(bind=engine)
     stock_impact.Base.metadata.create_all(bind=engine)
+    # イベント自動抽出用テーブル（ソースポリシー＋冪等管理）
+    event_source_policy.Base.metadata.create_all(bind=engine)
 
     # 2. Seed Initial Watchlist (if empty)
     db = SessionLocal()
