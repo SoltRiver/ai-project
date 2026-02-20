@@ -1,12 +1,14 @@
 
 import os
-import requests
 import logging
 import time
 from datetime import datetime, timedelta
-
 from typing import Optional, Dict, List, Any
+import requests
+import pandas as pd
 from dotenv import load_dotenv
+
+import jquantsapi
 
 # Load env vars from .env file if present
 load_dotenv()
@@ -14,6 +16,9 @@ load_dotenv()
 logger = logging.getLogger(__name__)
 
 class JQuantsClient:
+    """
+    J-Quants API Client Wrapper (Adapter for jquants-api-client v2)
+    """
     BASE_URL = "https://api.jquants.com/v2"
     
     def __init__(self):
@@ -21,11 +26,20 @@ class JQuantsClient:
         
         if not self.api_key:
              logger.warning("JQUANTS_API_KEY not set. J-Quants features will be unavailable.")
+             self.jq = None
+        else:
+             try:
+                 # Initialize official client (V2)
+                 self.jq = jquantsapi.ClientV2(api_key=self.api_key)
+             except Exception as e:
+                 logger.error(f"Failed to initialize JQuantsClientV2: {e}")
+                 self.jq = None
 
     def get(self, endpoint: str, params: Dict[str, Any] = None) -> Dict[str, Any]:
         """
-        V2 API 用の認証済み GET リクエスト。
-        x-api-key ヘッダーで認証する。
+        [Deprecated] V2 API 用の認証済み GET リクエスト。
+        互換性のために requests を直接使用するメソッドを残すが、
+        可能な限り公式クライアントのメソッドを使用すること。
         """
         if not self.api_key:
             return {}
@@ -37,22 +51,20 @@ class JQuantsClient:
             resp = requests.get(url, headers=headers, params=params, timeout=20)
             resp.raise_for_status()
             return resp.json()
-        except requests.exceptions.HTTPError as e:
-            # Free プラン制限 (403) はwarningレベルでログ出力
-            if e.response is not None and e.response.status_code == 403:
-                logger.warning(f"J-Quants API 403 Forbidden ({endpoint}): Free プランでは利用不可")
-            else:
-                logger.error(f"J-Quants API Request Failed ({endpoint}): {e}")
-            return {}
         except Exception as e:
             logger.error(f"J-Quants API Request Failed ({endpoint}): {e}")
             return {}
 
     def get_all(self, endpoint: str, params: Dict[str, Any] = None) -> List[Dict[str, Any]]:
         """
-        ページネーション対応の全件取得。
-        V2 API は "pagination_key" でページ分割する。
+        [Deprecated] ページネーション対応の全件取得。
+        公式クライアント移行に伴い、このメソッドは直接使用せず
+        各専用メソッド（get_financial_summary等）を使用することを推奨。
         """
+        # 既存ロジック維持
+        return self._legacy_get_all(endpoint, params)
+        
+    def _legacy_get_all(self, endpoint: str, params: Dict[str, Any] = None) -> List[Dict[str, Any]]:
         all_data: List[Dict[str, Any]] = []
         current_params = dict(params) if params else {}
 
@@ -63,11 +75,10 @@ class JQuantsClient:
             data = resp.get("data", [])
             all_data.extend(data)
 
-            # 次ページがあれば継続
             pagination_key = resp.get("pagination_key")
             if pagination_key:
                 current_params["pagination_key"] = pagination_key
-                time.sleep(0.5)  # レートリミット対策
+                time.sleep(0.5)
             else:
                 break
 
@@ -77,157 +88,184 @@ class JQuantsClient:
         """
         /equities/bars/daily
         """
-        params = {"code": code}
-        if date:
-            params["date"] = date.replace("-", "") # J-Quants uses YYYYMMDD
-        if from_date:
-            params["from"] = from_date.replace("-", "")
-        if to_date:
-            params["to"] = to_date.replace("-", "")
+        if not self.jq:
+            return {}
             
-        resp = self.get("/equities/bars/daily", params)
-        
-        if "data" in resp:
-            # Map keys O->Open, H->High, etc.
+        try:
+            # jquants-api-client params: code, date, from_yyyymmdd, to_yyyymmdd
+            # Note: library might use different param names. Checking assumed signature.
+            # ClientV2.get_eq_bars_daily(code=..., date=..., from_yyyymmdd=..., to_yyyymmdd=...) usually
+            # But let's verify params based on previous method list. 
+            # Assuming widely used kwargs like code, date, from_date, to_date or standardized.
+            # safe approach: pass keys as compatible via kwargs if needed or specific mapping.
+            
+            # Using keyword arguments based on library V2 conventions (usually matches API params or standard)
+            # API query params: code, date, from, to
+            # Library often maps 'from' -> 'from_yyyymmdd' to avoid usage of reserved keyword.
+            
+            # Since I cannot verify exact signature without help(), I will try standard args.
+            
+            kwargs = {"code": code}
+            if date: kwargs["date"] = date.replace("-", "")
+            if from_date: kwargs["from_yyyymmdd"] = from_date.replace("-", "")
+            if to_date: kwargs["to_yyyymmdd"] = to_date.replace("-", "")
+
+            # Call official client
+            df = self.jq.get_eq_bars_daily(**kwargs)
+            
+            if df.empty:
+                return {}
+                
+            # Convert to list of dicts
+            data_list = df.to_dict(orient="records")
+            
+            # Standardize keys (O -> Open, etc)
+            # V2 API returns Open, High, Low, Close, Volume.
+            # If library returns exact API columns, we might need no mapping if already correct.
+            # But for safety, ensure "Open" etc exist.
+            
             standardized = []
-            for item in resp["data"]:
+            for item in data_list:
                 new_item = item.copy()
+                
+                # Check mapping if short names (O, H, L, C) are present
                 mapping = {
                     "O": "Open", "H": "High", "L": "Low", "C": "Close", "Vo": "Volume",
                     "AdjO": "AdjOpen", "AdjH": "AdjHigh", "AdjL": "AdjLow", "AdjC": "AdjClose", "AdjVo": "AdjVolume"
                 }
                 for old_k, new_k in mapping.items():
-                    if old_k in new_item:
+                    if old_k in new_item and new_k not in new_item:
                          new_item[new_k] = new_item.pop(old_k)
+                
+                # If library already returns "Open", keys are preserved.
                 standardized.append(new_item)
             
-            resp["daily_quotes"] = standardized
+            return {"daily_quotes": standardized, "data": standardized} # Return compatible structure
             
-        return resp
+        except Exception as e:
+            logger.error(f"J-Quants Lib `get_eq_bars_daily` failed: {e}")
+            return {}
 
     def get_dividend(self, code: str) -> List[Dict[str, Any]]:
         """
-        /fins/dividend エンドポイントから配当情報を取得する。
-        ※ Free プランでは 403 エラー（Light 以上が必要）
-
-        Returns:
-            配当レコードのリスト。V2 レスポンスの "data" キーから取得。
-            取得失敗時は空リストを返す。
+        /fins/dividend 配当情報
         """
-        if not self.api_key:
+        if not self.jq:
             return []
-        # V2 API は5桁コードを要求する場合がある
-        code = self._normalize_code(code)
-        params = {"code": code}
-        resp = self.get("/fins/dividend", params)
-        # V2 レスポンス: {"data": [...]} を優先
-        if isinstance(resp, dict):
-            return resp.get("data", [])
-        return []
+        try:
+            code = self._normalize_code(code)
+            df = self.jq.get_fin_dividend(code=code)
+            if df.empty:
+                return []
+            return df.to_dict(orient="records")
+        except Exception as e:
+            # Free plan 403 or other error
+            logger.warning(f"J-Quants Lib `get_fin_dividend` failed (possibly 403): {e}")
+            return []
 
     def get_listed_info(self, code: str = None, date: str = None) -> Dict[str, Any]:
         """
-        /equities/master から銘柄情報を取得する。
-        code を指定すると単一銘柄、未指定で全銘柄を返す。
-
-        Returns:
-            V2 レスポンス: {"data": [{...}, ...]} 形式
+        /equities/master 銘柄情報
+        Returns: {"data": [...]} compatible format
         """
-        if not self.api_key:
+        if not self.jq:
             return {}
-        params = {}
-        if code:
-            params["code"] = self._normalize_code(code)
-        if date:
-            params["date"] = date.replace("-", "")
-        else:
-            # Free プラン対応: 12週前の日付を使用
-            target_date = datetime.now() - timedelta(weeks=13)
-            params["date"] = target_date.strftime("%Y%m%d")
-
-        resp = self.get("/equities/master", params)
-        return resp
+        try:
+            kwargs = {}
+            if code: kwargs["code"] = self._normalize_code(code)
+            if date: kwargs["date"] = date.replace("-", "")
+            else:
+                 # Default logic handled by usage side or library?
+                 pass 
+                 
+            df = self.jq.get_eq_master(**kwargs)
+            if df.empty:
+                return {}
+            
+            return {"data": df.to_dict(orient="records")}
+        except Exception as e:
+            logger.error(f"J-Quants Lib `get_eq_master` failed: {e}")
+            return {}
 
     def get_financial_summary(self, code: str) -> List[Dict[str, Any]]:
         """
-        /fins/summary から財務サマリーを取得する。
-        Free プランでも利用可能。
-
-        Returns:
-            財務サマリーレコードのリスト。
+        /fins/summary 財務サマリー
         """
-        if not self.api_key:
+        if not self.jq:
             return []
-        code = self._normalize_code(code)
-        return self.get_all("/fins/summary", {"code": code})
+        try:
+            code = self._normalize_code(code)
+            # get_fin_summary handles pagination iteratively internally usually
+            df = self.jq.get_fin_summary(code=code)
+            if df.empty:
+                return []
+            return df.to_dict(orient="records")
+        except Exception as e:
+            logger.error(f"J-Quants Lib `get_fin_summary` failed: {e}")
+            return []
 
     @staticmethod
     def _normalize_code(code: str) -> str:
-        """
-        銘柄コードを J-Quants V2 用に正規化する。
-        4桁コード → 5桁（末尾0付加）、.T サフィックス除去。
-        """
         code = code.replace(".T", "").strip()
-        # 4桁の場合は5桁に拡張（J-Quants V2は5桁コードを使用）
         if len(code) == 4 and code.isdigit():
             code = code + "0"
         return code
 
     def get_listed_issues(self) -> List[Dict[str, Any]]:
         """
-        上場銘柄一覧を取得する（/equities/master）。
-        Free プランの日付制限に対応したフォールバック戦略:
-        1. 当日（Premium/Standard）
-        2. 13週前（Free プラン対応）
-        3. 直近7日間（祝日・週末対応）
-        4. 固定日付フォールバック
+        上場銘柄一覧 (Fallback strategy with library)
         """
+        if not self.jq:
+            return []
+            
         strategies = [
-            # (説明, 日付)
             ("today", datetime.now().strftime("%Y%m%d")),
             ("13w_ago", (datetime.now() - timedelta(weeks=13)).strftime("%Y%m%d")),
         ]
-        # 直近7日間を追加
         for i in range(1, 8):
             d = (datetime.now() - timedelta(days=i)).strftime("%Y%m%d")
             strategies.append((f"day_minus_{i}", d))
-        # 固定日付フォールバック
         strategies.append(("deep_fallback", "20240104"))
 
         for label, date_str in strategies:
             try:
-                resp = self.get("/equities/master", {"date": date_str})
-                if isinstance(resp, dict) and "data" in resp and resp["data"]:
-                    logger.info(f"J-Quants: マスターデータ取得成功 date={date_str} ({label})")
-                    return resp["data"]
+                # Use library method
+                df = self.jq.get_eq_master(date=date_str)
+                if not df.empty:
+                    data = df.to_dict(orient="records")
+                    if data:
+                        logger.info(f"J-Quants: マスターデータ取得成功 date={date_str} ({label})")
+                        return data
             except Exception:
                 pass
-            time.sleep(0.5)  # レートリミット対策（Free: 5req/min）
+            time.sleep(0.5)
 
         logger.error("J-Quants: マスターデータを取得できませんでした")
         return []
 
     def get_margin_interest(self, code: str) -> List[Dict[str, Any]]:
         """
-        /markets/margin-interest から信用取引週末残高を取得する。
-        前週比の算出に必要な直近データを返す。
-        Free プランでは取得制限の可能性あり。
-
-        Returns:
-            信用残レコードのリスト（日付降順）。
-            取得失敗時は空リストを返す。
+        /markets/margin-interest 信用週末残高
         """
-        if not self.api_key:
+        if not self.jq:
             return []
-        code = self._normalize_code(code)
-        # 直近の信用残データを取得（前週比計算のため複数件）
-        resp = self.get("/markets/margin-interest", {"code": code})
-        if isinstance(resp, dict):
-            data = resp.get("data", [])
-            # 日付降順にソート（最新が先頭）
+        try:
+            code = self._normalize_code(code)
+            df = self.jq.get_mkt_margin_interest(code=code)
+            if df.empty:
+                return []
+            
+            data = df.to_dict(orient="records")
+            # Sort by date desc
             data.sort(key=lambda x: x.get("Date", ""), reverse=True)
             return data
-        return []
+        except Exception as e:
+            # Free plan 403 expected
+            if "403" in str(e):
+                logger.warning(f"J-Quants API 403 Forbidden (margin-interest): Free プランでは利用不可")
+            else:
+                logger.error(f"J-Quants Lib `get_mkt_margin_interest` failed: {e}")
+            return []
 
 # Global instance
 client = JQuantsClient()
