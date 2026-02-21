@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
-from routers import stocks, fundamental, indices, news, ranking, edinet, edinet_docs, fundamentals
+from routers import stocks, fundamental, indices, news, ranking, edinet, edinet_docs, fundamentals, calendar
 
 """
 メインのFastAPIアプリケーション定義ファイル。
@@ -24,7 +24,7 @@ def startup_event():
     # 1. Create Tables
     from database import engine
     from models import stock, master, edinet_file, company_info, stock_impact
-    from models import event_source_policy
+    from models import event_source_policy, event
     stock.Base.metadata.create_all(bind=engine)
     master.Base.metadata.create_all(bind=engine)
     edinet_file.Base.metadata.create_all(bind=engine)
@@ -32,6 +32,8 @@ def startup_event():
     stock_impact.Base.metadata.create_all(bind=engine)
     # イベント自動抽出用テーブル（ソースポリシー＋冪等管理）
     event_source_policy.Base.metadata.create_all(bind=engine)
+    # イベントカレンダー用テーブル
+    event.Base.metadata.create_all(bind=engine)
 
     # 2. Seed Initial Watchlist (if empty)
     db = SessionLocal()
@@ -67,6 +69,7 @@ app.include_router(ranking.router)
 app.include_router(edinet.router, prefix="/api")
 app.include_router(edinet_docs.router, prefix="/api")
 app.include_router(fundamentals.router, prefix="/api")
+app.include_router(calendar.router)
 
 
 @app.get("/", include_in_schema=False)

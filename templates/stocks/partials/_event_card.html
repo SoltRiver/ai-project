@@ -1,0 +1,50 @@
+<!-- 銘柄詳細ページ用イベントカード -->
+<div class="event-card">
+    <h3 class="event-card-title">📅 イベント</h3>
+
+    {% if has_events %}
+    <!-- 次のイベント -->
+    {% if next_event %}
+    <div class="event-next">
+        <span class="event-next-label">次のイベント：</span>
+        <span class="cal-tag cal-tag-{{ 'earnings' if next_event.type_tag == '決算' else 'dividend' }}">{{
+            next_event.type_tag }}</span>
+        <span class="event-next-title">{{ next_event.title }}</span>
+        <span class="event-next-date">{{ next_event.event_date_display }}</span>
+        <span class="cal-event-status cal-status-{{ next_event.status|lower }}">{{ next_event.status_label }}</span>
+    </div>
+    {% endif %}
+
+    <!-- 直近3件 -->
+    {% if recent_events %}
+    <ul class="event-recent-list">
+        {% for evt in recent_events %}
+        <li class="event-recent-item">
+            <span class="event-recent-date">{{ evt.event_date_display }}</span>
+            <span class="cal-tag cal-tag-{{ 'earnings' if evt.type_tag == '決算' else 'dividend' }}">{{ evt.type_tag
+                }}</span>
+            <span class="event-recent-title">{{ evt.title }}</span>
+            <span class="cal-event-status cal-status-{{ evt.status|lower }}">{{ evt.status_label }}</span>
+            <span class="cal-info-icon" tabindex="0"
+                title="ソース: {{ evt.source }}&#10;最終確認: {{ evt.last_verified_at }}{% if evt.notes %}&#10;備考: {{ evt.notes }}{% endif %}">ⓘ</span>
+        </li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+
+    <!-- 配当欠損サマリ -->
+    {% if dividend_missing and dividend_missing.has_missing %}
+    <div class="event-missing-notice">
+        ⚠ 配当：情報不足あり（未取得：{{ dividend_missing.missing_labels|join(' / ') }}）
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="event-empty">
+        イベント情報はまだ取得されていません。
+    </div>
+    {% endif %}
+
+    <!-- カレンダーリンク -->
+    <a href="/calendar?code={{ code }}" class="event-calendar-link">📅 カレンダーで確認</a>
+</div>

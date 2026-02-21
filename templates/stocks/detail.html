@@ -18,6 +18,10 @@
     </div>
 </section>
 
+<!-- イベントカード（htmx遅延ロード） -->
+<div id="event-card-container" hx-get="/partials/events/stock/{{ stock.code }}" hx-trigger="load" hx-swap="innerHTML">
+</div>
+
 <div class="tab-bar" role="tablist" aria-label="タブ切り替え">
     {% for tab in tabs %}
     <button class="tab-button {% if loop.first %}is-active{% endif %}" type="button" data-tab-name="{{ tab.name }}"

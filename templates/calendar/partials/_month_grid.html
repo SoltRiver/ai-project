@@ -1,0 +1,43 @@
+<!-- 月カレンダーグリッド（htmx partial） -->
+<div class="cal-grid-wrapper" data-cal-month="{{ cal.month_str }}">
+    <!-- 月ナビゲーション -->
+    <div class="cal-month-nav">
+        <button type="button" class="cal-nav-btn" onclick="switchMonth('{{ cal.prev_month }}')">◀ 前月</button>
+        <h2 class="cal-month-title">{{ cal.month_label }}</h2>
+        <button type="button" class="cal-nav-btn" onclick="switchMonth('{{ cal.next_month }}')">次月 ▶</button>
+    </div>
+
+    <!-- 曜日ヘッダー -->
+    <div class="cal-grid cal-weekdays">
+        {% for wd in cal.weekdays %}
+        <div class="cal-weekday {% if loop.index == 6 %}sat{% elif loop.index == 7 %}sun{% endif %}">{{ wd }}</div>
+        {% endfor %}
+    </div>
+
+    <!-- 日付セル -->
+    <div class="cal-grid cal-days">
+        {% for cell in cal.cells %}
+        {% if cell.is_empty %}
+        <div class="cal-cell is-empty"></div>
+        {% else %}
+        <div class="cal-cell {% if cell.is_today %}is-today{% endif %} {% if cell.is_selected %}is-selected{% endif %} {% if cell.has_events %}has-events{% endif %}"
+            data-date="{{ cell.date_str }}" onclick="selectDate('{{ cell.date_str }}')" role="button" tabindex="0"
+            aria-label="{{ cell.date_str }}">
+            <span class="cal-day-num">{{ cell.day }}</span>
+            {% if cell.has_events %}
+            <span class="cal-badge">{{ cell.event_count }}</span>
+            {% endif %}
+
+            <div class="cal-cell-tags">
+                {% for tag in cell.tags %}
+                <span class="cal-tag cal-tag-{{ 'earnings' if tag == '決算' else 'dividend' }}">{{ tag }}</span>
+                {% endfor %}
+                {% if cell.extra_count > 0 %}
+                <span class="cal-tag cal-tag-more">+{{ cell.extra_count }}</span>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+        {% endfor %}
+    </div>
+</div>

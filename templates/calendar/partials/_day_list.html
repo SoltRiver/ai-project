@@ -1,0 +1,29 @@
+<!-- 当日イベントリスト（htmx partial） -->
+<div class="cal-day-list">
+    <h3 class="cal-day-title">
+        📋 {{ selected_date }}
+    </h3>
+
+    {% if day_events and day_events|length > 0 %}
+    <ul class="cal-event-list">
+        {% for evt in day_events %}
+        <li class="cal-event-item">
+            <div class="cal-event-row">
+                <span class="cal-tag cal-tag-{{ 'earnings' if evt.type_tag == '決算' else 'dividend' }}">{{ evt.type_tag
+                    }}</span>
+                <span class="cal-event-code">{{ evt.stock_code }}</span>
+                <span class="cal-event-title">{{ evt.title }}</span>
+                <span class="cal-event-status cal-status-{{ evt.status|lower }}">{{ evt.status_label }}</span>
+                <!-- 情報アイコン（ツールチップ） -->
+                <span class="cal-info-icon" tabindex="0"
+                    title="ソース: {{ evt.source }}&#10;最終確認: {{ evt.last_verified_at }}{% if evt.notes %}&#10;備考: {{ evt.notes }}{% endif %}">ⓘ</span>
+            </div>
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <div class="cal-empty">
+        該当するイベントはありません。
+    </div>
+    {% endif %}
+</div>

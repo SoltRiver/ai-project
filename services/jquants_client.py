@@ -267,5 +267,24 @@ class JQuantsClient:
                 logger.error(f"J-Quants Lib `get_mkt_margin_interest` failed: {e}")
             return []
 
+    def get_earnings_calendar(self) -> List[Dict[str, Any]]:
+        """
+        決算発表予定日カレンダーを取得（/eq/earnings_cal）
+        全銘柄分を一括取得し、呼び出し側でフィルタする。
+        """
+        if not self.jq:
+            return []
+        try:
+            df = self.jq.get_eq_earnings_cal()
+            if df.empty:
+                return []
+            return df.to_dict(orient="records")
+        except Exception as e:
+            if "403" in str(e):
+                logger.warning("J-Quants API 403 Forbidden (earnings_cal): Free プランでは利用不可の可能性")
+            else:
+                logger.error(f"J-Quants Lib `get_eq_earnings_cal` failed: {e}")
+            return []
+
 # Global instance
 client = JQuantsClient()

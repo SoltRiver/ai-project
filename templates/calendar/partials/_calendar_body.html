@@ -1,0 +1,22 @@
+<!-- カレンダー本体（月グリッド + 日リスト） -->
+<!-- refresh後の全体差し替え用 -->
+{% if sync_result is defined and sync_result %}
+<div class="cal-sync-result">
+    ✅ 同期完了: {{ sync_result.upserted }}件更新
+    {% if sync_result.errors %}
+    <span class="cal-sync-warn">（{{ sync_result.errors|length }}件エラー）</span>
+    {% endif %}
+</div>
+{% endif %}
+
+<div class="cal-layout">
+    <!-- 左: 月カレンダーグリッド -->
+    <div id="cal-grid-container">
+        {% include "calendar/partials/_month_grid.html" %}
+    </div>
+
+    <!-- 右: 当日リスト -->
+    <div id="cal-day-container">
+        {% include "calendar/partials/_day_list.html" %}
+    </div>
+</div>
