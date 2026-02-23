@@ -180,6 +180,20 @@
         });
     </script>
 
+    {# ===== EDINET 差分比較セクション（htmx パーシャル） ===== #}
+    {% if doc_id and doc_id != "N/A" %}
+    <div style="margin-top: 2rem;">
+        <div id="edinet-diff-container" hx-get="/partials/edinet/diff_summary?doc_id={{ doc_id }}" hx-trigger="load"
+            hx-swap="innerHTML">
+            {# ローディング表示 #}
+            <div class="diff-loading" id="diff-loading">
+                <div class="diff-loading-spinner"></div>
+                <p>EDINET 差分データを読み込み中...</p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     {% endif %}
 </div>
 {% endblock %}

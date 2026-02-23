@@ -1,6 +1,15 @@
+# EDINET 指標定義（差分比較機能対応）
+# category: PL（損益計算書）/ CF（キャッシュフロー）/ BS（貸借対照表）
+# is_fixed: true = 固定6項目、false = 変化大候補
+# order: 固定6項目の表示順
+
 metrics:
-  - metric_key: net_sales
+  # ===== 固定6項目（この順で常に表示） =====
+  - metric_key: revenue
     metric_label: 売上高
+    category: PL
+    is_fixed: true
+    order: 1
     concept_candidates:
       # J-GAAP
       - "jppfs_cor:NetSales"
@@ -15,6 +24,9 @@ metrics:
 
   - metric_key: operating_profit
     metric_label: 営業利益
+    category: PL
+    is_fixed: true
+    order: 2
     concept_candidates:
       # J-GAAP
       - "jppfs_cor:OperatingIncome"
@@ -24,24 +36,115 @@ metrics:
       - "jpcrp_cor:OperatingIncome"
     prefer_duration_days_range: [300, 400]
 
-  - metric_key: ordinary_profit
-    metric_label: 経常利益
-    concept_candidates:
-      # J-GAAP
-      - "jppfs_cor:OrdinaryIncome"
-      # JP-CR
-      - "jpcrp_cor:OrdinaryIncome"
-      # IFRS (No direct equivalent, usually PreTaxProfit or similar, but for safety keep strict)
-    prefer_duration_days_range: [300, 400]
-
   - metric_key: net_income
     metric_label: 当期純利益
+    category: PL
+    is_fixed: true
+    order: 3
     concept_candidates:
       # J-GAAP
       - "jppfs_cor:NetIncome"
-      - "jppfs_cor:CurrentNetIncome"
+      - "jppfs_cor:ProfitLossAttributableToOwnersOfParent"
       # IFRS
       - "ifrs-full:ProfitLoss"
       # JP-CR
       - "jpcrp_cor:NetIncome"
     prefer_duration_days_range: [300, 400]
+
+  - metric_key: operating_cf
+    metric_label: 営業CF
+    category: CF
+    is_fixed: true
+    order: 4
+    concept_candidates:
+      # J-GAAP
+      - "jppfs_cor:NetCashProvidedByUsedInOperatingActivities"
+      # JP-CR
+      - "jpcrp_cor:NetCashProvidedByUsedInOperatingActivities"
+    prefer_duration_days_range: [300, 400]
+
+  - metric_key: total_assets
+    metric_label: 総資産
+    category: BS
+    is_fixed: true
+    order: 5
+    concept_candidates:
+      # J-GAAP
+      - "jppfs_cor:TotalAssets"
+      # JP-CR
+      - "jpcrp_cor:TotalAssets"
+    prefer_duration_days_range: null  # instant 指標
+
+  - metric_key: equity_ratio
+    metric_label: 自己資本比率
+    category: BS
+    is_fixed: true
+    order: 6
+    derived: true  # equity / total_assets で算出
+    source_metrics:
+      - equity
+      - total_assets
+    concept_candidates: []
+    prefer_duration_days_range: null
+
+  # ===== 固定6で使用する補助指標（直接表示はしないが equity_ratio 計算に必要） =====
+  - metric_key: equity
+    metric_label: 株主資本
+    category: BS
+    is_fixed: false
+    is_helper: true
+    concept_candidates:
+      - "jppfs_cor:ShareholdersEquity"
+      - "jppfs_cor:OwnersEquity"
+      - "jppfs_cor:NetAssets"
+      # JP-CR
+      - "jpcrp_cor:ShareholdersEquity"
+    prefer_duration_days_range: null
+
+  # ===== 変化大候補（固定6を除外した追加指標） =====
+  - metric_key: ordinary_profit
+    metric_label: 経常利益
+    category: PL
+    is_fixed: false
+    concept_candidates:
+      # J-GAAP
+      - "jppfs_cor:OrdinaryIncome"
+      # JP-CR
+      - "jpcrp_cor:OrdinaryIncome"
+    prefer_duration_days_range: [300, 400]
+
+  - metric_key: investing_cf
+    metric_label: 投資CF
+    category: CF
+    is_fixed: false
+    concept_candidates:
+      - "jppfs_cor:NetCashProvidedByUsedInInvestingActivities"
+      - "jpcrp_cor:NetCashProvidedByUsedInInvestingActivities"
+    prefer_duration_days_range: [300, 400]
+
+  - metric_key: financing_cf
+    metric_label: 財務CF
+    category: CF
+    is_fixed: false
+    concept_candidates:
+      - "jppfs_cor:NetCashProvidedByUsedInFinancingActivities"
+      - "jpcrp_cor:NetCashProvidedByUsedInFinancingActivities"
+    prefer_duration_days_range: [300, 400]
+
+  - metric_key: cash_end
+    metric_label: 現金及び現金同等物期末残高
+    category: BS
+    is_fixed: false
+    concept_candidates:
+      - "jppfs_cor:CashAndCashEquivalents"
+      - "jpcrp_cor:CashAndCashEquivalents"
+    prefer_duration_days_range: null
+
+  - metric_key: net_assets
+    metric_label: 純資産
+    category: BS
+    is_fixed: false
+    concept_candidates:
+      - "jppfs_cor:NetAssets"
+      - "jpcrp_cor:NetAssets"
+    prefer_duration_days_range: null

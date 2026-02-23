@@ -1,7 +1,7 @@
 # 株価分析アプリ（StockAnalyst AI）仕様書
 
-> **最終更新日**: 2026-02-15
-> **バージョン**: v2.0
+> **最終更新日**: 2026-02-21
+> **バージョン**: v2.1
 
 ## 1. 概要
 
@@ -46,13 +46,14 @@
 ### 2.2 銘柄詳細（Stock Detail）
 **パス**: `/stocks/{code}`
 
-タブ切り替え（htmx による部分更新）で以下の4つのビューを提供：
+タブ切り替え（htmx による部分更新）で以下の5つのビューを提供：
 
 | タブ名 | アイコン | パス | 内容 |
 | :--- | :--- | :--- | :--- |
 | テクニカル分析 | 📈 | `/stocks/{code}/tab/chart` | チャート・テクニカル指標 |
 | ファンダメンタル分析 | 📊 | `/stocks/{code}/tab/fundamental` | 財務データ・投資指標 |
 | 配当 | 💰 | `/stocks/{code}/tab/dividend` | 配当履歴・配当利回り |
+| 需給 | ⚖️ | `/stocks/{code}/tab/margin` | 信用残データ・需給分析 |
 | 株主優待 | 🎁 | `/stocks/{code}/tab/shareholder` | 株主優待情報 |
 
 #### 2.2.1 テクニカル分析タブ（Chart）
@@ -79,7 +80,21 @@
 - **表示項目**: 配当履歴、配当利回り、配当性向（EPS ベース）、現在株価。
 - **データソース表記**: "jquants" / "yfinance" / "none" のソース情報を表示。
 
-#### 2.2.4 株主優待タブ（Shareholder Benefits）
+#### 2.2.4 需給タブ（Supply/Demand）
+- **データソース**: J-Quants API V2 `/markets/margin-interest` エンドポイントから信用取引週末残高を取得。
+- **表示項目**（固定順）:
+  1. **需給サイズ（相対）** — 総残高 / ADV20 を日数換算し「低・中・高」に分類。データ不足時は「暫定」表示。
+  2. **構成比バー** — 買い残・売り残の100%横分割バー（バー外に%表示）。
+  3. **絶対量** — 信用買い残・信用売り残・総残高（株数）。
+  4. **前週比** — 増減株数 + 増減率%。
+  5. **偏り分類** — 5段階（買い偏り強/弱、偏りなし、売り偏り弱/強）+ 判定保留。
+  6. **信頼度** — ◎高 / 〇中 / △低 / —未確定。
+  7. **注意文** — 「信用残は需給の一側面であり、価格の方向性を示すものではありません」
+- **安全性設計**: 価格予測を想起させる文言は一切使用しない。色は淡色（muted）を使用。
+- **ロジック**: `services/margin_service.py` に集約（ADV20算出時の外れ値クリップ、偏り5段階分類等）。
+- **フォールバック**: API取得失敗時は「信用残データを取得できませんでした」メッセージを表示。
+
+#### 2.2.5 株主優待タブ（Shareholder Benefits）
 - 株主優待情報の表示（将来拡張向けの基盤実装済み）。
 
 ### 2.3 市場インデックス（Market Indices）
@@ -222,19 +237,22 @@
 | 市場データ | Yahoo Finance (yfinance) | 株価、指数、ニュース、配当の取得 |
 | 銘柄マスター | J-Quants API V2 | 上場銘柄一覧(`/equities/master`)、株価データ(`/equities/bars/daily`)、発行済株式数 |
 | 財務サマリー | J-Quants API V2 | 財務サマリー(`/fins/summary`)、配当(`/fins/dividend`) |
+| 信用残 | J-Quants API V2 | 信用取引週末残高(`/markets/margin-interest`) ※Free プランでは403 |
 | 財務情報 | EDINET API v2 (ZIP/XBRL) | 有価証券報告書の取得、XBRLパース、財務数値抽出 |
 | AI / NLP | Google Gemini API | ニュース翻訳・要約、ランキング分析、銘柄影響分析 |
 | AI / NLP | OpenAI API | ニュース分析・株式分析のバックアップ、テクニカル/ファンダメンタル総合分析 |
 
 ### 5.1 J-Quants API V2 対応
 
-- **認証方式**: `x-api-key` ヘッダー
+- **公式クライアント**: `jquants-api-client` (v2.0.0) の `ClientV2` クラスを使用。`services/jquants_client.py` が Adapter として機能し、アプリ内の各サービスに統一インターフェースを提供。
+- **認証方式**: `x-api-key` ヘッダー（`ClientV2(api_key=...)` で初期化）
 - **Free プラン制限対応**:
   - `/equities/master`: 13週前の日付を使用するフォールバック戦略（当日→13週前→直近7日間→固定日付）
   - `/fins/dividend`: 403エラー（Light以上が必要）→ yfinance にフォールバック
+  - `/markets/margin-interest`: 403エラー（Free プラン不可）→ フォールバックUI表示
   - レートリミット: 5req/min 対策として0.5秒のスリープ
 - **コード正規化**: 4桁→5桁（末尾0付加）、`.T` サフィックス除去
-- **ページネーション**: `pagination_key` による全件取得対応
+- **戻り値変換**: 公式クライアントが返す pandas DataFrame を `List[Dict]` に変換し、既存コードとの互換性を維持
 
 ---
 
@@ -265,12 +283,13 @@ ai-project/
 ├── services/                # ビジネスロジック
 │   ├── stock_service.py     # 銘柄情報・チャート・パターン（94KB）
 │   ├── stock_master_service.py # 銘柄マスター同期
+│   ├── margin_service.py    # 需給タブ用ロジック（信用残分析）
 │   ├── data_fetcher.py      # yfinance データ取得
 │   ├── market_indices.py    # 主要指標取得
 │   ├── news_service.py      # ニュース取得・AI分析連携
 │   ├── ranking_service.py   # ランキング計算・AI解説
 │   ├── ai_client.py         # AI連携（Gemini/OpenAI）
-│   ├── jquants_client.py    # J-Quants API V2 クライアント
+│   ├── jquants_client.py    # J-Quants API V2 クライアント（jquants-api-client Adapter）
 │   ├── jquants_market_fetcher.py # J-Quantsマーケットデータ取得
 │   ├── financial_analyzer.py # ファンダメンタル分析エンジン
 │   ├── fundamental_fetcher.py # ファンダメンタルデータ取得
@@ -304,6 +323,7 @@ ai-project/
 │   │       ├── _tab_chart.html       # テクニカル分析タブ
 │   │       ├── _tab_fundamental.html # ファンダメンタルタブ
 │   │       ├── _tab_dividend.html    # 配当タブ
+│   │       ├── _tab_margin.html      # 需給タブ
 │   │       └── _tab_shareholder.html # 株主優待タブ
 │   ├── indices/index.html   # 指標一覧
 │   ├── news/index.html      # ニュース一覧
@@ -358,6 +378,7 @@ ai-project/
 
 ### 金融・データ取得
 - `yfinance >= 0.2.28` — Yahoo Financeデータ取得
+- `jquants-api-client >= 2.0.0` — J-Quants API V2 公式クライアント
 - `edinet-xbrl >= 0.2.0` — EDINETデータパース
 - `requests >= 2.31.0` — HTTP通信
 

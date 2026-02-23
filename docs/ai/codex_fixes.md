@@ -390,3 +390,14 @@
     - **テーブル作成**: event_source_policy, event_ingest_state 正常作成。
     - **ポリシーシード**: EDINET_API(有効), TDNET_API(無効), MANUAL(有効) 投入確認。
     - **Regression**: 全主要ページ・タブ HTTP 200 確認。
+
+### Review Session 34 (EDINET 差分比較機能 実装)
+- **Status**: **Success** (Executed 2026-02-23).
+- **Scope**: `services/edinet_diff_service.py`, `routers/edinet_diff.py`, `models/edinet_facts_snapshot.py`, `models/edinet_diff_summary.py`, `templates/partials/edinet/_diff_summary.html`, `fastapi_app.py`, `static/css/theme.css`, `config/edinet_metrics.yml`.
+- **Findings**:
+    1. **`_compute_metric_diff` のロジックバグ**: `is_missing` が `current_val is None or prev_val is None` で判定されていたため、初回取得（prev無し）の場合に全固定6項目が「情報不足」と表示されていた。
+- **Action**:
+    - `is_missing` を `current_val is None` のみで判定するよう修正。`prev_val is None` の場合は差分計算不可だが「欠損」ではない。
+- **Verification**:
+    - **Unit Tests**: `tests/test_edinet_diff.py` 24件全テスト PASSED。
+    - **Browser**: 差分パーシャルエンドポイントのエラー表示確認。

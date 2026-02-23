@@ -1,0 +1,242 @@
+{# EDINET 差分サマリーパーシャル（htmx フラグメント） #}
+{# hx-get="/partials/edinet/diff_summary?doc_id=..." で呼び出される #}
+
+{% if diff.status == "failed" %}
+{# ===== 失敗時の表示 ===== #}
+<div class="edinet-diff-error">
+    <h4>📊 EDINET 差分比較</h4>
+    <div class="diff-error-message">
+        <p>{{ diff.notes or "差分データの生成に失敗しました。" }}</p>
+        <button class="btn-reload" hx-get="/partials/edinet/diff_summary?doc_id={{ doc_id }}&force=true"
+            hx-target="#edinet-diff-container" hx-swap="innerHTML" hx-indicator="#diff-loading">
+            再読込
+        </button>
+    </div>
+</div>
+
+{% elif diff.status in ["ok", "partial"] %}
+{# ===== 正常時の表示 ===== #}
+<div class="edinet-diff-summary">
+    <h4>📊 EDINET 差分比較（有価証券報告書）</h4>
+
+    {# ---- 1) 比較対象ブロック ---- #}
+    <div class="diff-comparison-header">
+        <div class="diff-doc-pair">
+            <div class="diff-doc-item">
+                <span class="diff-label">今回</span>
+                <span class="diff-doc-id">{{ diff.current_doc_id }}</span>
+                <span class="diff-date">{{ diff.current_submit_date or "—" }}</span>
+                <span class="diff-period">{{ diff.current_period or "" }}</span>
+            </div>
+
+            {% if diff.has_prev %}
+            <span class="diff-arrow">↔</span>
+            <div class="diff-doc-item">
+                <span class="diff-label">前回</span>
+                <span class="diff-doc-id">{{ diff.prev_doc_id }}</span>
+                <span class="diff-date">{{ diff.prev_submit_date or "—" }}</span>
+                <span class="diff-period">{{ diff.prev_period or "" }}</span>
+            </div>
+            {% else %}
+            <div class="diff-doc-item diff-no-prev">
+                <span class="diff-label">前回</span>
+                <span class="diff-notice">比較対象なし（初回取得）</span>
+            </div>
+            {% endif %}
+        </div>
+
+        {% if diff.scope_mismatch %}
+        <div class="diff-warning">
+            ⚠ 注意：連結/個別の区分が一致しない可能性があります
+        </div>
+        {% endif %}
+    </div>
+
+    {# ---- 2) 変化が大きい項目（最大3件） ---- #}
+    <div class="diff-top-changes">
+        <h5>変化が大きい項目（最大3件）</h5>
+
+        {% if diff.top_changes_error %}
+        <div class="diff-info-note">
+            ℹ {{ diff.top_changes_error }}
+        </div>
+        {% elif not diff.has_prev %}
+        <div class="diff-info-note">
+            ℹ 比較対象なし（初回取得）のため、変化大の抽出は行いません。
+        </div>
+        {% elif diff.top_changes and diff.top_changes | length > 0 %}
+        <div class="diff-change-cards">
+            {% for item in diff.top_changes %}
+            <div class="diff-change-card">
+                <div class="change-card-header">
+                    <span class="change-metric-label">{{ item.metric_label }}</span>
+                    <span class="change-category-badge badge-{{ item.category | lower }}">{{ item.category }}</span>
+                </div>
+                <div class="change-card-body">
+                    <div class="change-values">
+                        <span class="change-current">{{ item.current_value | fmt_num }} 百万円</span>
+                        <span class="change-arrow">←</span>
+                        <span class="change-prev">{{ item.prev_value | fmt_num }} 百万円</span>
+                    </div>
+                    <div class="change-delta">
+                        <span
+                            class="delta-value {% if item.delta and item.delta | float > 0 %}delta-positive{% elif item.delta and item.delta | float < 0 %}delta-negative{% endif %}">
+                            {{ item.delta | fmt_delta }}
+                        </span>
+                        <span
+                            class="delta-pct {% if item.delta_pct is not none and item.delta_pct > 0 %}delta-positive{% elif item.delta_pct is not none and item.delta_pct < 0 %}delta-negative{% endif %}">
+                            {{ item.delta_pct | fmt_pct }}
+                        </span>
+                    </div>
+                </div>
+                {# ツールチップ（根拠情報） #}
+                <div class="change-source-info"
+                    title="source: {{ item.source_locator or '—' }} / scope: {{ item.consolidation_scope or '—' }}">
+                    <small>📎 {{ item.source_locator or "—" }}</small>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="diff-info-note">
+            変化が大きい項目：該当なし
+        </div>
+        {% endif %}
+    </div>
+
+    {# ---- 3) 固定6項目テーブル ---- #}
+    {% if diff.fixed_six %}
+    <div class="diff-fixed-table">
+        <h5>主要指標比較</h5>
+        <div class="table-responsive">
+            <table class="diff-table">
+                <thead>
+                    <tr>
+                        <th>指標</th>
+                        <th class="text-right">今回</th>
+                        <th class="text-right">前回</th>
+                        <th class="text-right">差分</th>
+                        <th class="text-right">差分率</th>
+                        <th>単位</th>
+                        <th>連結区分</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in diff.fixed_six %}
+                    <tr class="{% if item.is_missing %}row-missing{% endif %}">
+                        <td class="metric-name">
+                            {{ item.metric_label }}
+                            {% if item.is_missing %}
+                            <span class="missing-badge" title="情報不足">ℹ</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-right">
+                            {% if item.current_value is not none %}
+                            {% if item.metric_key == "equity_ratio" %}
+                            {{ "%.1f" | format(item.current_value | float * 100) }}%
+                            {% else %}
+                            {{ item.current_value | fmt_num }}
+                            {% endif %}
+                            {% else %}
+                            <span class="missing-value">—</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-right">
+                            {% if diff.has_prev %}
+                            {% if item.prev_value is not none %}
+                            {% if item.metric_key == "equity_ratio" %}
+                            {{ "%.1f" | format(item.prev_value | float * 100) }}%
+                            {% else %}
+                            {{ item.prev_value | fmt_num }}
+                            {% endif %}
+                            {% else %}
+                            <span class="missing-value">—</span>
+                            {% endif %}
+                            {% else %}
+                            <span class="no-prev">—</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-right">
+                            {% if diff.has_prev and not item.is_missing %}
+                            <span
+                                class="{% if item.delta and item.delta | float > 0 %}delta-positive{% elif item.delta and item.delta | float < 0 %}delta-negative{% endif %}">
+                                {% if item.metric_key == "equity_ratio" %}
+                                {% if item.delta is not none %}
+                                {{ "%+.1f" | format(item.delta | float * 100) }}pt
+                                {% else %}
+                                —
+                                {% endif %}
+                                {% else %}
+                                {{ item.delta | fmt_delta }}
+                                {% endif %}
+                            </span>
+                            {% else %}
+                            <span class="missing-value">—</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-right">
+                            {% if diff.has_prev and not item.is_missing %}
+                            <span
+                                class="{% if item.delta_pct is not none and item.delta_pct > 0 %}delta-positive{% elif item.delta_pct is not none and item.delta_pct < 0 %}delta-negative{% endif %}">
+                                {{ item.delta_pct | fmt_pct }}
+                            </span>
+                            {% else %}
+                            <span class="missing-value">—</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if item.metric_key == "equity_ratio" %}
+                            %
+                            {% elif item.unit and item.unit != "—" %}
+                            百万円
+                            {% else %}
+                            —
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="scope-badge" title="{{ item.source_locator or '—' }}">
+                                {{ item.consolidation_scope or "—" }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    {# ---- 4) 根拠・メタ情報 ---- #}
+    <div class="diff-meta-footer">
+        <div class="diff-meta-items">
+            <span class="diff-meta-item" title="生成日時">
+                🕐 {{ diff.generated_at or "—" }}
+            </span>
+            <span class="diff-meta-item diff-status-{{ diff.status }}">
+                {% if diff.status == "ok" %}✅ 全指標取得{% elif diff.status == "partial" %}⚠ 一部欠損{% endif %}
+            </span>
+        </div>
+        {% if diff.notes %}
+        <div class="diff-notes">
+            {% for note in diff.notes.split('\n') %}
+            <p class="diff-note-item">📝 {{ note }}</p>
+            {% endfor %}
+        </div>
+        {% endif %}
+        <p class="diff-disclaimer">
+            表示は取得できた数値に基づく差分です。反応は市場の事前期待等により異なります。
+        </p>
+    </div>
+</div>
+
+{% else %}
+{# ===== データなし ===== #}
+<div class="edinet-diff-empty">
+    <h4>📊 EDINET 差分比較</h4>
+    <p>差分データがありません。</p>
+    <button class="btn-reload" hx-get="/partials/edinet/diff_summary?doc_id={{ doc_id }}&force=true"
+        hx-target="#edinet-diff-container" hx-swap="innerHTML" hx-indicator="#diff-loading">
+        生成する
+    </button>
+</div>
+{% endif %}
