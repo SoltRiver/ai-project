@@ -1,7 +1,7 @@
 # 株価分析アプリ（StockAnalyst AI）仕様書
 
-> **最終更新日**: 2026-02-21
-> **バージョン**: v2.1
+> **最終更新日**: 2026-02-23
+> **バージョン**: v2.2
 
 ## 1. 概要
 
@@ -74,6 +74,7 @@
 - **投資指標算出**: J-Quants API（株価データ）とEDINET（財務データ）を統合し、PER（株価収益率）、PBR（株価純資産倍率）、ROE（自己資本利益率）、EPS、BPSを自動算出・表示。
 - **データソース（Hybrid）**: EDINET API v2（XBRL）+ J-Quants API（Daily Quotes / Listed Info）。
 - **フォールバック機能**: 市場データ取得失敗時（または未認証時）でも、財務データのみを用いた分析レポートを表示可能。
+- **EDINET 差分比較**: 前回の有価証券報告書との数値を自動比較し、「固定6指標」の増減と「変化の大きい項目（最大3件）」を表示。htmx 連携による非同期ロード（`/partials/edinet/diff_summary`）。
 
 #### 2.2.3 配当タブ（Dividend）
 - **配当データ取得**: J-Quants API を優先し、取得不可時は yfinance にフォールバック。
@@ -166,11 +167,16 @@
 - **市場データ連携**: J-Quants API から株価データを取得し、PER/PBR/ROE 等の投資指標を自動算出（`with_market=True` オプション）。
 - **フォールバック**: J-Quants取得失敗時でも財務データのみのレポートを表示。
 
-### 2.10 個別銘柄ファンダメンタル分析
-**パス**: `/stocks/{symbol}/fundamental`
-
 - `FinancialAnalyzer` サービスを使用したシンボルベースのファンダメンタル分析。
 - EDINET 書類の検索・ダウンロード・解析を自動で実行。
+
+### 2.11 EDINET 差分比較（Diff Feature）
+**パス**: `/partials/edinet/diff_summary?doc_id=...`
+
+- **自動比較**: 同一企業の「今回」と「前回」の有価証券報告書を自動特定し、財務数値を正規化した上で比較。
+- **重要変化抽出**: 独自の「二段階閾値 + スケール・絶対額スコアリング」により、多数の勘定科目の中から投資家が注目すべき変化（売上高の急増、負債の減少等）を最大3件抽出。
+- **固定指標表示**: 売上高、営業利益、親会社株主利益、総資産、純資産、自己資本比率の6項目を固定で比較表示。
+- **免責事項**: 投資判断は自己責任である旨を明記。
 
 ---
 
@@ -215,6 +221,8 @@
 | `stocks` | `Stock` | ウォッチリスト（code, added_at） |
 | `stock_master` | `StockMaster` | 銘柄マスター（code, name, market, updated_at） |
 | `app_sync_status` | `AppSyncStatus` | データ同期ステータス管理 |
+| `edinet_facts_snapshot` | `EdinetFactsSnapshot` | 正規化済み財務データのスナップショット |
+| `edinet_diff_summary` | `EdinetDiffSummary` | 差分比較結果のサマリーキャッシュ |
 
 ### 4.2 DDL設計（将来拡張用）
 `ddl/create_tables.sql` に以下のテーブルを定義済み（MySQL/InnoDB向け）:
@@ -268,7 +276,12 @@ ai-project/
 │
 ├── models/                  # SQLAlchemy モデル
 │   ├── stock.py             # Stock (ウォッチリスト)
-│   └── master.py            # StockMaster, AppSyncStatus
+│   ├── master.py            # StockMaster, AppSyncStatus
+│   ├── edinet_facts_snapshot.py # [NEW] 財務スナップショット
+│   └── edinet_diff_summary.py   # [NEW] 差分サマリー
+│
+├── schemas/                 # [NEW] Pydantic レスポンスモデル
+│   └── response_models.py   # JSON API 用型定義
 │
 ├── routers/                 # FastAPI ルーター
 │   ├── stocks.py            # 銘柄管理・用語集・ローソク足
@@ -278,7 +291,8 @@ ai-project/
 │   ├── fundamental.py       # 個別銘柄ファンダメンタル
 │   ├── fundamentals.py      # EDINETファンダメンタルズAPI
 │   ├── edinet.py            # EDINET書類API
-│   └── edinet_docs.py       # EDINET書類ダウンロード・解析
+│   ├── edinet_docs.py       # EDINET書類ダウンロード・解析
+│   └── edinet_diff.py       # [NEW] EDINET差分API (htmx)
 │
 ├── services/                # ビジネスロジック
 │   ├── stock_service.py     # 銘柄情報・チャート・パターン（94KB）
@@ -299,7 +313,8 @@ ai-project/
 │   ├── edinet_fetcher.py    # EDINET書類フェッチ
 │   ├── edinet_document_store.py # EDINET書類ストレージ
 │   ├── edinet_xbrl_locator.py  # XBRLファイルロケーター
-│   └── edinet_fin_extract.py   # XBRL財務データ抽出
+│   ├── edinet_fin_extract.py   # XBRL財務データ抽出
+│   └── edinet_diff_service.py  # [NEW] 差分計算ロジック
 │
 ├── utils/                   # ユーティリティ
 │   ├── analyzer.py          # テクニカル指標計算（SMA/RSI/トレンド等）
@@ -434,6 +449,7 @@ ai-project/
 | GET | `/api/edinet/documents/{doc_id}/financials` | 財務データ抽出 |
 | GET | `/api/fundamentals/reports/{doc_id}` | ファンダメンタルレポート（HTML） |
 | GET | `/api/fundamentals/edinet/{doc_id}` | ファンダメンタルデータ（JSON） |
+| GET | `/partials/edinet/diff_summary` | EDINET差分サマリー（htmx） |
 | GET | `/healthz` | ヘルスチェック |
 
 ---

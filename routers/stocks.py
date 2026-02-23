@@ -172,7 +172,9 @@ async def delete_stocks(request: Request, db: Session = Depends(get_db)):
 
 
 from fastapi.responses import JSONResponse
-@router.get("/api/stocks/search")
+from schemas.response_models import StockSearchResponse
+
+@router.get("/api/stocks/search", response_model=StockSearchResponse)
 async def search_stocks_api(q: str = ""):
     results = stock_service.search_stocks(q)
     # Format for autocomplete: "Name (Code)"

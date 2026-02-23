@@ -1,7 +1,9 @@
 
 from fastapi import APIRouter, HTTPException, Query, BackgroundTasks, Request
+from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from typing import Dict, Any
+from schemas.response_models import EdinetDownloadResponse, EdinetFinancialsResponse
 import os
 import logging
 from services.edinet_client import EdinetClient, EdinetAPIError
@@ -14,7 +16,7 @@ router = APIRouter(prefix="/edinet/documents", tags=["edinet_docs"])
 templates = Jinja2Templates(directory="templates")
 logger = logging.getLogger(__name__)
 
-@router.get("/ui/search", include_in_schema=False)
+@router.get("/ui/search", response_class=HTMLResponse, include_in_schema=False)
 async def search_documents_ui(request: Request, date: str = Query(None), sec_code: str = Query(None)):
     """
     UI for searching EDINET documents.
@@ -70,7 +72,7 @@ async def search_documents_ui(request: Request, date: str = Query(None), sec_cod
             "error": str(e)
         })
 
-@router.get("/{doc_id}/download")
+@router.get("/{doc_id}/download", response_model=EdinetDownloadResponse)
 async def download_document(doc_id: str, force: bool = False) -> Dict[str, Any]:
     """
     Download ZIP, extract, and locate XBRL.
@@ -115,7 +117,7 @@ async def download_document(doc_id: str, force: bool = False) -> Dict[str, Any]:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Processing failed: {str(e)}")
 
-@router.get("/{doc_id}/financials")
+@router.get("/{doc_id}/financials", response_model=EdinetFinancialsResponse)
 async def extract_financials(doc_id: str) -> Dict[str, Any]:
     """
     Extract financials from Primary XBRL.

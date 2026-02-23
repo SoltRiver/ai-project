@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Request
+from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from services.market_indices import get_major_indices
 
@@ -9,7 +10,7 @@ from services.market_indices import get_major_indices
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
 
-@router.get("/indices")
+@router.get("/indices", response_class=HTMLResponse)
 async def indices_view(request: Request):
     """
     主要指標一覧ページを表示します。

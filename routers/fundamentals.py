@@ -3,6 +3,7 @@ from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from typing import Dict, Any, Optional
+from schemas.response_models import EdinetFundamentalResponse
 import logging
 from services.edinet_client import EdinetClient
 from services.edinet_document_store import EdinetDocumentStore
@@ -55,7 +56,7 @@ async def get_fundamental_report(request: Request, doc_id: str):
             "doc_id": doc_id
         }, status_code=500)
 
-@router.get("/edinet/{doc_id}")
+@router.get("/edinet/{doc_id}", response_model=EdinetFundamentalResponse)
 async def get_edinet_fundamental(doc_id: str, with_market: bool = False):
     """
     Get fundamental data from EDINET document.

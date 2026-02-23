@@ -1,6 +1,7 @@
 
 from fastapi import APIRouter, HTTPException, Query
 from typing import Dict, Any, List
+from schemas.response_models import EdinetDocumentsResponse, EdinetHealthResponse
 from datetime import datetime
 import os
 import logging
@@ -10,7 +11,7 @@ from services.edinet_client import EdinetAPIError
 router = APIRouter(prefix="/edinet", tags=["edinet"])
 logger = logging.getLogger(__name__)
 
-@router.get("/documents")
+@router.get("/documents", response_model=EdinetDocumentsResponse)
 async def get_documents(
     date: str = Query(..., regex="^\d{4}-\d{2}-\d{2}$", description="YYYY-MM-DD"),
     type: int = Query(2, ge=1, le=2, description="1 or 2")
@@ -35,7 +36,7 @@ async def get_documents(
         traceback.print_exc()
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
-@router.get("/health")
+@router.get("/health", response_model=EdinetHealthResponse)
 async def health_check():
     api_key = os.environ.get("EDINET_API_KEY")
     has_key = bool(api_key)

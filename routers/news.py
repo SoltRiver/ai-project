@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Request
+from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from services.news_service import fetch_and_analyze_market_news
 
@@ -10,7 +11,7 @@ AI分析済みのマーケットニュースを提供する。
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
 
-@router.get("/news")
+@router.get("/news", response_class=HTMLResponse)
 async def news_index(request: Request):
     """
     マーケットニュース一覧を表示する。
