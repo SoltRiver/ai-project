@@ -1,42 +1,66 @@
-<!-- 月カレンダーグリッド（htmx partial） -->
-<div class="cal-grid-wrapper" data-cal-month="{{ cal.month_str }}">
-    <!-- 月ナビゲーション -->
-    <div class="cal-month-nav">
-        <button type="button" class="cal-nav-btn" onclick="switchMonth('{{ cal.prev_month }}')">◀ 前月</button>
-        <h2 class="cal-month-title">{{ cal.month_label }}</h2>
-        <button type="button" class="cal-nav-btn" onclick="switchMonth('{{ cal.next_month }}')">次月 ▶</button>
+{# templates/calendar/partials/_month_grid.html #}
+<div
+    class="bg-white dark:bg-[#16161e] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-soft overflow-hidden">
+    <!-- Month Nav -->
+    <div class="flex items-center justify-between px-6 py-6 border-b border-slate-100 dark:border-slate-800">
+        <button type="button"
+            class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-blue-600 transition-all shadow-sm border border-slate-200 dark:border-slate-800"
+            @click="$dispatch('calendar-switch-month', '{{ cal.prev_month }}')">
+            <span class="text-xl">◀</span>
+        </button>
+        <h2 class="text-2xl font-black text-slate-900 dark:text-white tracking-tight">{{ cal.month_label }}</h2>
+        <button type="button"
+            class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-blue-600 transition-all shadow-sm border border-slate-200 dark:border-slate-800"
+            @click="$dispatch('calendar-switch-month', '{{ cal.next_month }}')">
+            <span class="text-xl">▶</span>
+        </button>
     </div>
 
-    <!-- 曜日ヘッダー -->
-    <div class="cal-grid cal-weekdays">
+    <!-- Weekdays Header -->
+    <div class="grid grid-cols-7 bg-slate-50 dark:bg-slate-900/50">
         {% for wd in cal.weekdays %}
-        <div class="cal-weekday {% if loop.index == 6 %}sat{% elif loop.index == 7 %}sun{% endif %}">{{ wd }}</div>
+        <div class="py-3 text-center text-[10px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100 dark:border-slate-800
+                    {% if loop.index == 6 %}text-blue-500/70 {% elif loop.index == 7 %}text-rose-500/70{% endif %}">
+            {{ wd }}
+        </div>
         {% endfor %}
     </div>
 
-    <!-- 日付セル -->
-    <div class="cal-grid cal-days">
+    <!-- Days Grid -->
+    <div
+        class="grid grid-cols-7 divide-x divide-y divide-slate-100 dark:divide-slate-800 border-b border-slate-100 dark:border-slate-800">
         {% for cell in cal.cells %}
         {% if cell.is_empty %}
-        <div class="cal-cell is-empty"></div>
+        <div class="aspect-square bg-slate-50/30 dark:bg-slate-900/10"></div>
         {% else %}
-        <div class="cal-cell {% if cell.is_today %}is-today{% endif %} {% if cell.is_selected %}is-selected{% endif %} {% if cell.has_events %}has-events{% endif %}"
-            data-date="{{ cell.date_str }}" onclick="selectDate('{{ cell.date_str }}')" role="button" tabindex="0"
-            aria-label="{{ cell.date_str }}">
-            <span class="cal-day-num">{{ cell.day }}</span>
-            {% if cell.has_events %}
-            <span class="cal-badge">{{ cell.event_count }}</span>
-            {% endif %}
+        <button type="button"
+            class="aspect-square p-2 relative flex flex-col items-start gap-1 transition-all group overflow-hidden"
+            :class="selectedDate === '{{ cell.date_str }}' 
+                            ? 'bg-blue-50 dark:bg-blue-900/20 ring-2 ring-inset ring-blue-500 z-10' 
+                            : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'"
+            @click="$dispatch('calendar-select-date', '{{ cell.date_str }}')">
 
-            <div class="cal-cell-tags">
-                {% for tag in cell.tags %}
-                <span class="cal-tag cal-tag-{{ 'earnings' if tag == '決算' else 'dividend' }}">{{ tag }}</span>
+            <span class="text-sm font-bold transition-transform group-hover:scale-110"
+                class="{% if cell.is_today %}text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/40 rounded-full px-1.5 -ml-1.5{% else %}text-slate-900 dark:text-slate-400{% endif %}">
+                {{ cell.day }}
+            </span>
+
+            {% if cell.has_events %}
+            <div class="mt-auto w-full flex flex-col gap-0.5">
+                {% for tag in cell.tags[:2] %}
+                <div
+                    class="text-[8px] font-black px-1.5 py-0.5 rounded-sm uppercase tracking-tighter truncate
+                                    {% if tag == '決算' %}bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400
+                                    {% else %}bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-400{% endif %}">
+                    {{ tag }}
+                </div>
                 {% endfor %}
                 {% if cell.extra_count > 0 %}
-                <span class="cal-tag cal-tag-more">+{{ cell.extra_count }}</span>
+                <div class="text-[8px] font-black text-slate-400">+{{ cell.extra_count }}</div>
                 {% endif %}
             </div>
-        </div>
+            {% endif %}
+        </button>
         {% endif %}
         {% endfor %}
     </div>

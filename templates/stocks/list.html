@@ -1,165 +1,147 @@
 {% extends "base.html" %}
+{% from "components/macros.html" import button, card, form_input, badge %}
+
 {% block content %}
-<section class="page-header" style="margin-bottom: 2rem;">
-    <div>
-        <h1>株価リスト</h1>
-    </div>
+<section class="mb-8">
+    <h1 class="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-2">株価リスト</h1>
+    <p class="text-slate-500 dark:text-slate-400">ウォッチリストの管理とリアルタイム分析</p>
 </section>
 
 <!-- Toolbar: Search & Actions -->
-<!-- Toolbar: Search & Actions -->
-<div class="toolbar-container"
-    style="display: flex; gap: 1rem; margin-bottom: 1.5rem; align-items: center; flex-wrap: wrap;">
-    <form action="/stocks/add" method="post" style="display: contents;">
-        <div class="search-box" style="flex: 0 1 400px; position: relative; min-width: 250px;">
-            <input type="text" id="stock-search" name="code" placeholder="銘柄コードまたは銘柄名で検索..." class="search-input"
-                autocomplete="off"
-                style="width: 100%; padding: 0.8rem 1rem; border: 1px solid var(--border); border-radius: 8px; background: var(--panel); color: var(--text); font-size: 1rem; box-shadow: var(--shadow-sm); box-sizing: border-box;">
-            <ul id="search-results"
-                style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; list-style: none; padding: 0; margin: 4px 0 0 0; z-index: 1000; box-shadow: var(--shadow-md); max-height: 200px; overflow-y: auto;">
-            </ul>
-        </div>
-        <div class="action-buttons" style="display: flex; gap: 0.5rem; flex-shrink: 0;">
-            <button class="primary-button" type="submit" style="padding: 0.8rem 1.2rem;">追加</button>
-            <button class="danger-button" type="button" id="delete-btn" style="padding: 0.8rem 1.2rem;">削除</button>
-        </div>
-    </form>
-</div>
+<div x-data="{ 
+    query: '', 
+    suggestions: [], 
+    showSuggestions: false,
+    selectedStocks: [],
+    async fetchSuggestions() {
+        if (this.query.length < 1) {
+            this.suggestions = [];
+            this.showSuggestions = false;
+            return;
+        }
+        try {
+            const res = await fetch(`/api/stocks/search?q=${encodeURIComponent(this.query)}`);
+            if (res.ok) {
+                const data = await res.json();
+                this.suggestions = data.suggestions || [];
+                this.showSuggestions = this.suggestions.length > 0;
+            }
+        } catch (err) {
+            console.error('Search failed', err);
+        }
+    },
+    selectSuggestion(s) {
+        this.query = s;
+        this.showSuggestions = false;
+    },
+    submitDelete() {
+        if (this.selectedStocks.length === 0) return;
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '/stocks/delete';
+        this.selectedStocks.forEach(code => {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'selected_stocks';
+            input.value = code;
+            form.appendChild(input);
+        });
+        document.body.appendChild(form);
+        form.submit();
+    }
+}" class="mb-8">
+    <div class="flex flex-col xl:flex-row gap-4 items-start xl:items-end">
+        <form action="/stocks/add" method="post" class="flex-1 w-full max-w-4xl">
+            <div class="flex flex-col md:flex-row gap-3 items-end w-full">
+                <div class="relative flex-1 w-full">
+                    {{ form_input(
+                    label="銘柄追加",
+                    name="code",
+                    id="stock-search",
+                    placeholder="銘柄コードまたは銘柄名で検索...",
+                    attr='x-model.debounce.300ms="query" @input="fetchSuggestions" @click.outside="showSuggestions =
+                    false" autocomplete="off"'
+                    ) }}
 
-<div class="card">
-    <div style="text-align: left; margin-bottom: 0.5rem; padding-left: 0.5rem;">
-        <span class="timestamp small" style="color: var(--text-muted); font-size: 0.85rem;">{{ timestamp_label }}</span>
+                    <!-- Autocomplete Suggestions -->
+                    <div x-show="showSuggestions" x-transition.opacity
+                        class="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-[#16161e] border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl z-50 max-h-60 overflow-y-auto">
+                        <ul class="py-1">
+                            <template x-for="s in suggestions" :key="s">
+                                <li @click="selectSuggestion(s)"
+                                    class="px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer border-b last:border-0 border-slate-100 dark:border-slate-800 transition-colors">
+                                    <span class="text-sm font-medium text-slate-700 dark:text-slate-300"
+                                        x-text="s"></span>
+                                </li>
+                            </template>
+                        </ul>
+                    </div>
+                </div>
+                {{ button(label="追加", type="submit", variant="primary", class="w-full md:w-32 h-[46px]") }}
+            </div>
+        </form>
+
+        <div class="flex-none">
+            {{ button(
+            label='<span class="text-lg">🗑️</span> 削除',
+            variant="danger",
+            class="w-full md:w-32 h-[46px]",
+            attr='@click="submitDelete" x-show="selectedStocks.length > 0" x-transition'
+            ) }}
+        </div>
     </div>
-    <table class="stock-table">
-        <thead>
-            <tr>
-                <th class="checkbox-col" style="width: 40px; padding-right: 0;">削除</th>
-                <th>銘柄名（コード）</th>
-                <th>現在値</th>
-                <th>前日比</th>
-                <th>最高値 / 最安値</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for item in stocks %}
-            <tr>
-                <td class="checkbox-col" style="padding-right: 0;"><input type="checkbox" name="selected_stocks"
-                        value="{{ item.code }}" aria-label="{{ item.name }} を削除対象にする" /></td>
-                <td class="name-cell">
-                    <a href="/stocks/{{ item.code }}">{{ item.name }}</a>
-                </td>
-                <td class="price-cell">{{ item.current_price }}</td>
-                <td class="change-cell">
-                    <span class="change-badge change-{{ item.change_direction }}">
-                        <span
-                            class="{{ 'arrow-up' if item.change_direction == 'up' else 'arrow-down' if item.change_direction == 'down' else '' }}">{{
-                            item.change_icon }}</span>
-                        {{ item.change_text }}
-                    </span>
-                </td>
-                <td class="hl-cell">{{ item.high_low }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+
+    {% call card(footer=timestamp_label) %}
+    <div class="overflow-x-auto overflow-y-hidden">
+        <table class="w-full text-left border-collapse min-w-[800px]">
+            <thead>
+                <tr class="text-slate-500 dark:text-slate-400 text-sm uppercase tracking-wider font-bold">
+                    <th class="px-6 py-4 w-12 text-center">
+                        <input type="checkbox"
+                            @change='selectedStocks = $event.target.checked ? {{ stocks | map(attribute="code") | list | tojson }} : []'
+                            class="rounded border-slate-300 text-blue-600 focus:ring-blue-500">
+                    </th>
+                    <th class="px-6 py-4">銘柄名（コード）</th>
+                    <th class="px-6 py-4 text-right">現在値</th>
+                    <th class="px-6 py-4 text-center">前日比</th>
+                    <th class="px-6 py-4">最高値 / 最安値</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+                {% for item in stocks %}
+                <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                    <td class="px-6 py-4 text-center">
+                        <input type="checkbox" name="selected_stocks" value="{{ item.code }}" x-model="selectedStocks"
+                            class="rounded border-slate-300 text-blue-600 focus:ring-blue-500 shadow-sm">
+                    </td>
+                    <td class="px-6 py-4">
+                        <a href="/stocks/{{ item.code }}"
+                            class="font-bold text-slate-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+                            {{ item.name }}
+                        </a>
+                    </td>
+                    <td class="px-6 py-4 text-right font-mono font-semibold text-slate-900 dark:text-white">
+                        {{ item.current_price }}
+                    </td>
+                    <td class="px-6 py-4 text-center">
+                        {% set badge_color = 'green' if item.change_direction == 'up' else 'red' if
+                        item.change_direction == 'down' else 'gray' %}
+                        {{ badge(
+                        text='<span
+                            class="' ~ ('animate-bounce inline-block rotate-0' if item.change_direction == 'up' else 'animate-bounce inline-block rotate-180' if item.change_direction == 'down' else '') ~ '">'
+                            ~ item.change_icon ~ '</span> ' ~ item.change_text,
+                        color=badge_color,
+                        class="px-3 py-1 text-sm"
+                        ) }}
+                    </td>
+                    <td class="px-6 py-4 text-sm text-slate-500 dark:text-slate-400 font-mono">
+                        {{ item.high_low }}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endcall %}
 </div>
-
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const searchInput = document.getElementById('stock-search');
-        const resultsList = document.getElementById('search-results');
-
-        // Autocomplete
-        if (searchInput && resultsList) {
-            let debounceTimer;
-
-            searchInput.addEventListener('input', function (e) {
-                clearTimeout(debounceTimer);
-                const query = e.target.value.trim();
-
-                if (query.length < 1) {
-                    resultsList.style.display = 'none';
-                    return;
-                }
-
-                debounceTimer = setTimeout(async () => {
-                    try {
-                        const res = await fetch(`/api/stocks/search?q=${encodeURIComponent(query)}`);
-                        if (!res.ok) return;
-                        const data = await res.json();
-                        const suggestions = data.suggestions || [];
-
-                        if (suggestions.length > 0) {
-                            resultsList.innerHTML = suggestions.map(s =>
-                                `<li style="padding: 0.8rem 1rem; cursor: pointer; border-bottom: 1px solid var(--border);">
-                                    ${s}
-                                </li>`
-                            ).join('');
-                            resultsList.style.display = 'block';
-
-                            // Click handler for items
-                            resultsList.querySelectorAll('li').forEach(li => {
-                                li.addEventListener('click', () => {
-                                    searchInput.value = li.textContent.trim();
-                                    resultsList.style.display = 'none';
-                                });
-                                // Hover effect
-                                li.addEventListener('mouseenter', () => li.style.background = 'var(--bg-hover)');
-                                li.addEventListener('mouseleave', () => li.style.background = 'var(--panel)');
-                            });
-                        } else {
-                            resultsList.style.display = 'none';
-                        }
-                    } catch (err) {
-                        console.error('Search failed', err);
-                    }
-                }, 300);
-            });
-
-            // Hide on click outside
-            document.addEventListener('click', (e) => {
-                if (!searchInput.contains(e.target) && !resultsList.contains(e.target)) {
-                    resultsList.style.display = 'none';
-                }
-            });
-        }
-
-        // Filter functionality (Client-side filter preserved for existing rows if needed, or rely on adding)
-        // Converting existing filter logic to just highlight or maybe removing it since we have "Add" now.
-        // The previous logic filtered the table. The request says "Add button adds to list". 
-        // So search box is primarily for adding new stuff, not filtering existing list?
-        // "Add button press: Add stock entered in search box to list".
-        // "Delete button press: Delete checked stocks".
-        // The requirement implies the list is persistent/stateful.
-        // So the client-side filter might be confusing if it hides rows. Let's REMOVE the old filter logic 
-        // to avoid conflict with the "Add" purpose. The User Request implies search is for finding NEW stocks to add.
-
-        // Delete Button
-        const deleteBtn = document.getElementById('delete-btn');
-        if (deleteBtn) {
-            deleteBtn.addEventListener('click', function () {
-                const checked = document.querySelectorAll('input[name="selected_stocks"]:checked');
-                if (checked.length === 0) {
-                    return;
-                }
-
-                // Create a form to submit
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.action = '/stocks/delete';
-
-                checked.forEach(box => {
-                    const input = document.createElement('input');
-                    input.type = 'hidden';
-                    input.name = 'selected_stocks';
-                    input.value = box.value;
-                    form.appendChild(input);
-                });
-
-                document.body.appendChild(form);
-                form.submit();
-            });
-        }
-    });
-</script>
 {% endblock %}

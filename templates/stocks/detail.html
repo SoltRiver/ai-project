@@ -1,44 +1,75 @@
 {% extends "base.html" %}
+{% from "components/macros.html" import button, card, badge %}
+
 {% block content %}
-<section class="page-header detail-header">
-    <div>
-        <h1 class="stock-title">{{ stock.display_name }}</h1>
-        <div class="price-stack detail-price">
-            <div class="main-price">{{ stock.price_text }}</div>
-            <div class="muted change-line">
-                <span class="change-badge change-{{ stock.change_direction }}">
-                    <span
-                        class="{{ 'arrow-up' if stock.change_direction == 'up' else 'arrow-down' if stock.change_direction == 'down' else '' }}">{{
-                        stock.change_icon }}</span>
-                    {{ stock.change_text }}
-                </span>
+<section class="mb-10 flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
+    <div class="space-y-4">
+        <div>
+            <span
+                class="text-sm font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-1 block">銘柄詳細</span>
+            <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight text-slate-900 dark:text-white">{{
+                stock.display_name }}</h1>
+        </div>
+        <div class="flex items-baseline gap-6 sm:gap-10 flex-wrap">
+            <div class="text-5xl sm:text-6xl font-mono font-bold tracking-tighter text-slate-900 dark:text-white">
+                {{ stock.price_text }}
             </div>
-            <!-- Link removed: Fundamental analysis is now embedded in the tab -->
+            {% set badge_color = 'green' if stock.change_direction == 'up' else 'red' if stock.change_direction ==
+            'down' else 'gray' %}
+            <div class="flex items-center">
+                {{ badge(
+                text='<span
+                    class="' ~ ('animate-bounce inline-block' if stock.change_direction == 'up' else 'animate-bounce inline-block rotate-180' if stock.change_direction == 'down' else '') ~ '">'
+                    ~ stock.change_icon ~ '</span> <span class="ml-2">' ~ stock.change_text ~ '</span>',
+                color=badge_color,
+                class="px-5 py-2 text-lg border-2 shadow-sm"
+                ) }}
+            </div>
         </div>
     </div>
 </section>
 
 <!-- イベントカード（htmx遅延ロード） -->
-<div id="event-card-container" hx-get="/partials/events/stock/{{ stock.code }}" hx-trigger="load" hx-swap="innerHTML">
-</div>
-
-<div class="tab-bar" role="tablist" aria-label="タブ切り替え">
-    {% for tab in tabs %}
-    <button class="tab-button {% if loop.first %}is-active{% endif %}" type="button" data-tab-name="{{ tab.name }}"
-        aria-pressed="{{ 'true' if loop.first else 'false' }}" hx-get="/stocks/{{ stock.code }}/tab/{{ tab.name }}"
-        hx-target="#tab-content" hx-swap="innerHTML" hx-indicator="#tab-loading">
-        <span class="tab-icon">{{ tab.icon }}</span>
-        <span>{{ tab.label }}</span>
-    </button>
-    {% endfor %}
-</div>
-
-<div class="tab-content-wrapper">
-    <div id="tab-loading" class="htmx-indicator">
-        <div class="spinner"></div>
+<div id="event-card-container" hx-get="/partials/events/stock/{{ stock.code }}" hx-trigger="load" hx-swap="innerHTML"
+    class="mb-8">
+    <div
+        class="animate-pulse bg-white dark:bg-[#16161e] rounded-2xl h-32 border border-slate-200 dark:border-slate-800">
     </div>
-    <div id="tab-content" hx-get="/stocks/{{ stock.code }}/tab/chart" hx-trigger="load" hx-target="#tab-content"
-        hx-swap="innerHTML" hx-indicator="#tab-loading">
+</div>
+
+<div x-data="{ activeTab: '{{ tabs[0].name }}' }" class="mb-8">
+    <div class="flex flex-wrap gap-2 border-b border-slate-200 dark:border-slate-800 mb-6" role="tablist">
+        {% for tab in tabs %}
+        <button type="button" class="px-6 py-3 font-bold text-sm transition-all border-b-2 flex items-center gap-2"
+            :class="activeTab === '{{ tab.name }}' 
+                ? 'border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-900/10' 
+                : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'"
+            @click="activeTab = '{{ tab.name }}'" hx-get="/stocks/{{ stock.code }}/tab/{{ tab.name }}"
+            hx-target="#tab-content" hx-swap="innerHTML" hx-indicator="#tab-loading">
+            <span>{{ tab.icon }}</span>
+            <span>{{ tab.label }}</span>
+        </button>
+        {% endfor %}
+    </div>
+
+    <div class="relative min-h-[400px]">
+        <div id="tab-loading"
+            class="htmx-indicator absolute inset-0 z-10 flex items-center justify-center bg-white/60 dark:bg-[#1a1b26]/60 backdrop-blur-[2px] rounded-2xl transition-opacity duration-300">
+            <div class="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent shadow-lg">
+            </div>
+        </div>
+
+        <div id="tab-content" hx-get="/stocks/{{ stock.code }}/tab/chart" hx-trigger="load" hx-target="#tab-content"
+            hx-swap="innerHTML" hx-indicator="#tab-loading" class="transition-all duration-300">
+            <div class="animate-pulse space-y-4">
+                <div class="h-64 bg-slate-100 dark:bg-slate-800 rounded-2xl"></div>
+                <div class="grid grid-cols-3 gap-4">
+                    <div class="h-32 bg-slate-100 dark:bg-slate-800 rounded-2xl"></div>
+                    <div class="h-32 bg-slate-100 dark:bg-slate-800 rounded-2xl"></div>
+                    <div class="h-32 bg-slate-100 dark:bg-slate-800 rounded-2xl"></div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 {% endblock %}

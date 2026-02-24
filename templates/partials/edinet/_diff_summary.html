@@ -1,200 +1,219 @@
-{# EDINET 差分サマリーパーシャル（htmx フラグメント） #}
-{# hx-get="/partials/edinet/diff_summary?doc_id=..." で呼び出される #}
+{# templates/partials/edinet/_diff_summary.html #}
+{% from "components/macros.html" import card, badge, button %}
 
 {% if diff.status == "failed" %}
-{# ===== 失敗時の表示 ===== #}
-<div class="edinet-diff-error">
-    <h4>📊 EDINET 差分比較</h4>
-    <div class="diff-error-message">
-        <p>{{ diff.notes or "差分データの生成に失敗しました。" }}</p>
-        <button class="btn-reload" hx-get="/partials/edinet/diff_summary?doc_id={{ doc_id }}&force=true"
-            hx-target="#edinet-diff-container" hx-swap="innerHTML" hx-indicator="#diff-loading">
-            再読込
-        </button>
+<div
+    class="p-6 bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800 rounded-2xl shadow-soft animate-shake">
+    <h4 class="text-lg font-black text-rose-700 dark:text-rose-300 mb-3 flex items-center gap-2">
+        <span>📊</span> EDINET 差分比較
+    </h4>
+    <div class="flex flex-col gap-4">
+        <p class="text-sm text-rose-600 dark:text-rose-400 font-medium">{{ diff.notes or "差分データの生成に失敗しました。" }}</p>
+        {{ button(
+        label="再読込",
+        variant="danger",
+        attr='hx-get="/partials/edinet/diff_summary?doc_id=' ~ doc_id ~ '&force=true" hx-target="#edinet-diff-container"
+        hx-swap="innerHTML" hx-indicator="#diff-loading"'
+        ) }}
     </div>
 </div>
 
 {% elif diff.status in ["ok", "partial"] %}
-{# ===== 正常時の表示 ===== #}
-<div class="edinet-diff-summary">
-    <h4>📊 EDINET 差分比較（有価証券報告書）</h4>
+<div class="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+    <div class="flex items-center gap-4">
+        <h4
+            class="text-xl font-extrabold text-slate-900 dark:text-white uppercase tracking-tight flex items-center gap-2">
+            <span class="text-2xl">📊</span> EDINET 差分比較
+        </h4>
+        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">(有価証券報告書)</span>
+        <div class="h-px flex-grow bg-slate-100 dark:bg-slate-800"></div>
+    </div>
 
-    {# ---- 1) 比較対象ブロック ---- #}
-    <div class="diff-comparison-header">
-        <div class="diff-doc-pair">
-            <div class="diff-doc-item">
-                <span class="diff-label">今回</span>
-                <span class="diff-doc-id">{{ diff.current_doc_id }}</span>
-                <span class="diff-date">{{ diff.current_submit_date or "—" }}</span>
-                <span class="diff-period">{{ diff.current_period or "" }}</span>
+    {# ---- 1) Comparison Header ---- #}
+    <div
+        class="p-6 bg-white dark:bg-[#16161e] border border-slate-200 dark:border-slate-800 rounded-[28px] shadow-soft">
+        <div class="flex flex-col md:flex-row items-center justify-center gap-8 md:gap-16">
+            <!-- Current -->
+            <div class="flex flex-col items-center gap-2 text-center group transition-all hover:scale-105">
+                <span
+                    class="px-3 py-1 bg-blue-600 text-white rounded-full text-[10px] font-black uppercase tracking-widest mb-1 shadow-md">今回</span>
+                <div class="text-sm font-mono font-black text-slate-900 dark:text-white">{{ diff.current_doc_id }}</div>
+                <div class="text-[10px] font-bold text-slate-400 uppercase tracking-tight">{{ diff.current_submit_date
+                    or "—" }}</div>
+                <div class="text-xs font-black text-blue-500">{{ diff.current_period or "" }}</div>
             </div>
 
             {% if diff.has_prev %}
-            <span class="diff-arrow">↔</span>
-            <div class="diff-doc-item">
-                <span class="diff-label">前回</span>
-                <span class="diff-doc-id">{{ diff.prev_doc_id }}</span>
-                <span class="diff-date">{{ diff.prev_submit_date or "—" }}</span>
-                <span class="diff-period">{{ diff.prev_period or "" }}</span>
+            <div class="flex flex-col items-center">
+                <div
+                    class="w-12 h-12 rounded-full bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 flex items-center justify-center text-slate-300">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3"
+                            d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                    </svg>
+                </div>
+            </div>
+
+            <!-- Previous -->
+            <div class="flex flex-col items-center gap-2 text-center group transition-all hover:scale-105">
+                <span
+                    class="px-3 py-1 bg-slate-200 dark:bg-slate-800 text-slate-500 rounded-full text-[10px] font-black uppercase tracking-widest mb-1">前回</span>
+                <div class="text-sm font-mono font-black text-slate-400 dark:text-slate-500">{{ diff.prev_doc_id }}
+                </div>
+                <div class="text-[10px] font-bold text-slate-400 uppercase tracking-tight">{{ diff.prev_submit_date or
+                    "—" }}</div>
+                <div class="text-xs font-black text-slate-500">{{ diff.prev_period or "" }}</div>
             </div>
             {% else %}
-            <div class="diff-doc-item diff-no-prev">
-                <span class="diff-label">前回</span>
-                <span class="diff-notice">比較対象なし（初回取得）</span>
+            <div
+                class="flex flex-col items-center px-8 py-4 bg-slate-50 dark:bg-slate-900/30 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800">
+                <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">前回データなし</span>
+                <div class="text-xs text-slate-300 italic">初回取得のため比較できません</div>
             </div>
             {% endif %}
         </div>
 
         {% if diff.scope_mismatch %}
-        <div class="diff-warning">
-            ⚠ 注意：連結/個別の区分が一致しない可能性があります
+        <div
+            class="mt-6 flex items-center justify-center gap-3 px-4 py-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800 rounded-full text-[10px] font-black text-amber-600 dark:text-amber-400 uppercase tracking-widest animate-pulse mx-auto w-fit">
+            <span>⚠ 注意：連結/個別の区分が一致しない可能性があります</span>
         </div>
         {% endif %}
     </div>
 
-    {# ---- 2) 変化が大きい項目（最大3件） ---- #}
-    <div class="diff-top-changes">
-        <h5>変化が大きい項目（最大3件）</h5>
+    {# ---- 2) Top Changes ---- #}
+    <section>
+        <h5 class="text-sm font-black text-slate-500 dark:text-slate-500 uppercase tracking-[0.2em] mb-6 text-center">
+            変化が大きい項目</h5>
 
         {% if diff.top_changes_error %}
-        <div class="diff-info-note">
-            ℹ {{ diff.top_changes_error }}
-        </div>
+        <div class="text-center py-6 text-slate-400 text-xs italic">{{ diff.top_changes_error }}</div>
         {% elif not diff.has_prev %}
-        <div class="diff-info-note">
-            ℹ 比較対象なし（初回取得）のため、変化大の抽出は行いません。
-        </div>
-        {% elif diff.top_changes and diff.top_changes | length > 0 %}
-        <div class="diff-change-cards">
+        <div class="text-center py-6 text-slate-400 text-xs italic">比較対象なし（初回取得）のため、分析をスキップします。</div>
+        {% elif diff.top_changes %}
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             {% for item in diff.top_changes %}
-            <div class="diff-change-card">
-                <div class="change-card-header">
-                    <span class="change-metric-label">{{ item.metric_label }}</span>
-                    <span class="change-category-badge badge-{{ item.category | lower }}">{{ item.category }}</span>
+            <div
+                class="group bg-white dark:bg-[#16161e] border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-soft transition-all hover:-translate-y-1 hover:shadow-xl">
+                <div class="flex justify-between items-start mb-6">
+                    <span
+                        class="text-xs font-black text-slate-900 dark:text-white group-hover:text-blue-600 transition-colors">{{
+                        item.metric_label }}</span>
+                    {% set cat_color = 'green' if item.category == 'B/S' else 'blue' %}
+                    <span
+                        class="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest
+                                 {% if cat_color == 'green' %}bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400{% else %}bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400{% endif %}">
+                        {{ item.category }}
+                    </span>
                 </div>
-                <div class="change-card-body">
-                    <div class="change-values">
-                        <span class="change-current">{{ item.current_value | fmt_num }} 百万円</span>
-                        <span class="change-arrow">←</span>
-                        <span class="change-prev">{{ item.prev_value | fmt_num }} 百万円</span>
+
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex flex-col items-center flex-1">
+                        <span class="text-[9px] font-bold text-slate-400 mb-1">前回</span>
+                        <span class="text-xs font-mono font-black text-slate-500">{{ item.prev_value | fmt_num }}</span>
                     </div>
-                    <div class="change-delta">
+                    <div class="text-slate-200">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M13 5l7 7-7 7" />
+                        </svg>
+                    </div>
+                    <div class="flex flex-col items-center flex-1">
+                        <span class="text-[9px] font-bold text-slate-400 mb-1">今回</span>
+                        <span class="text-xs font-mono font-black text-slate-900 dark:text-white">{{ item.current_value
+                            | fmt_num }}</span>
+                    </div>
+                </div>
+
+                <div
+                    class="flex items-center justify-center gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
+                    {% set delta_color = 'emerald' if item.delta | float > 0 else 'rose' if item.delta | float < 0
+                        else 'slate' %} <span
+                        class="text-sm font-black font-mono text-{{ delta_color }}-600 dark:text-{{ delta_color }}-400">
+                        {{ item.delta | fmt_delta }}</span>
                         <span
-                            class="delta-value {% if item.delta and item.delta | float > 0 %}delta-positive{% elif item.delta and item.delta | float < 0 %}delta-negative{% endif %}">
-                            {{ item.delta | fmt_delta }}
-                        </span>
-                        <span
-                            class="delta-pct {% if item.delta_pct is not none and item.delta_pct > 0 %}delta-positive{% elif item.delta_pct is not none and item.delta_pct < 0 %}delta-negative{% endif %}">
+                            class="px-2 py-0.5 rounded-full text-[10px] font-black font-mono bg-{{ delta_color }}-50 dark:bg-{{ delta_color }}-900/20 text-{{ delta_color }}-700 dark:text-{{ delta_color }}-300">
                             {{ item.delta_pct | fmt_pct }}
                         </span>
-                    </div>
                 </div>
-                {# ツールチップ（根拠情報） #}
-                <div class="change-source-info"
-                    title="source: {{ item.source_locator or '—' }} / scope: {{ item.consolidation_scope or '—' }}">
-                    <small>📎 {{ item.source_locator or "—" }}</small>
+
+                {% if item.source_locator %}
+                <div
+                    class="mt-4 pt-4 text-[8px] font-bold text-slate-400 truncate opacity-0 group-hover:opacity-100 transition-opacity">
+                    📎 {{ item.source_locator }}
                 </div>
+                {% endif %}
             </div>
             {% endfor %}
         </div>
         {% else %}
-        <div class="diff-info-note">
-            変化が大きい項目：該当なし
-        </div>
+        <div class="text-center py-6 text-slate-400 text-xs italic">該当する大きな変化は見つかりませんでした。</div>
         {% endif %}
-    </div>
+    </section>
 
-    {# ---- 3) 固定6項目テーブル ---- #}
+    {# ---- 3) Fixed Indicators Table ---- #}
     {% if diff.fixed_six %}
-    <div class="diff-fixed-table">
-        <h5>主要指標比較</h5>
-        <div class="table-responsive">
-            <table class="diff-table">
+    <section>
+        <h5 class="text-sm font-black text-slate-500 dark:text-slate-500 uppercase tracking-[0.2em] mb-6 text-center">
+            主要指標比較</h5>
+        {% call card() %}
+        <div class="overflow-x-auto -mx-6">
+            <table class="w-full text-left border-separate border-spacing-0">
                 <thead>
-                    <tr>
-                        <th>指標</th>
-                        <th class="text-right">今回</th>
-                        <th class="text-right">前回</th>
-                        <th class="text-right">差分</th>
-                        <th class="text-right">差分率</th>
-                        <th>単位</th>
-                        <th>連結区分</th>
+                    <tr
+                        class="text-slate-400 text-[10px] font-black uppercase tracking-widest border-b border-slate-100 dark:border-slate-800">
+                        <th class="px-6 py-4">指標</th>
+                        <th class="px-6 py-4 text-right">今回</th>
+                        <th class="px-6 py-4 text-right">前回</th>
+                        <th class="px-6 py-4 text-right">差分</th>
+                        <th class="px-6 py-4 text-center">差分率</th>
+                        <th class="px-6 py-4">セグメント</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
                     {% for item in diff.fixed_six %}
-                    <tr class="{% if item.is_missing %}row-missing{% endif %}">
-                        <td class="metric-name">
-                            {{ item.metric_label }}
-                            {% if item.is_missing %}
-                            <span class="missing-badge" title="情報不足">ℹ</span>
-                            {% endif %}
+                    <tr
+                        class="group hover:bg-slate-50/50 dark:hover:bg-slate-900/30 transition-colors {% if item.is_missing %}opacity-60 italic{% endif %}">
+                        <td class="px-6 py-4">
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm font-bold text-slate-900 dark:text-white">{{ item.metric_label
+                                    }}</span>
+                                {% if item.is_missing %}
+                                <span class="text-[10px] text-amber-500" title="情報不足">ⓘ</span>
+                                {% endif %}
+                            </div>
                         </td>
-                        <td class="text-right">
+                        <td class="px-6 py-4 text-right font-mono font-black text-slate-900 dark:text-white">
                             {% if item.current_value is not none %}
-                            {% if item.metric_key == "equity_ratio" %}
-                            {{ "%.1f" | format(item.current_value | float * 100) }}%
-                            {% else %}
-                            {{ item.current_value | fmt_num }}
-                            {% endif %}
-                            {% else %}
-                            <span class="missing-value">—</span>
-                            {% endif %}
+                            {% if item.metric_key == "equity_ratio" %}{{ "%.1f" | format(item.current_value | float *
+                            100) }}%{% else %}{{ item.current_value | fmt_num }}{% endif %}
+                            {% else %}<span class="text-slate-300">—</span>{% endif %}
                         </td>
-                        <td class="text-right">
-                            {% if diff.has_prev %}
-                            {% if item.prev_value is not none %}
-                            {% if item.metric_key == "equity_ratio" %}
-                            {{ "%.1f" | format(item.prev_value | float * 100) }}%
-                            {% else %}
-                            {{ item.prev_value | fmt_num }}
-                            {% endif %}
-                            {% else %}
-                            <span class="missing-value">—</span>
-                            {% endif %}
-                            {% else %}
-                            <span class="no-prev">—</span>
-                            {% endif %}
+                        <td class="px-6 py-4 text-right font-mono font-bold text-slate-400">
+                            {% if diff.has_prev and item.prev_value is not none %}
+                            {% if item.metric_key == "equity_ratio" %}{{ "%.1f" | format(item.prev_value | float * 100)
+                            }}%{% else %}{{ item.prev_value | fmt_num }}{% endif %}
+                            {% else %}<span class="text-slate-100">—</span>{% endif %}
                         </td>
-                        <td class="text-right">
+                        <td class="px-6 py-4 text-right font-mono font-black">
                             {% if diff.has_prev and not item.is_missing %}
-                            <span
-                                class="{% if item.delta and item.delta | float > 0 %}delta-positive{% elif item.delta and item.delta | float < 0 %}delta-negative{% endif %}">
-                                {% if item.metric_key == "equity_ratio" %}
-                                {% if item.delta is not none %}
-                                {{ "%+.1f" | format(item.delta | float * 100) }}pt
-                                {% else %}
-                                —
-                                {% endif %}
-                                {% else %}
-                                {{ item.delta | fmt_delta }}
-                                {% endif %}
-                            </span>
-                            {% else %}
-                            <span class="missing-value">—</span>
-                            {% endif %}
+                            {% set dc = 'emerald' if item.delta | float > 0 else 'rose' if item.delta | float < 0
+                                else 'slate' %} <span class="text-{{ dc }}-600 dark:text-{{ dc }}-400">
+                                {% if item.metric_key == "equity_ratio" %}{{ "%+.1f" | format(item.delta | float * 100)
+                                }}pt{% else %}{{ item.delta | fmt_delta }}{% endif %}
+                                </span>
+                                {% else %}<span class="text-slate-100">—</span>{% endif %}
                         </td>
-                        <td class="text-right">
+                        <td class="px-6 py-4 text-center">
                             {% if diff.has_prev and not item.is_missing %}
+                            {% set col = 'green' if item.delta_pct | float > 0 else 'red' if item.delta_pct | float < 0
+                                else 'gray' %} {{ badge(text=item.delta_pct | fmt_pct, color=col,
+                                class="px-3 py-1 text-[10px] font-black font-mono" ) }} {% else %}<span
+                                class="text-slate-100">—</span>{% endif %}
+                        </td>
+                        <td class="px-6 py-4">
                             <span
-                                class="{% if item.delta_pct is not none and item.delta_pct > 0 %}delta-positive{% elif item.delta_pct is not none and item.delta_pct < 0 %}delta-negative{% endif %}">
-                                {{ item.delta_pct | fmt_pct }}
-                            </span>
-                            {% else %}
-                            <span class="missing-value">—</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if item.metric_key == "equity_ratio" %}
-                            %
-                            {% elif item.unit and item.unit != "—" %}
-                            百万円
-                            {% else %}
-                            —
-                            {% endif %}
-                        </td>
-                        <td>
-                            <span class="scope-badge" title="{{ item.source_locator or '—' }}">
+                                class="inline-flex px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-[9px] font-bold text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700"
+                                title="{{ item.source_locator }}">
                                 {{ item.consolidation_scope or "—" }}
                             </span>
                         </td>
@@ -203,40 +222,55 @@
                 </tbody>
             </table>
         </div>
-    </div>
+        {% endcall %}
+    </section>
     {% endif %}
 
-    {# ---- 4) 根拠・メタ情報 ---- #}
-    <div class="diff-meta-footer">
-        <div class="diff-meta-items">
-            <span class="diff-meta-item" title="生成日時">
-                🕐 {{ diff.generated_at or "—" }}
-            </span>
-            <span class="diff-meta-item diff-status-{{ diff.status }}">
-                {% if diff.status == "ok" %}✅ 全指標取得{% elif diff.status == "partial" %}⚠ 一部欠損{% endif %}
-            </span>
+    {# ---- 4) Footer Meta ---- #}
+    <footer class="p-8 bg-slate-50 dark:bg-slate-900/40 rounded-[32px] border border-slate-100 dark:border-slate-800">
+        <div class="flex flex-wrap gap-6 items-center justify-between mb-6">
+            <div class="flex items-center gap-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                <span class="flex items-center gap-2">🕐 {{ diff.generated_at or "—" }}</span>
+                <span class="h-4 w-px bg-slate-200 dark:bg-slate-800"></span>
+                <span
+                    class="flex items-center gap-2 transition-colors
+                            {% if diff.status == 'ok' %}text-emerald-500{% elif diff.status == 'partial' %}text-amber-500{% endif %}">
+                    {% if diff.status == "ok" %}✅ 全指標取得{% elif diff.status == "partial" %}⚠ 一部欠損あり{% endif %}
+                </span>
+            </div>
+
+            <p
+                class="text-[10px] italic text-slate-400 bg-white dark:bg-slate-900 px-3 py-1 rounded-full border border-slate-100 dark:border-slate-800">
+                表示は取得できた数値に基づく差分です。反応は市場の事前期待等により異なります。
+            </p>
         </div>
+
         {% if diff.notes %}
-        <div class="diff-notes">
+        <div class="space-y-2 pt-6 border-t border-slate-200 dark:border-slate-800">
             {% for note in diff.notes.split('\n') %}
-            <p class="diff-note-item">📝 {{ note }}</p>
+            <div class="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400 font-medium">
+                <span class="text-blue-500">📝</span> {{ note }}
+            </div>
             {% endfor %}
         </div>
         {% endif %}
-        <p class="diff-disclaimer">
-            表示は取得できた数値に基づく差分です。反応は市場の事前期待等により異なります。
-        </p>
-    </div>
+    </footer>
 </div>
 
 {% else %}
-{# ===== データなし ===== #}
-<div class="edinet-diff-empty">
-    <h4>📊 EDINET 差分比較</h4>
-    <p>差分データがありません。</p>
-    <button class="btn-reload" hx-get="/partials/edinet/diff_summary?doc_id={{ doc_id }}&force=true"
-        hx-target="#edinet-diff-container" hx-swap="innerHTML" hx-indicator="#diff-loading">
-        生成する
-    </button>
+<div
+    class="flex flex-col items-center justify-center py-20 px-6 bg-slate-50 dark:bg-slate-900/20 rounded-[40px] border-2 border-dashed border-slate-200 dark:border-slate-800 text-center">
+    <div
+        class="w-20 h-20 rounded-full bg-white dark:bg-slate-800 flex items-center justify-center text-3xl shadow-soft border border-slate-100 dark:border-slate-700 mb-6">
+        📊</div>
+    <h4 class="text-xl font-extrabold text-slate-900 dark:text-white mb-2">EDINET 差分比較</h4>
+    <p class="text-sm text-slate-400 max-w-xs mb-8">この書類の差分データはまだ生成されていません。前年度との比較データを生成しますか？</p>
+    {{ button(
+    label="差分データを生成する",
+    variant="primary",
+    class="px-10 py-4 rounded-2xl shadow-xl",
+    attr='hx-get="/partials/edinet/diff_summary?doc_id=' ~ doc_id ~ '&force=true" hx-target="#edinet-diff-container"
+    hx-swap="innerHTML" hx-indicator="#diff-loading"'
+    ) }}
 </div>
 {% endif %}

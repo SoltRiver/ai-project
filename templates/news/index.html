@@ -1,42 +1,61 @@
 {% extends "base.html" %}
+{% from "components/macros.html" import card, badge %}
 
 {% block content %}
-<div class="container news-container">
-    <header class="section-header">
-        <h1>マーケットニュース (AI分析)</h1>
-        <p class="description">主要な市場ニュースをAIが要約し、影響を受ける可能性のある銘柄を分析しています。</p>
+<div class="max-w-4xl mx-auto">
+    <header class="mb-10 text-center md:text-left">
+        <h1 class="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-2">マーケットニュース (AI分析)</h1>
+        <p class="text-slate-500 dark:text-slate-400">主要な市場ニュースをAIが要約し、影響を受ける可能性のある銘柄を分析しています。</p>
     </header>
 
-    <div class="news-grid">
+    <div class="space-y-8">
         {% for item in news_items %}
-        <article class="card news-card">
-            <div class="news-header">
-                <span class="publisher">{{ item.publisher }}</span>
-                <span class="date">{{ item.published_at.strftime('%Y-%m-%d %H:%M') if item.published_at else '日時不明'
+        <article
+            class="bg-white dark:bg-[#16161e] border-l-4 border-blue-600 dark:border-blue-500 rounded-r-2xl shadow-soft p-6 transition-all hover:shadow-lg">
+            <div class="flex justify-between items-center text-xs font-bold text-slate-400 dark:text-slate-500 mb-3">
+                <span class="uppercase tracking-widest">{{ item.publisher }}</span>
+                <span class="font-mono">{{ item.published_at.strftime('%Y-%m-%d %H:%M') if item.published_at else '日時不明'
                     }}</span>
             </div>
-            <h2 class="news-title">
-                <a href="{{ item.link }}" target="_blank" rel="noopener noreferrer" title="Original: {{ item.title }}">
+
+            <h2 class="text-xl font-bold text-slate-900 dark:text-white mb-4 leading-snug">
+                <a href="{{ item.link }}" target="_blank" rel="noopener noreferrer"
+                    class="hover:text-blue-600 transition-colors">
                     {{ item.translated_title or item.title }}
                 </a>
             </h2>
 
-            <div class="ai-analysis-section">
-                <div class="summary-box">
-                    <h3><span class="icon">🤖</span> AI要約</h3>
-                    <p>{{ item.ai_summary }}</p>
+            <div class="bg-slate-50 dark:bg-slate-900/40 rounded-xl p-5 border border-slate-100 dark:border-slate-800">
+                <div class="mb-4">
+                    <h3
+                        class="flex items-center gap-2 text-sm font-bold text-slate-500 dark:text-slate-400 mb-2 uppercase tracking-tight">
+                        <span class="text-base text-blue-500">🤖</span> AI要約
+                    </h3>
+                    <p class="text-slate-700 dark:text-slate-300 leading-relaxed">{{ item.ai_summary }}</p>
                 </div>
 
                 {% if item.impacted_stocks %}
-                <div class="impact-box">
-                    <h3>銘柄への影響</h3>
-                    <div class="tags">
+                <div class="pt-4 border-t border-slate-200 dark:border-slate-800">
+                    <h3 class="text-sm font-bold text-slate-500 dark:text-slate-400 mb-3 uppercase tracking-tight">
+                        銘柄への影響</h3>
+                    <div class="flex flex-wrap gap-2">
                         {% for stock in item.impacted_stocks %}
-                        {% set badge_class = 'badge-success' if stock.impact_type == 'positive' else 'badge-danger' %}
-                        <span class="badge {{ badge_class }}" title="{{ stock.reason }}">
-                            {{ stock.name }}
-                            <span class="reason-tooltip">{{ stock.reason }}</span>
-                        </span>
+                        <div x-data="{ tooltip: false }" class="relative">
+                            {% set color = 'green' if stock.impact_type == 'positive' else 'red' %}
+                            <span @mouseenter="tooltip = true" @mouseleave="tooltip = false"
+                                class="cursor-help transition-transform hover:scale-105 active:scale-95">
+                                {{ badge(text=stock.name, color=color, class="px-3 shadow-sm border-2") }}
+                            </span>
+
+                            <!-- Custom Tooltip -->
+                            <div x-show="tooltip" x-transition.opacity
+                                class="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-48 p-3 bg-slate-900 text-white text-[10px] rounded-lg shadow-2xl z-20 text-center leading-relaxed pointer-events-none">
+                                <span x-text="'Reason: ' + '{{ stock.reason }}'"></span>
+                                <div
+                                    class="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-slate-900">
+                                </div>
+                            </div>
+                        </div>
                         {% endfor %}
                     </div>
                 </div>
@@ -44,142 +63,11 @@
             </div>
         </article>
         {% else %}
-        <div class="empty-state">
-            <p>現在表示できるニュースはありません。</p>
+        <div
+            class="text-center py-20 bg-slate-50 dark:bg-slate-900/20 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800">
+            <p class="text-slate-500">現在表示できるニュースはありません。</p>
         </div>
         {% endfor %}
     </div>
 </div>
-
-<style>
-    .news-container {
-        max-width: 900px;
-        margin: 0 auto;
-    }
-
-    .news-grid {
-        display: grid;
-        gap: 2rem;
-        margin-top: 2rem;
-    }
-
-    .news-card {
-        padding: 1.5rem;
-        border-left: 4px solid var(--primary-color);
-    }
-
-    .news-header {
-        display: flex;
-        justify-content: space-between;
-        font-size: 0.85rem;
-        color: var(--text-muted);
-        margin-bottom: 0.5rem;
-    }
-
-    .news-title {
-        font-size: 1.25rem;
-        margin: 0 0 1rem 0;
-    }
-
-    .news-title a {
-        color: var(--text-main);
-        text-decoration: none;
-    }
-
-    .news-title a:hover {
-        text-decoration: underline;
-        color: var(--primary-color);
-    }
-
-    .ai-analysis-section {
-        background: var(--bg-subtle);
-        padding: 1rem;
-        border-radius: 8px;
-        margin-top: 1rem;
-    }
-
-    .summary-box h3,
-    .impact-box h3 {
-        font-size: 0.95rem;
-        margin: 0 0 0.5rem 0;
-        color: var(--text-dim);
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
-
-    .summary-box p {
-        font-size: 0.95rem;
-        line-height: 1.6;
-        margin: 0;
-    }
-
-    .impact-box {
-        margin-top: 1rem;
-        padding-top: 1rem;
-        border-top: 1px dashed var(--border-color);
-    }
-
-    .tags {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.5rem;
-    }
-
-    .badge {
-        padding: 0.25rem 0.75rem;
-        border-radius: 999px;
-        font-size: 0.85rem;
-        font-weight: 500;
-        position: relative;
-        cursor: help;
-    }
-
-    .badge-success {
-        background-color: rgba(34, 197, 94, 0.15);
-        color: #15803d;
-        border: 1px solid rgba(34, 197, 94, 0.3);
-    }
-
-    .badge-danger {
-        background-color: rgba(239, 68, 68, 0.15);
-        color: #b91c1c;
-        border: 1px solid rgba(239, 68, 68, 0.3);
-    }
-
-    /* Tooltip for reason */
-    .badge .reason-tooltip {
-        visibility: hidden;
-        position: absolute;
-        bottom: 120%;
-        left: 50%;
-        transform: translateX(-50%);
-        background-color: #333;
-        color: #fff;
-        padding: 0.5rem;
-        border-radius: 4px;
-        width: 200px;
-        text-align: center;
-        font-size: 0.8rem;
-        z-index: 10;
-        opacity: 0;
-        transition: opacity 0.2s;
-        pointer-events: none;
-    }
-
-    .badge:hover .reason-tooltip {
-        visibility: visible;
-        opacity: 1;
-    }
-
-    [data-theme="dark"] .badge-success {
-        background-color: rgba(34, 197, 94, 0.2);
-        color: #4ade80;
-    }
-
-    [data-theme="dark"] .badge-danger {
-        background-color: rgba(239, 68, 68, 0.2);
-        color: #f87171;
-    }
-</style>
 {% endblock %}

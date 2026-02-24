@@ -401,3 +401,19 @@
 - **Verification**:
     - **Unit Tests**: `tests/test_edinet_diff.py` 24件全テスト PASSED。
     - **Browser**: 差分パーシャルエンドポイントのエラー表示確認。
+
+### Review Session 35 (チャート描画ロジックの復元と構文修正)
+- **Status**: **Success** (Executed 2026-02-24).
+- **Scope**: `static/js/app.js`, `static/css/theme.css`, `templates/components/macros.html`.
+- **Findings**:
+    1. **構文エラー**: 以前の編集で `renderCandleCharts` の閉じブラケット、および IIFE の閉じブラケットが重複・欠落し、スクリプトのパースエラーが発生していた。
+    2. **ロジック欠落**: `draw` 関数内で出来高ラベルの表示や、ゴールデンクロス・デッドクロスの描画ロジックが欠落していた。
+    3. **イベントリスナーのスコープ不備**: `canvas` のマウスイベントリスナーが `renderCandleCharts` の外に配置されており、ローカル変数にアクセスできずエラーとなっていた。
+- **Action**:
+    - `app.js` を大修正し、全描画ロジックとイベントリスナーを適切なスコープに再配置。
+    - `theme.css` においてグローバルな `overflow-x: hidden` を追加し、リキッドレイアウト崩れを防止。
+    - `macros.html` の `badge` マクロをリファクタリングし、一貫したプレミアムデザインを提供。
+- **Verification**:
+    - **コードレビュー**: ブラケットの整合性とスコープの正常性を確認。
+    - **目視確認**: ランキング画面のフィルタボタン、銘柄詳細のイベントバッジ、チャートの正常描画を確認。
+

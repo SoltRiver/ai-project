@@ -1,48 +1,92 @@
+{# templates/candle_patterns/partials/_list_area.html #}
+{% from "components/macros.html" import card, button, badge %}
+
 {% for cat in categories %}
 {% set tone_label = '（上向き）' if cat.tone == 'bullish' else '（下向き）' if cat.tone == 'bearish' else '（様子見）' %}
 {% set cat_label = cat.key ~ tone_label %}
 {% set items = group_by_category[active_tab][cat.key] %}
 {% if items %}
-<section class="pattern-section" data-category="{{ cat.key }}">
-    <div class="section-head">
-        <span class="section-pill section-pill--{{ cat.tone }}">{{ cat_label }}</span>
-        <span class="section-count">{{ items | length }}件</span>
+<section class="mb-12 animate-in fade-in slide-in-from-bottom-4 duration-500" data-category="{{ cat.key }}">
+    <div class="flex items-center gap-4 mb-6">
+        {% set tone_colors = {
+        'bullish': 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/40 dark:text-emerald-400
+        dark:border-emerald-800',
+        'bearish': 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-900/40 dark:text-rose-400
+        dark:border-rose-800',
+        'neutral': 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400
+        dark:border-slate-700'
+        } %}
+        <span
+            class="px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest border shadow-sm {{ tone_colors.get(cat.tone, tone_colors.neutral) }}">
+            {{ cat_label }}
+        </span>
+        <div class="h-px flex-grow bg-slate-200 dark:bg-slate-800"></div>
+        <span class="text-xs font-bold text-slate-400">{{ items | length }}件</span>
     </div>
 
-    <div class="pattern-card-grid">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6 lg:gap-8">
         {% for p in items %}
-        <article class="pattern-card tone-{{ p.tone }}">
-            <header class="pattern-card__head">
-                <div class="pattern-card__title">{{ p.name }}</div>
-            </header>
-
-            <div class="pattern-visual-box">
-                <img src="/static/{{ p.svg }}" alt="{{ p.name }}" loading="lazy" />
+        <article
+            class="group bg-white dark:bg-[#16161e] border border-slate-200 dark:border-slate-800 rounded-[28px] shadow-soft overflow-hidden flex flex-col transition-all hover:-translate-y-2 hover:shadow-2xl mx-auto w-full max-w-[420px]">
+            <div
+                class="aspect-[4/3] bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-800/50 dark:to-slate-900/50 flex items-center justify-center p-8 overflow-hidden relative">
+                <img src="/static/{{ p.svg }}" alt="{{ p.name }}"
+                    class="w-32 h-32 object-contain transition-transform duration-500 group-hover:scale-110 drop-shadow-2xl"
+                    loading="lazy" />
+                <div class="absolute top-4 right-4 animate-pulse">
+                    {% if p.tone == 'bullish' %}<span class="text-xl">📈</span>{% elif p.tone == 'bearish' %}<span
+                        class="text-xl">📉</span>{% endif %}
+                </div>
             </div>
 
-            <div class="pattern-info">
-                <div class="pattern-info-block">
-                    <div class="pattern-info-title">特徴</div>
-                    <div class="pattern-info-text">
-                        <strong>{{ p.desc_lead }}</strong>
-                        <span class="desc-body">{{ p.desc_body }}</span>
+            <div class="p-6 flex-grow flex flex-col">
+                <h3
+                    class="text-xl font-extrabold text-slate-900 dark:text-white mb-6 group-hover:text-blue-600 transition-colors">
+                    {{ p.name }}
+                </h3>
+
+                <div class="space-y-4 mb-8 flex-grow">
+                    <div class="space-y-1">
+                        <div class="text-[10px] font-black uppercase tracking-widest text-slate-400">特徴</div>
+                        <p class="text-sm text-slate-700 dark:text-slate-300">
+                            <strong class="text-blue-600 dark:text-blue-400 leading-tight block mb-1">{{ p.desc_lead
+                                }}</strong>
+                            <span class="text-slate-500 line-clamp-2 text-xs">{{ p.desc_body }}</span>
+                        </p>
+                    </div>
+                    <div class="space-y-1">
+                        <div class="text-[10px] font-black uppercase tracking-widest text-slate-400">推奨アクション</div>
+                        <div
+                            class="text-xs font-bold text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-900 px-3 py-2 rounded-lg border border-slate-100 dark:border-slate-800">
+                            {{ p.action if p.action else p.catch }}
+                        </div>
                     </div>
                 </div>
-                <div class="pattern-info-block">
-                    <div class="pattern-info-title">推奨アクション</div>
-                    <div class="pattern-info-text">{{ p.action if p.action else p.catch }}</div>
-                </div>
-            </div>
 
-            <div class="pattern-card__actions">
-                <button class="pattern-button pattern-detail-trigger" type="button" data-pattern-id="{{ p.id }}"
-                    data-name="{{ p.name }}" data-action="{{ p.action if p.action else p.catch if p.catch else '' }}"
-                    data-desc-lead="{{ p.desc_lead }}" data-desc-body="{{ p.desc_body }}"
-                    data-detail="{{ p.detail_desc }}" data-scene="{{ p.scene }}" data-howto="{{ p.howto }}"
-                    data-tips="{{ p.tips | join('||') if p.tips else p.notes | join('||') if p.notes else '' }}"
-                    data-svg="/static/{{ p.svg }}">
-                    詳細を見る
-                </button>
+                {% set p_data = {
+                "id": p.id,
+                "name": p.name,
+                "action": p.action if p.action else p.catch if p.catch else "",
+                "desc_lead": p.desc_lead,
+                "desc_body": p.desc_body,
+                "scene": p.scene or "",
+                "howto": p.howto or "",
+                "tips": p.tips or [],
+                "image": "/static/" ~ p.svg
+                } %}
+                <div x-data="{ 
+                    openDetail() {
+                        const data = JSON.parse($el.dataset.pattern);
+                        window.showPatternCardModalFromObject(data);
+                    }
+                }" data-pattern='{{ p_data | tojson | forceescape }}'>
+                    {{ button(
+                    label="詳細解説を見る",
+                    variant="ghost",
+                    class="w-full py-3 rounded-[16px] text-xs font-black uppercase tracking-widest",
+                    attr='@click="openDetail()"'
+                    ) }}
+                </div>
             </div>
         </article>
         {% endfor %}
@@ -50,3 +94,14 @@
 </section>
 {% endif %}
 {% endfor %}
+{# Alpine script to handle custom object-based modal injection #}
+<script>
+    if (!window.showPatternCardModalFromObject) {
+        window.showPatternCardModalFromObject = (data) => {
+            // Our modal partial x-data should expose this logic
+            // Since we defined the x-data in _candle_modal.html, 
+            // we can use a custom event.
+            window.dispatchEvent(new CustomEvent('open-pattern-modal', { detail: data }));
+        };
+    }
+</script>

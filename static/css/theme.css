@@ -42,13 +42,29 @@
 
 body.app-shell {
     margin: 0;
-    font-family: "Segoe UI", "Hiragino Sans", sans-serif;
+    font-family: inherit;
     background: radial-gradient(circle at 20% 20%, rgba(46, 204, 113, 0.08), transparent 25%),
         radial-gradient(circle at 80% 0%, rgba(14, 165, 233, 0.1), transparent 30%),
         var(--bg);
     color: var(--text);
     min-height: 100vh;
+    overflow-x: hidden;
+    line-height: 1.5;
 }
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+
+/* Hide scrollbar for IE, Edge and Firefox */
+.no-scrollbar {
+    -ms-overflow-style: none;
+    /* IE and Edge */
+    scrollbar-width: none;
+    /* Firefox */
+}
+
 
 [data-theme="dark"] body.app-shell {
     /* Tokyo Night Background */
@@ -321,12 +337,25 @@ a:hover {
     font-weight: 800;
 }
 
-.detail-price .main-price {
-    font-size: 2.2rem;
-}
-
 .detail-header .stock-title {
     margin: 0;
+}
+
+/* Enhanced Chart Layout */
+.chart-wrapper {
+    position: relative;
+    width: 100%;
+    min-height: 400px;
+    /* Ensure chart area doesn't collapse */
+    background: var(--panel);
+    border-radius: 12px;
+}
+
+.candle-canvas {
+    display: block;
+    width: 100%;
+    height: auto;
+    min-height: 400px;
 }
 
 
@@ -533,11 +562,16 @@ a:hover {
 }
 
 .badge {
-    display: inline-block;
-    padding: 0.2rem 0.6rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.25rem 0.75rem;
     border-radius: 999px;
-    font-size: 0.8rem;
+    font-size: 0.75rem;
+    font-weight: 700;
     border: 1px solid var(--border);
+    white-space: nowrap;
+    line-height: 1;
 }
 
 .status-green {

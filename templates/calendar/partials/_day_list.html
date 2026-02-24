@@ -1,29 +1,73 @@
-<!-- 当日イベントリスト（htmx partial） -->
-<div class="cal-day-list">
-    <h3 class="cal-day-title">
-        📋 {{ selected_date }}
-    </h3>
-
-    {% if day_events and day_events|length > 0 %}
-    <ul class="cal-event-list">
-        {% for evt in day_events %}
-        <li class="cal-event-item">
-            <div class="cal-event-row">
-                <span class="cal-tag cal-tag-{{ 'earnings' if evt.type_tag == '決算' else 'dividend' }}">{{ evt.type_tag
-                    }}</span>
-                <span class="cal-event-code">{{ evt.stock_code }}</span>
-                <span class="cal-event-title">{{ evt.title }}</span>
-                <span class="cal-event-status cal-status-{{ evt.status|lower }}">{{ evt.status_label }}</span>
-                <!-- 情報アイコン（ツールチップ） -->
-                <span class="cal-info-icon" tabindex="0"
-                    title="ソース: {{ evt.source }}&#10;最終確認: {{ evt.last_verified_at }}{% if evt.notes %}&#10;備考: {{ evt.notes }}{% endif %}">ⓘ</span>
-            </div>
-        </li>
-        {% endfor %}
-    </ul>
-    {% else %}
-    <div class="cal-empty">
-        該当するイベントはありません。
+{# templates/calendar/partials/_day_list.html #}
+<div
+    class="bg-white dark:bg-[#16161e] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-soft h-full overflow-hidden">
+    <div class="px-6 py-6 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
+        <h3 class="flex items-center gap-3 text-lg font-extrabold text-slate-900 dark:text-white">
+            <span class="text-xl">📋</span> {{ selected_date }}
+        </h3>
     </div>
-    {% endif %}
+
+    <div class="p-6">
+        {% if day_events and day_events|length > 0 %}
+        <ul class="space-y-4">
+            {% for evt in day_events %}
+            <li
+                class="group p-4 bg-slate-50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-800 rounded-xl transition-all hover:bg-white dark:hover:bg-slate-800 hover:shadow-md hover:border-blue-200 dark:hover:border-blue-900">
+                <div class="flex flex-col gap-3">
+                    <div class="flex justify-between items-start">
+                        <div class="flex items-center gap-2">
+                            {% set tag_color = 'green' if evt.type_tag == '決算' else 'red' %}
+                            <span
+                                class="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest
+                                         {% if tag_color == 'green' %}bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400{% else %}bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-400{% endif %}">
+                                {{ evt.type_tag }}
+                            </span>
+                            <a href="/stocks/{{ evt.stock_code }}"
+                                class="text-sm font-mono font-black text-blue-600 dark:text-blue-400 hover:underline">
+                                {{ evt.stock_code }}
+                            </a>
+                        </div>
+                        <div x-data="{ tooltip: false }" class="relative">
+                            <button @mouseenter="tooltip = true" @mouseleave="tooltip = false"
+                                class="text-slate-300 hover:text-blue-500 transition-colors">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                            </button>
+                            <div x-show="tooltip"
+                                class="absolute right-0 bottom-full mb-2 w-48 p-3 bg-slate-900 text-white text-[10px] rounded-lg shadow-2xl z-20 leading-relaxed font-medium">
+                                ソース: {{ evt.source }}<br>最終確認: {{ evt.last_verified_at }}
+                                {% if evt.notes %}<br>備考: {{ evt.notes }}{% endif %}
+                                <div class="absolute top-full right-2 border-8 border-transparent border-t-slate-900">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="font-bold text-slate-900 dark:text-slate-100 leading-snug">
+                        {{ evt.title }}
+                    </div>
+
+                    <div class="flex items-center gap-2 text-[10px] font-bold">
+                        {% set status_colors = {
+                        'confirmed': 'text-emerald-600 dark:text-emerald-400',
+                        'estimated': 'text-amber-600 dark:text-amber-400',
+                        'unspecified': 'text-slate-400'
+                        } %}
+                        <span class="{{ status_colors.get(evt.status|lower, 'text-slate-400') }}">
+                            ● {{ evt.status_label }}
+                        </span>
+                    </div>
+                </div>
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <div class="flex flex-col items-center justify-center py-20 text-center space-y-4 text-slate-400">
+            <span class="text-5xl">🌙</span>
+            <p class="font-medium">該当するイベントはありません。</p>
+        </div>
+        {% endif %}
+    </div>
 </div>

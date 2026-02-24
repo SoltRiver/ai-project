@@ -1,0 +1,31 @@
+{
+  "name": "ai-project",
+  "version": "1.0.0",
+  "description": "FastAPI + htmx + Python で構築された株式投資分析アシスタント。\r J-Quants API からの株価・財務情報の取得に加え、EDINET からの有価証券報告書（XBRL/PDF）の自動取得・解析・全文検索機能を備えています。",
+  "main": "tailwind.config.js",
+  "directories": {
+    "doc": "docs",
+    "test": "tests"
+  },
+  "scripts": {
+    "build:css": "@tailwindcss/cli -i ./static/css/input.css -o ./static/css/output.css",
+    "watch:css": "@tailwindcss/cli -i ./static/css/input.css -o ./static/css/output.css --watch",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SoltRiver/ai-project.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/SoltRiver/ai-project/issues"
+  },
+  "homepage": "https://github.com/SoltRiver/ai-project#readme",
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.2.1",
+    "tailwindcss": "^4.2.1"
+  }
+}

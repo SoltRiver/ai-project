@@ -1,72 +1,88 @@
-<!-- GC/DC Help Modal (Redesigned to match Pattern Modal) -->
-<div class="pattern-modal-overlay" data-modal-cross-overlay hidden>
-    <div class="pattern-modal" role="dialog" aria-modal="true" aria-labelledby="cross-modal-title">
-        <button class="modal-close" data-modal-cross-close aria-label="閉じる">&times;</button>
+{# templates/partials/_cross_modal.html #}
+<div x-data="{ 
+    open: false, 
+    data: {},
+    init() {
+        window.showCrossHelpModal = (e, data) => {
+            if (e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            this.data = data;
+            this.open = true;
+        }
+    }
+}" @keydown.window.escape="open = false">
+    <template x-teleport="body">
+        <div x-show="open"
+            class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"
+            x-transition.opacity>
 
-        <div class="modal-body">
-            <!-- Left: Visual Symbol -->
-            <div class="modal-visual" id="modal-cross-visual"
-                style="font-size: 5rem; background: rgba(var(--accent-rgb), 0.05);">
-                <!-- ☀ or ☠ injected via JS -->
-            </div>
+            <div x-show="open" x-transition.scale.95 @click.outside="open = false"
+                class="bg-white dark:bg-[#16161e] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl max-w-lg w-full relative p-6 md:p-8">
 
-            <!-- Right: Content -->
-            <div class="modal-text">
-                <h2 id="cross-modal-title" class="modal-title">信頼度評価詳細</h2>
+                <button @click="open = false"
+                    class="absolute top-4 right-4 text-2xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">&times;</button>
 
-                <!-- Specific Result Section (Dynamic) -->
-                <div id="cross-details-section" style="display: none;">
-                    <div class="modal-sec">
-                        <h3>現在の評価</h3>
-                        <div class="badge-row" style="margin-bottom: 0.5rem;">
-                            <span id="modal-cross-badge" class="conf-badge"></span>
+                <div class="flex flex-col gap-6">
+                    <div class="flex items-center gap-6">
+                        <div class="text-6xl p-4 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-slate-100 dark:border-slate-800 flex items-center justify-center"
+                            :class="data.type === 'golden' ? 'text-amber-500' : 'text-blue-500'">
+                            <span x-text="data.type === 'golden' ? '☀' : '☠'"></span>
                         </div>
-                        <p class="modal-desc"><b style="color: var(--muted);">理由：</b><span
-                                id="modal-cross-reason"></span></p>
-                    </div>
-                    <div class="tooltip-divider" style="margin: 1rem 0;"></div>
-                </div>
-
-                <div class="modal-sec">
-                    <h3>評価基準について</h3>
-                    <p class="modal-desc">
-                        基準線（短期・長期MA）の状態から、以下の要素を総合的に評価しています。
-                    </p>
-                    <ul class="modern-list" style="margin: 0.8rem 0;">
-                        <li>長期MAの傾き・トレンド方向</li>
-                        <li>現在値（終値）の乖離具合</li>
-                        <li>クロスの発生タイミング</li>
-                    </ul>
-                </div>
-
-                <div class="modal-sec">
-                    <h3>判定の目安</h3>
-                    <div class="modal-meta-grid" style="grid-template-columns: 1fr; gap: 0.5rem;">
-                        <div style="display: flex; align-items: start; gap: 0.8rem; margin-bottom: 0.5rem;">
-                            <span class="conf-badge conf-high" style="min-width: 60px; justify-content: center;">高
-                                ◎</span>
-                            <span
-                                style="font-size: 0.85rem; color: var(--text);">トレンドが強力で、価格がMAの優位方向にある安定した反発・反落サイン。</span>
-                        </div>
-                        <div style="display: flex; align-items: start; gap: 0.8rem; margin-bottom: 0.5rem;">
-                            <span class="conf-badge conf-medium" style="min-width: 60px; justify-content: center;">中
-                                〇</span>
-                            <span
-                                style="font-size: 0.85rem; color: var(--text);">クロスは成立しているが、MAの傾きや価格位置にわずかに懸念がある状態。</span>
-                        </div>
-                        <div style="display: flex; align-items: start; gap: 0.8rem; margin-bottom: 0.5rem;">
-                            <span class="conf-badge conf-low" style="min-width: 60px; justify-content: center;">低
-                                △</span>
-                            <span
-                                style="font-size: 0.85rem; color: var(--text);">逆張り的な位置でのクロスや、トレンドが不明確なもみ合い局面でのサイン。</span>
+                        <div>
+                            <h2 class="text-2xl font-extrabold text-slate-900 dark:text-white">信頼度評価詳細</h2>
+                            <div class="mt-2">
+                                <span class="px-3 py-1 rounded-full text-xs font-bold border"
+                                    :class="data.colorClass || 'border-slate-300 text-slate-500'"
+                                    x-text="(data.level || 'ー') + (data.icon ? ' ' + data.icon : '')"></span>
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <div class="alert alert-neutral" style="margin-top: 1rem; font-size: 0.75rem; padding: 0.8rem;">
-                    ※ 本評価は売買を推奨するものではなく、過去の統計的・技術的基準に基づくものです。最終判断はご自身で行ってください。
+                    <div class="space-y-4">
+                        <section
+                            class="bg-slate-50 dark:bg-slate-900/30 p-4 rounded-xl border border-slate-100 dark:border-slate-800">
+                            <h3 class="text-sm font-bold uppercase tracking-wider text-slate-500 mb-1">評価理由</h3>
+                            <p class="text-slate-900 dark:text-slate-200 font-medium" x-text="data.reason || 'ー'"></p>
+                        </section>
+
+                        <section>
+                            <h3 class="text-sm font-bold uppercase tracking-wider text-slate-500 mb-2">評価基準について</h3>
+                            <p class="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                                基準線（短期・長期MA）の状態から、長期MAの傾き、現在値の乖離、発生タイミングなどを総合的に評価しています。
+                            </p>
+                        </section>
+
+                        <section class="space-y-3">
+                            <h3 class="text-sm font-bold uppercase tracking-wider text-slate-500 mb-1">判定の目安</h3>
+                            <div class="flex gap-4 items-start">
+                                <span
+                                    class="shrink-0 w-12 text-center py-1 rounded-full bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 text-xs font-bold border border-emerald-200 dark:border-emerald-800">高
+                                    ◎</span>
+                                <p class="text-xs text-slate-500">トレンドが強力で、価格がMAの優位方向にある安定した反発・反落サイン。</p>
+                            </div>
+                            <div class="flex gap-4 items-start">
+                                <span
+                                    class="shrink-0 w-12 text-center py-1 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 text-xs font-bold border border-blue-200 dark:border-blue-800">中
+                                    〇</span>
+                                <p class="text-xs text-slate-500">クロスは成立しているが、MAの傾きや価格位置にわずかに懸念がある状態。</p>
+                            </div>
+                            <div class="flex gap-4 items-start">
+                                <span
+                                    class="shrink-0 w-12 text-center py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-xs font-bold border border-slate-200 dark:border-slate-800">低
+                                    △</span>
+                                <p class="text-xs text-slate-500">もみ合い局面や、トレンドが不明確な状態でのサイン。</p>
+                            </div>
+                        </section>
+                    </div>
+
+                    <div
+                        class="text-[10px] text-slate-400 bg-slate-50 dark:bg-slate-900/20 p-3 rounded-lg border border-slate-100 dark:border-slate-800 italic">
+                        ※ 本評価は統計的・技術的基準に基づくものであり、売買を推奨するものではありません。
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
+    </template>
 </div>

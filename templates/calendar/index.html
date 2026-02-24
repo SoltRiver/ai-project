@@ -1,157 +1,118 @@
 {% extends "base.html" %}
+{% from "components/macros.html" import button, card, form_input, badge %}
+
 {% block content %}
-<section class="cal-page">
-    <!-- 注意文（安全装置） -->
-    <div class="cal-notice">
-        ⓘ 表示は取得できた日程のみ。未取得の項目は「情報不足」として表示します。
-    </div>
+<section x-data="{ 
+    watchOnly: {{ 'true' if filters.watch_only else 'false' }},
+    code: '{{ filters.code or '' }}',
+    typesEarnings: {{ 'true' if filters.types_earnings else 'false' }},
+    typesDividend: {{ 'true' if filters.types_dividend else 'false' }},
+    month: '{{ cal.month_str }}',
+    selectedDate: '{{ selected_date }}',
+    
+    get params() {
+        const p = new URLSearchParams();
+        p.set('watch_only', this.watchOnly ? 'on' : 'off');
+        if (this.code) p.set('code', this.code);
+        const t = [];
+        if (this.typesEarnings) t.push('EARNINGS');
+        if (this.typesDividend) t.push('DIVIDEND');
+        if (t.length > 0 && t.length < 2) p.set('types', t.join(','));
+        return p.toString();
+    },
+    
+    updateCalendar() {
+        htmx.ajax('GET', '/partials/calendar/month_grid?' + this.params + '&month=' + this.month, {
+            target: '#cal-grid-container',
+            swap: 'innerHTML'
+        });
+        htmx.ajax('GET', '/partials/calendar/day?' + this.params + '&date=' + this.selectedDate, {
+            target: '#cal-day-container',
+            swap: 'innerHTML'
+        });
+    },
+    
+    selectDate(date) {
+        this.selectedDate = date;
+        const url = new URL(window.location);
+        url.searchParams.set('date', date);
+        history.pushState({}, '', url);
+        this.updateCalendar();
+    },
+    
+    switchMonth(m) {
+        this.month = m;
+        this.selectedDate = m + '-01'; // Simplified logic
+        const url = new URL(window.location);
+        url.searchParams.set('month', m);
+        url.searchParams.delete('date');
+        history.pushState({}, '', url);
+        this.updateCalendar();
+    }
+}" @calendar-select-date.window="selectDate($event.detail)" @calendar-switch-month.window="switchMonth($event.detail)">
 
-    <!-- 上部フィルタ -->
-    <div class="cal-filters">
-        <form id="cal-filter-form" class="cal-filter-row">
-            <!-- ウォッチのみ -->
-            <label class="cal-filter-check">
-                <input type="checkbox" name="watch_only" value="on" {% if filters.watch_only %}checked{% endif %}
-                    onchange="updateCalendar()">
-                ウォッチのみ
+    <header class="mb-8">
+        <h1 class="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-2">イベントカレンダー</h1>
+        <div
+            class="inline-flex items-center gap-2 px-3 py-1 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-full text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest">
+            <span>ⓘ</span> 表示は取得できた日程のみ。未取得の項目は「情報不足」として表示します。
+        </div>
+    </header>
+
+    <!-- Filters -->
+    <div
+        class="mb-8 p-6 bg-white dark:bg-[#16161e] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-soft">
+        <form id="cal-filter-form" class="flex flex-wrap items-end gap-6">
+            <label class="flex items-center gap-3 cursor-pointer group">
+                <input type="checkbox" x-model="watchOnly" @change="updateCalendar()"
+                    class="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 transition-all">
+                <span
+                    class="text-sm font-bold text-slate-700 dark:text-slate-300 group-hover:text-blue-600 transition-colors">ウォッチのみ</span>
             </label>
 
-            <!-- 銘柄コード -->
-            <label class="cal-filter-label">
-                銘柄:
-                <input type="text" name="code" value="{{ filters.code }}" placeholder="銘柄コード" class="cal-filter-input"
-                    onchange="updateCalendar()">
-            </label>
+            <div class="flex-1 min-w-[200px] max-w-sm">
+                {{ form_input(
+                label="銘柄検索",
+                name="code",
+                placeholder="銘柄コード",
+                attr='x-model.debounce.500ms="code" @input="updateCalendar()"'
+                ) }}
+            </div>
 
-            <!-- 種別 -->
-            <label class="cal-filter-check">
-                <input type="checkbox" name="type_earnings" value="EARNINGS" {% if filters.types_earnings %}checked{%
-                    endif %} onchange="updateCalendar()">
-                決算
-            </label>
-            <label class="cal-filter-check">
-                <input type="checkbox" name="type_dividend" value="DIVIDEND" {% if filters.types_dividend %}checked{%
-                    endif %} onchange="updateCalendar()">
-                配当
-            </label>
+            <div class="flex items-center gap-6">
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" x-model="typesEarnings" @change="updateCalendar()"
+                        class="w-4 h-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500">
+                    <span class="text-sm font-bold text-slate-700 dark:text-slate-300">決算</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" x-model="typesDividend" @change="updateCalendar()"
+                        class="w-4 h-4 rounded border-slate-300 text-rose-600 focus:ring-rose-500">
+                    <span class="text-sm font-bold text-slate-700 dark:text-slate-300">配当</span>
+                </label>
+            </div>
 
-            <!-- 更新ボタン -->
-            <button type="button" class="cal-refresh-btn" hx-post="/actions/events/refresh" hx-target="#cal-body"
-                hx-swap="innerHTML" hx-include="#cal-filter-form" hx-vals='{"month": "{{ cal.month_str }}"}'
-                hx-indicator="#cal-loading">
-                🔄 更新
-            </button>
+            <div class="ml-auto">
+                {{ button(
+                label='<span class="animate-spin-slow">🔄</span> 更新',
+                variant="secondary",
+                attr='hx-post="/actions/events/refresh" hx-target="#cal-body" hx-swap="innerHTML"
+                hx-include="#cal-filter-form" hx-indicator="#cal-loading"'
+                ) }}
+            </div>
         </form>
     </div>
 
-    <!-- ローディング -->
-    <div id="cal-loading" class="htmx-indicator">
-        <div class="spinner"></div>
-    </div>
+    <!-- Main Container -->
+    <div class="relative min-h-[600px]">
+        <div id="cal-loading"
+            class="htmx-indicator absolute inset-0 z-50 flex items-center justify-center bg-white/60 dark:bg-[#1a1b26]/60 backdrop-blur-[2px] rounded-2xl">
+            <div class="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent"></div>
+        </div>
 
-    <!-- カレンダー本体 -->
-    <div id="cal-body">
-        {% include "calendar/partials/_calendar_body.html" %}
+        <div id="cal-body">
+            {% include "calendar/partials/_calendar_body.html" %}
+        </div>
     </div>
 </section>
-
-<script>
-    // カレンダーUI用の軽量JS
-    function updateCalendar() {
-        const form = document.getElementById('cal-filter-form');
-        const params = buildFilterParams();
-        const monthStr = document.querySelector('[data-cal-month]')?.dataset.calMonth || '';
-
-        // 月グリッドを更新
-        htmx.ajax('GET', '/partials/calendar/month_grid?' + params + '&month=' + monthStr, {
-            target: '#cal-grid-container',
-            swap: 'innerHTML'
-        });
-
-        // 日リストを更新
-        const selectedDate = document.querySelector('.cal-cell.is-selected')?.dataset.date || '';
-        htmx.ajax('GET', '/partials/calendar/day?' + params + '&date=' + selectedDate, {
-            target: '#cal-day-container',
-            swap: 'innerHTML'
-        });
-    }
-
-    function buildFilterParams() {
-        const form = document.getElementById('cal-filter-form');
-        const params = new URLSearchParams();
-
-        // ウォッチのみ
-        const watchOnly = form.querySelector('[name="watch_only"]');
-        if (watchOnly && watchOnly.checked) {
-            params.set('watch_only', 'on');
-        } else {
-            params.set('watch_only', 'off');
-        }
-
-        // 銘柄コード
-        const code = form.querySelector('[name="code"]')?.value?.trim();
-        if (code) params.set('code', code);
-
-        // 種別
-        const types = [];
-        if (form.querySelector('[name="type_earnings"]')?.checked) types.push('EARNINGS');
-        if (form.querySelector('[name="type_dividend"]')?.checked) types.push('DIVIDEND');
-        if (types.length > 0 && types.length < 2) {
-            params.set('types', types.join(','));
-        }
-
-        return params.toString();
-    }
-
-    function selectDate(dateStr) {
-        // 選択状態の更新
-        document.querySelectorAll('.cal-cell').forEach(c => c.classList.remove('is-selected'));
-        const target = document.querySelector(`.cal-cell[data-date="${dateStr}"]`);
-        if (target) target.classList.add('is-selected');
-
-        // 右側リストを更新
-        const params = buildFilterParams();
-        htmx.ajax('GET', '/partials/calendar/day?' + params + '&date=' + dateStr, {
-            target: '#cal-day-container',
-            swap: 'innerHTML'
-        });
-
-        // URL更新
-        const url = new URL(window.location);
-        url.searchParams.set('date', dateStr);
-        history.pushState({}, '', url);
-    }
-
-    function switchMonth(monthStr) {
-        const params = buildFilterParams();
-
-        // URL更新
-        const url = new URL(window.location);
-        url.searchParams.set('month', monthStr);
-        url.searchParams.delete('date');
-        history.pushState({}, '', url);
-
-        // 月グリッドを更新
-        htmx.ajax('GET', '/partials/calendar/month_grid?' + params + '&month=' + monthStr, {
-            target: '#cal-grid-container',
-            swap: 'innerHTML'
-        });
-
-        // 日リストをリセット（当該月の1日）
-        const parts = monthStr.split('-');
-        const today = new Date();
-        let resetDate;
-        if (today.getFullYear() === parseInt(parts[0]) && (today.getMonth() + 1) === parseInt(parts[1])) {
-            // 当月なら今日
-            resetDate = today.toISOString().split('T')[0];
-        } else {
-            resetDate = monthStr + '-01';
-        }
-
-        htmx.ajax('GET', '/partials/calendar/day?' + params + '&date=' + resetDate, {
-            target: '#cal-day-container',
-            swap: 'innerHTML'
-        });
-    }
-</script>
 {% endblock %}

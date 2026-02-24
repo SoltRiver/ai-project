@@ -1,66 +1,87 @@
-<!-- AIによるランキング分析セクション -->
-<section class="ai-analysis-card card mb-4 {% if rank_type == 'top' %}top-theme{% else %}bottom-theme{% endif %}">
-    <div class="card-header">
-        <h3><span class="ai-icon">🤖</span> AIによるランキング分析</h3>
-        <span class="last-updated">{{ last_updated }}</span>
+{# templates/ranking/_list.html #}
+{% from "components/macros.html" import card, badge %}
+
+<!-- AI分析セクション -->
+<div class="mb-8">
+    <div
+        class="bg-white dark:bg-[#16161e] border-l-4 rounded-r-2xl shadow-soft h-full transition-all border-blue-500 dark:border-blue-400 overflow-hidden">
+        <div
+            class="flex justify-between items-center px-6 py-4 bg-slate-50/50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800">
+            <h3 class="flex items-center gap-2 font-extrabold text-slate-900 dark:text-white uppercase tracking-tight">
+                <span class="text-xl">🤖</span> AIによるランキング分析
+            </h3>
+            <span class="text-xs font-mono text-slate-400">{{ last_updated }}</span>
+        </div>
+        <div class="px-6 py-5 text-slate-700 dark:text-slate-300 leading-relaxed text-sm whitespace-pre-wrap">
+            {{ ai_analysis }}
+        </div>
     </div>
-    <div class="card-body ai-content" style="white-space: pre-wrap;">
-        {{ ai_analysis }}
-    </div>
-</section>
+</div>
 
 <!-- ランキングリスト -->
-<div class="ranking-table-wrapper card">
-    <table class="ranking-table">
+{% call card() %}
+<div class="overflow-x-auto -mx-6">
+    <table class="w-full text-left border-collapse">
         <thead>
-            <tr>
-                <th style="white-space: nowrap;">ランク</th>
-                <th>銘柄（コード）</th>
-                <th>現在値</th>
-                <th>変動額</th>
-                <th>変動率</th>
-                <th>セクター / 理由</th>
+            <tr class="text-slate-500 dark:text-slate-400 text-xs uppercase tracking-widest font-bold">
+                <th class="px-6 py-4 w-20 text-center">ランク</th>
+                <th class="px-6 py-4">銘柄（コード）</th>
+                <th class="px-6 py-4 text-right">現在値</th>
+                <th class="px-6 py-4 text-right">変動額</th>
+                <th class="px-6 py-4 text-center">変動率</th>
+                <th class="px-6 py-4">セクター / 理由</th>
             </tr>
         </thead>
-        <tbody>
+        <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
             {% for item in items %}
-            <tr class="ranking-row {% if rank_type == 'top' %}row-top{% else %}row-bottom{% endif %}">
-                <td class="rank-cell" style="white-space: nowrap;">
-                    {% if loop.index <= 3 %} <span class="medal medal-{{ loop.index }}">{{ loop.index }}</span>
+            <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                <td class="px-6 py-4 text-center">
+                    {% if loop.index <= 3 %} {% set medal_colors=['bg-amber-400
+                        text-amber-900', 'bg-slate-300 text-slate-800' , 'bg-amber-600 text-white' ] %} <span
+                        class="inline-flex items-center justify-center w-8 h-8 rounded-full font-black text-sm {{ medal_colors[loop.index-1] }} shadow-sm">
+                        {{ loop.index }}
+                        </span>
                         {% else %}
-                        <span class="rank-num">{{ loop.index }}</span>
+                        <span class="text-slate-400 font-black text-sm">{{ loop.index }}</span>
                         {% endif %}
                 </td>
-                <td class="symbol-cell" style="white-space: nowrap;">
-                    <div class="stock-name">
-                        <a href="/stocks/{{ item.symbol }}">{{ item.name }}（{{ item.symbol }}）</a>
-                    </div>
+                <td class="px-6 py-4">
+                    <a href="/stocks/{{ item.symbol }}"
+                        class="font-bold text-slate-900 dark:text-white hover:text-blue-600 transition-colors">
+                        {{ item.name }} <span class="text-xs text-slate-500 ml-1 font-mono">({{ item.symbol }})</span>
+                    </a>
                 </td>
-                <td class="price-cell">
+                <td class="px-6 py-4 text-right font-mono font-bold text-slate-900 dark:text-white">
                     ¥{{ "{:,.1f}".format(item.price) }}
                 </td>
-                <td class="change-cell {% if item.change > 0 %}text-positive{% elif item.change < 0 %}text-negative{% endif %}"
-                    style="white-space: nowrap;">
-                    ¥{{ "{:,.1f}".format(item.change) }}
-                    <span class="arrow-icon" style="margin-left: 4px;">{% if item.change > 0 %}↑{% elif item.change < 0
-                            %}↓{% endif %}</span>
+                <td class="px-6 py-4 text-right font-mono font-bold whitespace-nowrap">
+                    {% set text_color = 'text-emerald-600 dark:text-emerald-400' if item.change > 0 else 'text-rose-600
+                    dark:text-rose-400' if item.change < 0 else 'text-slate-500' %} <span class="{{ text_color }}">
+                        ¥{{ "{:,.1f}".format(item.change) }}
+                        <span class="ml-1">{% if item.change > 0 %}↑{% elif item.change < 0 %}↓{% endif %}</span>
+                        </span>
                 </td>
-                <td
-                    class="percent-cell {% if item.change_percent > 0 %}bg-positive-soft{% elif item.change_percent < 0 %}bg-negative-soft{% endif %}">
-                    {{ "{:+.2f}%".format(item.change_percent) }}
-                </td>
-                <td class="reason-cell">
-                    <span class="sector-badge">{{ item.sector }}</span>
-                    <p class="reason-text">{{ item.reason }}</p>
+                <td class="px-6 py-4 text-center">
+                    {% set badge_color = 'green' if item.change_percent > 0 else 'red' if item.change_percent < 0
+                        else 'gray' %} {{ badge(text="{:+.2f}%" .format(item.change_percent), color=badge_color,
+                        class="px-3 py-1 font-mono text-sm shadow-sm" ) }} </td>
+                <td class="px-6 py-4 flex flex-col gap-1">
+                    <span
+                        class="inline-flex text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 w-fit">
+                        {{ item.sector }}
+                    </span>
+                    <p class="text-xs text-slate-600 dark:text-slate-400 line-clamp-2" title="{{ item.reason }}">{{
+                        item.reason }}</p>
                 </td>
             </tr>
             {% else %}
             <tr>
-                <td colspan="6" class="text-center py-4">データが取得できませんでした。</td>
+                <td colspan="6" class="px-6 py-12 text-center text-slate-400 font-medium">
+                    データが取得できませんでした。
+                </td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
 </div>
-
-<!-- HTMXリクエストの成功後にスクリプト等が必要な場合はここに記述 -->
+{% endcall %}

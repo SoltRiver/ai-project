@@ -1,25 +1,38 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="pattern-page">
-    <section class="pattern-hero">
-        <div class="pattern-hero__top">
-            <div>
-                <h1>ローソク足パターン</h1>
+<div class="max-w-7xl mx-auto">
+    <header class="mb-10">
+        <h1 class="text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-2">ローソク足パターン</h1>
+        <p class="text-slate-500 dark:text-slate-400">チャートに現れる典型的な形状から、相場の転換点や継続を読み解きます。</p>
+    </header>
+
+    <div x-data="{ activeTab: '{{ active_tab }}' }">
+        {% include "candle_patterns/partials/_tabs.html" %}
+
+        <div class="relative min-h-[400px]">
+            <div id="listLoading"
+                class="htmx-indicator absolute inset-0 z-50 flex items-center justify-center bg-white/60 dark:bg-[#1a1b26]/60 backdrop-blur-[2px] rounded-2xl">
+                <div class="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent"></div>
+            </div>
+
+            <div id="listArea" class="animate-in fade-in duration-500">
+                {% include "candle_patterns/partials/_list_area.html" %}
             </div>
         </div>
-    </section>
-    {% include "candle_patterns/partials/_tabs.html" %}
-
-    <div id="listLoading" class="list-loading htmx-indicator" aria-live="polite">読み込み中...</div>
-    <div id="listArea">
-        {% include "candle_patterns/partials/_list_area.html" %}
     </div>
 
-    <button id="backToTop" class="back-to-top" type="button" aria-label="ページの一番上に戻る" hidden>
-        <span class="icon" aria-hidden="true">▲</span>
-        <span class="text">TOP</span>
+    <!-- Back to Top Button -->
+    <button x-data="{ show: false }" x-init="window.addEventListener('scroll', () => { show = window.scrollY > 500 })"
+        x-show="show" x-transition.opacity @click="window.scrollTo({ top: 0, behavior: 'smooth' })"
+        class="fixed bottom-8 right-8 p-4 bg-blue-600 text-white rounded-full shadow-2xl hover:bg-blue-700 active:scale-95 transition-all z-40 group"
+        aria-label="ページの一番上に戻る">
+        <span class="flex flex-col items-center gap-1 font-black text-xs">
+            <svg class="w-4 h-4 transition-transform group-hover:-translate-y-1" fill="none" stroke="currentColor"
+                viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M5 15l7-7 7 7" />
+            </svg>
+            TOP
+        </span>
     </button>
-
-    {% include "partials/_candle_modal.html" %}
 </div>
 {% endblock %}

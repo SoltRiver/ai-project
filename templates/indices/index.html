@@ -1,71 +1,72 @@
 {% extends "base.html" %}
+{% from "components/macros.html" import button, card, badge %}
 
 {% block content %}
-<section class="page-header" style="margin-bottom: 2rem;">
+<section class="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
     <div>
-        <h1>主要指標一覧</h1>
-        <p class="text-muted">主要な市場指標のリアルタイム（遅延あり）状況です。</p>
+        <h1 class="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-2">主要指標一覧</h1>
+        <p class="text-slate-500 dark:text-slate-400">主要な市場指標のリアルタイム（遅延あり）状況です。</p>
     </div>
-    <div>
-        <button class="ghost-button" onclick="window.location.reload();">
-            更新
-        </button>
+    <div class="flex gap-2">
+        {{ button(label="更新", variant="secondary", attr='onclick="window.location.reload();"', class="px-6") }}
     </div>
 </section>
 
-<div class="card">
-    <table class="stock-table">
-        <thead>
-            <tr>
-                <th>指標名</th>
-                <th>現在値</th>
-                <th>前日比</th>
-                <th>状態</th>
+{% call card(class="p-0 overflow-hidden") %}
+<div class="overflow-x-auto">
+    <table class="w-full text-left border-collapse">
+        <thead class="bg-slate-50 dark:bg-slate-900/50">
+            <tr class="text-slate-500 dark:text-slate-400 text-xs uppercase tracking-widest font-bold">
+                <th class="px-6 py-5">指標名</th>
+                <th class="px-6 py-5 text-right">現在値</th>
+                <th class="px-6 py-5 text-center">前日比</th>
+                <th class="px-6 py-5 text-right">状態</th>
             </tr>
         </thead>
-        <tbody>
+        <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
             {% for item in indices %}
-            <tr>
-                <td class="name-cell">
-                    <strong>{{ item.name }}</strong>
-                    <br>
-                    <span style="font-size: 0.8em; color: var(--text-muted);">{{ item.ticker }}</span>
+            <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-all group">
+                <td class="px-6 py-5">
+                    <div
+                        class="font-bold text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                        {{ item.name }}</div>
+                    <div class="text-xs text-slate-400 font-mono">{{ item.ticker }}</div>
                 </td>
-                <td class="price-cell">
+                <td class="px-6 py-5 text-right font-mono font-bold text-slate-900 dark:text-white">
                     {% if item.price %}
                     {{ "{:,.2f}".format(item.price) }}
                     {% else %}
-                    -
+                    <span class="text-slate-300 dark:text-slate-600">-</span>
                     {% endif %}
                 </td>
-                <td class="change-cell">
+                <td class="px-6 py-5 text-center">
                     {% if item.change is not none %}
-                    {% set color_class = 'change-up' if item.change > 0 else 'change-down' if item.change < 0
-                        else 'change-flat' %} {% set icon='↑' if item.change> 0 else '↓' if item.change < 0 else '→' %}
-                            <span class="change-badge {{ color_class }}">
-                            <span
-                                class="{{ 'arrow-up' if item.change > 0 else 'arrow-down' if item.change < 0 else '' }}">{{
-                                icon }}</span>
-                            {{ "{:+,.2f}".format(item.change) }} ({{ "{:+.2f}%".format(item.change_percent) }})
-                            </span>
-                            {% else %}
-                            -
-                            {% endif %}
+                    {% set color = 'green' if item.change > 0 else 'red' if item.change < 0 else 'gray' %} {% set
+                        icon='↑' if item.change> 0 else '↓' if item.change < 0 else '→' %} {{ badge(
+                            text='<span class="' ~ ('animate-bounce inline-block' if item.change> 0 else 'animate-bounce
+                            inline-block rotate-180' if item.change < 0 else '' ) ~ '">' ~ icon ~ '</span> '
+                                ~ "{:+,.2f}" .format(item.change) ~ " (" ~ "{:+.2f}%" .format(item.change_percent) ~ ")"
+                                , color=color, class="px-3 py-1 text-xs font-mono whitespace-nowrap border-2 shadow-sm"
+                                ) }} {% else %} <span class="text-slate-300 dark:text-slate-600">-</span>
+                                {% endif %}
                 </td>
-                <td>
+                <td class="px-6 py-5 text-right">
                     {% if item.status == 'OK' %}
-                    <span style="color: var(--color-success);">● 取得成功</span>
+                    {{ badge(text="取得成功", color="green", class="px-2 py-0.5 text-[10px]") }}
                     {% else %}
-                    <span style="color: var(--color-danger);">× {{ item.status }}</span>
+                    {{ badge(text="取得失敗", color="red", class="px-2 py-0.5 text-[10px]") }}
                     {% endif %}
                 </td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
-    <div style="padding: 1rem; color: var(--text-muted); font-size: 0.9em;">
-        <p>※ データはYahoo Financeより取得しています。一部の指標（TOPIX、マザーズ等）はAPIの制限により取得できない場合があります。</p>
-        <p>※ 遅延データが含まれる場合があります。</p>
-    </div>
 </div>
+
+<div
+    class="mt-6 p-4 bg-slate-50 dark:bg-slate-900/40 rounded-xl border border-slate-100 dark:border-slate-800 text-xs text-slate-500 space-y-1">
+    <p>※ データはYahoo Financeより取得しています。一部の指標（TOPIX、マザーズ等）はAPIの制限により取得できない場合があります。</p>
+    <p>※ 遅延データが含まれる場合があります。</p>
+</div>
+{% endcall %}
 {% endblock %}

@@ -1,36 +1,57 @@
 <!DOCTYPE html>
-<html lang="ja" data-theme="{{ theme | default('light') }}">
+<html lang="ja" x-data="{ theme: localStorage.getItem('theme') || 'light' }" :data-theme="theme" :class="theme">
 
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{{ page_title or "株価分析アプリ" }}</title>
+    <!-- Tailwind Generated CSS -->
+    <link rel="stylesheet" href="/static/css/output.css" />
+    <!-- Legacy CSS (段階移行用) -->
     <link rel="stylesheet" href="/static/css/theme.css?v=7" />
     <link rel="stylesheet" href="/static/css/ranking.css?v=1" />
+
     <script src="/static/js/htmx.min.js"></script>
+    <!-- Alpine.js (defer) -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <script src="/static/js/app.js?v=12" defer></script>
 </head>
 
-<body class="app-shell">
-    <header class="top-bar">
+<body
+    class="app-shell bg-slate-50 dark:bg-[#1a1b26] text-slate-900 dark:text-[#c0caf5] min-h-screen transition-colors duration-300">
+    <header
+        class="top-bar sticky top-0 z-40 w-full backdrop-blur border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-[#111827]/80 flex items-center justify-between px-6 py-4">
         <a href="/" class="brand" style="text-decoration: none;">
             <span class="brand-icon">📈</span>
             <span class="brand-title">StockAnalyst</span>
             <span class="brand-sub">AI</span>
         </a>
-        <div class="nav-links">
-            <a href="/indices">主要指標</a>
-            <a href="/news">ニュース</a>
-            <a href="/stocks">株価リスト</a>
-            <a href="/ranking">ランキング</a>
-            <a href="/glossary">用語集</a>
-            <a href="/candle-patterns">ローソク足</a>
-            <a href="/calendar">カレンダー</a>
-        </div>
-        <button class="ghost-button" type="button" data-action="toggle-theme">テーマ切替</button>
+        <nav
+            class="nav-links flex gap-2 sm:gap-4 font-bold text-sm sm:text-base overflow-x-auto no-scrollbar whitespace-nowrap px-2">
+            <a href="/indices"
+                class="px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition">主要指標</a>
+            <a href="/news" class="px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition">ニュース</a>
+            <a href="/stocks"
+                class="px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition">株価リスト</a>
+            <a href="/ranking"
+                class="px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition">ランキング</a>
+            <a href="/glossary"
+                class="px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition">用語集</a>
+            <a href="/candle-patterns"
+                class="px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition">ローソク足</a>
+            <a href="/calendar"
+                class="px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition">カレンダー</a>
+        </nav>
+        <button @click="theme = (theme === 'light' ? 'dark' : 'light'); localStorage.setItem('theme', theme)"
+            class="ghost-button flex items-center justify-center p-2 rounded-full border border-slate-300 dark:border-slate-600 hover:border-blue-500 transition"
+            type="button">
+            <span x-show="theme === 'light'">🌙</span>
+            <span x-show="theme === 'dark'">☀️</span>
+            <span class="ml-2 hidden sm:inline">テーマ切替</span>
+        </button>
     </header>
 
-    <main class="page-container">
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12">
         {% block content %}{% endblock %}
     </main>
     {% include "partials/_candle_modal.html" %}

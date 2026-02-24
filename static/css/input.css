@@ -1,0 +1,13 @@
+@import "tailwindcss";
+
+@theme {
+    --font-sans: "Segoe UI", "Hiragino Sans", ui-sans-serif, system-ui, sans-serif;
+    --color-brand-accent: #0ea5e9;
+    --color-brand-positive: #22c55e;
+    --color-brand-negative: #ef4444;
+    --shadow-soft: 0 16px 30px rgba(15, 23, 42, 0.12);
+}
+
+@layer components {
+    /* 必要に応じて既存CSSとの互換スタイルの追加 */
+}
