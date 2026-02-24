@@ -1283,6 +1283,15 @@ def get_chart_tab(code: str, interval: str = "1d") -> Dict[str, Any]:
 
     interval_options = [{"value": key, "label": label} for key, label in INTERVAL_LABELS.items()]
 
+    # AI 予測の取得 (v1)
+    ai_prediction = None
+    if interval == "1d":
+        try:
+            from services.ai_prediction_service import predictor
+            ai_prediction = predictor.predict_latest(df)
+        except Exception as e:
+            logger.error(f"AI prediction error for {code}: {e}")
+
     return {
         "interval": interval,
         "interval_options": interval_options,
@@ -1299,6 +1308,7 @@ def get_chart_tab(code: str, interval: str = "1d") -> Dict[str, Any]:
         "risks": risks,
         "positives": positives,
         "axis_note": axis_note,
+        "ai_prediction": ai_prediction,  # 追加
     }
 
 
