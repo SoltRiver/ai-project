@@ -1,0 +1,25 @@
+<div class="card tendency-section">
+    <div class="section-header">
+        <div class="section-title">直近の傾向</div>
+    </div>
+    <div class="tendency-content py-2">
+        {% if news_tendency %}
+        <div class="flex items-center justify-between mb-4 bg-slate-50 dark:bg-slate-900/50 p-3 rounded-xl">
+            <div class="news-stats flex gap-4">
+                <div class="stat-item">
+                    <span class="text-xs text-slate-500">ポジティブ</span>
+                    <div class="text-lg font-bold text-green-600">{{ news_tendency.counts.last_30d.pos }}</div>
+                </div>
+                <div class="stat-item border-l border-slate-200 dark:border-slate-800 pl-4">
+                    <span class="text-xs text-slate-500">ネガティブ</span>
+                    <div class="text-lg font-bold text-red-600">{{ news_tendency.counts.last_30d.neg }}</div>
+                </div>
+            </div>
+            <div class="text-xs text-slate-400 italic">過去30日のニュース傾向</div>
+        </div>
+        <p class="text-sm text-slate-600 dark:text-slate-400 px-1">{{ news_tendency.summary_text }}</p>
+        {% else %}
+        <p class="text-sm text-slate-400 p-4">傾向データはありません。</p>
+        {% endif %}
+    </div>
+</div>

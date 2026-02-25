@@ -43,91 +43,49 @@
         </div>
     </div>
 
-    <!-- Modernized Info Sections -->
+
+    <!-- AI Prediction & Tendency Sections (v1.1) -->
     <div class="info-stack">
-        <!-- AI Prediction Section (v1) -->
-        {% if ai_prediction %}
-        <div class="card ai-prediction-section">
-            <div class="section-header">
-                <div class="section-title">利確先着確率（AI）</div>
-                {% if ai_prediction.is_provisional %}
-                <span class="badge gray">暫定</span>
-                {% else %}
-                <span class="badge blue">確定</span>
-                {% endif %}
-            </div>
-
-            <div class="ai-prediction-content py-4">
-                <div class="flex items-center justify-between gap-6">
-                    <div class="probability-display">
-                        <div class="text-xs text-slate-500 mb-1">推定確率</div>
-                        <div
-                            class="text-4xl font-bold {% if ai_prediction.is_provisional %}text-slate-400{% else %}text-blue-600 dark:text-blue-400{% endif %}">
-                            {{ ai_prediction.probability }}
-                        </div>
-                    </div>
-
-                    <div
-                        class="validation-info flex-1 grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs border-l border-slate-200 dark:border-slate-800 pl-6">
-                        <div class="valid-item">
-                            <div class="text-slate-400">Brier Score</div>
-                            <div class="font-mono font-bold">{{ ai_prediction.validation.brier_score }}</div>
-                        </div>
-                        <div class="valid-item">
-                            <div class="text-slate-400">試行回数 (N)</div>
-                            <div class="font-bold">
-                                {{ ai_prediction.validation.n }}
-                                {% if ai_prediction.validation.n < 300 %} <span
-                                    class="badge gray scale-75 transform -translate-y-0.5">参考</span>
-                                    {% endif %}
-                            </div>
-                        </div>
-                        <div class="valid-item">
-                            <div class="text-slate-400">検証期間</div>
-                            <div class="font-bold">{{ ai_prediction.validation.period }}</div>
-                        </div>
-                    </div>
-                </div>
-
-                <div
-                    class="mt-4 p-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl text-xs text-slate-500 leading-relaxed">
-                    {% if ai_prediction.is_provisional %}
-                    <p class="mb-1 text-orange-600 dark:text-orange-400 font-bold">⚠️ 未確定足のため暫定表示</p>
-                    {% endif %}
-                    <p>この確率は、過去データに基づく機械学習モデルの推定値であり、将来の成果を保証するものではありません。20営業日以内の利確(+1R)到達確率を予測しています。</p>
-                </div>
-            </div>
-        </div>
-        {% endif %}
-
-        <!-- Trading Signals -->
-        <div class="card signal-section">
-            <div class="section-header">
-                <div class="section-title">売買シグナル（初心者向け）</div>
-                <span class="badge neutral">AI分析</span>
-            </div>
-            <div class="signal-grid-modern">
-                {% for sig in signals %}
-                <div class="signal-card-modern tone-{{ sig.tone | default('neutral') }}">
-                    <div class="signal-icon">
-                        {% if sig.tone == 'positive' or sig.tone == 'bullish' %}
-                        <span class="icon-bull">🐂</span>
-                        {% elif sig.tone == 'negative' or sig.tone == 'bearish' %}
-                        <span class="icon-bear">🐻</span>
-                        {% else %}
-                        <span class="icon-neutral">⚖️</span>
-                        {% endif %}
-                    </div>
-                    <div class="signal-content">
-                        <div class="signal-title">{{ sig.title }}</div>
-                        <p class="signal-detail">{{ sig.detail }}</p>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
+        <!-- AI Assist Section -->
+        <div id="ai-assist-container" hx-get="/stocks/{{ stock.code }}/ai_assist?interval={{ interval }}"
+            hx-trigger="load" hx-swap="outerHTML">
+            <div class="card animate-pulse h-32 bg-white dark:bg-slate-900"></div>
         </div>
 
-
+        <!-- Tendency Section -->
+        <div id="tendency-container" hx-get="/stocks/{{ stock.code }}/tendency" hx-trigger="load" hx-swap="outerHTML">
+            <div class="card animate-pulse h-24 bg-white dark:bg-slate-900"></div>
+        </div>
     </div>
+
+    <!-- Trading Signals -->
+    <div class="card signal-section">
+        <div class="section-header">
+            <div class="section-title">売買シグナル（初心者向け）</div>
+            <span class="badge neutral">AI分析</span>
+        </div>
+        <div class="signal-grid-modern">
+            {% for sig in signals %}
+            <div class="signal-card-modern tone-{{ sig.tone | default('neutral') }}">
+                <div class="signal-icon">
+                    {% if sig.tone == 'positive' or sig.tone == 'bullish' %}
+                    <span class="icon-bull">🐂</span>
+                    {% elif sig.tone == 'negative' or sig.tone == 'bearish' %}
+                    <span class="icon-bear">🐻</span>
+                    {% else %}
+                    <span class="icon-neutral">⚖️</span>
+                    {% endif %}
+                </div>
+                <div class="signal-content">
+                    <div class="signal-title">{{ sig.title }}</div>
+                    <p class="signal-detail">{{ sig.detail }}</p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+
+</div>
 
 </div>

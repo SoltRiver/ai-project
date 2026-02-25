@@ -1,0 +1,110 @@
+<div class="card ai-prediction-section {% if is_provisional %}provisional-gray{% endif %}">
+    <div class="section-header">
+        <div class="section-title">AIアシスト分析</div>
+        {% if is_provisional %}
+        <span class="badge gray">暫定</span>
+        {% else %}
+        <span class="badge blue">確定</span>
+        {% endif %}
+    </div>
+
+    <div class="ai-prediction-content py-4">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
+            <!-- Part 1: Reliability -->
+            <div class="reliability-eval">
+                <div class="text-xs text-slate-500 mb-1">需給信頼度（ルール）</div>
+                <div class="flex items-center gap-2">
+                    <span class="text-3xl font-bold {{ reliability.css }}">{{ reliability.icon }}</span>
+                    <span class="text-lg font-bold">{{ reliability.label }}</span>
+                </div>
+            </div>
+
+            <!-- Part 2: AI Probability & Expected Value -->
+            <div class="ai-metrics border-l border-slate-200 dark:border-slate-800 pl-6">
+                <div class="flex flex-col gap-4">
+                    <div class="metric-item">
+                        <div class="text-xs text-slate-500 mb-1">利確先着確率（AI）</div>
+                        <div
+                            class="text-3xl font-bold {% if is_provisional %}text-slate-400{% else %}text-blue-600 dark:text-blue-400{% endif %}">
+                            {{ ai_prediction.probability if ai_prediction else '-' }}
+                        </div>
+                    </div>
+                    <div class="metric-item">
+                        <div class="text-xs text-slate-500 mb-1">期待値 (E_R)</div>
+                        <div
+                            class="text-2xl font-mono font-bold {% if ai_prediction and ai_prediction.expected_return > 0 %}text-green-600{% elif ai_prediction and ai_prediction.expected_return < 0 %}text-red-600{% endif %}">
+                            {{ ai_prediction.expected_return if ai_prediction else '-' }} <span
+                                class="text-sm font-normal text-slate-400">R</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Part 3: Validation Info -->
+            <div class="validation-info border-l border-slate-200 dark:border-slate-800 pl-6 text-xs space-y-2">
+                <div class="valid-item">
+                    <div class="text-slate-400">Brier Score</div>
+                    <div class="font-mono font-bold">{{ ai_prediction.validation.brier_score if ai_prediction else '-'
+                        }}</div>
+                </div>
+                <div class="valid-item">
+                    <div class="text-slate-400">試行回数 (N)</div>
+                    <div class="font-bold">
+                        {{ ai_prediction.validation.n if ai_prediction else '0' }}
+                        {% if ai_prediction and ai_prediction.validation.n < 300 %} <span
+                            class="badge gray scale-75 transform -translate-y-0.5">参考</span>
+                            {% endif %}
+                    </div>
+                </div>
+                <div class="valid-item">
+                    <div class="text-slate-400">検証期間</div>
+                    <div class="font-bold">{{ ai_prediction.validation.period if ai_prediction else '-' }}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Attention Badge / Contradiction -->
+        {% if ai_prediction and ai_prediction.attention %}
+        <div
+            class="mt-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl flex items-center gap-3 animate-pulse">
+            <span class="text-xl">⚠️</span>
+            <div class="text-sm font-bold text-red-700 dark:text-red-400">{{ ai_prediction.attention }}</div>
+        </div>
+        {% endif %}
+
+        <div class="mt-4 p-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl text-[10px] text-slate-500 leading-relaxed">
+            {% if is_provisional %}
+            <p class="mb-1 text-orange-600 dark:text-orange-400 font-bold">⚠️ 最新の足は未確定のため、暫定値を表示しています（期待値計算時の摩擦 cR=0.02
+                考慮済み）。</p>
+            {% endif %}
+            <p>※本指標は過去の傾向に基づく確率的な推定であり、投資成果を保証するものではありません。</p>
+        </div>
+    </div>
+</div>
+
+<style>
+    .provisional-gray {
+        filter: grayscale(0.5) opacity(0.8);
+    }
+
+    .reliability-high {
+        color: #22c55e;
+    }
+
+    /* Green-500 */
+    .reliability-mid {
+        color: #3b82f6;
+    }
+
+    /* Blue-500 */
+    .reliability-low {
+        color: #f59e0b;
+    }
+
+    /* Amber-500 */
+    .reliability-unknown {
+        color: #94a3b8;
+    }
+
+    /* Slate-400 */
+</style>

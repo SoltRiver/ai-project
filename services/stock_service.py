@@ -1283,14 +1283,17 @@ def get_chart_tab(code: str, interval: str = "1d") -> Dict[str, Any]:
 
     interval_options = [{"value": key, "label": label} for key, label in INTERVAL_LABELS.items()]
 
-    # AI 予測の取得 (v1)
+    # AI 予測 & ニュース傾向の取得 (v1.1)
     ai_prediction = None
+    news_tendency = None
     if interval == "1d":
         try:
             from services.ai_prediction_service import predictor
-            ai_prediction = predictor.predict_latest(df)
+            from services.news_service import get_news_tendency
+            ai_prediction = predictor.predict_latest(df, code)
+            news_tendency = get_news_tendency(code)
         except Exception as e:
-            logger.error(f"AI prediction error for {code}: {e}")
+            logger.error(f"AI prediction/news error for {code}: {e}")
 
     return {
         "interval": interval,
@@ -1308,7 +1311,41 @@ def get_chart_tab(code: str, interval: str = "1d") -> Dict[str, Any]:
         "risks": risks,
         "positives": positives,
         "axis_note": axis_note,
-        "ai_prediction": ai_prediction,  # 追加
+        "ai_prediction": ai_prediction,
+        "news_tendency": news_tendency,
+    }
+
+
+def get_ai_assist(code: str, interval: str = "1d") -> Dict[str, Any]:
+    """
+    AI予測セクション（信頼度・確率・期待値・矛盾）のデータを取得する。
+    htmxによる部分更新用。
+    """
+    from services.data_fetcher import fetch_stock_data, format_symbol_for_yfinance
+    symbol = format_symbol_for_yfinance(code)
+    df = fetch_stock_data(symbol, period="2y", interval=interval)
+    
+    ai_prediction = None
+    if interval == "1d" and df is not None:
+        try:
+            from services.ai_prediction_service import predictor
+            ai_prediction = predictor.predict_latest(df, code)
+        except Exception as e:
+            logger.error(f"AI assist fetch error for {code}: {e}")
+
+    # 信頼度情報を margin_service から取得
+    from services.margin_service import get_margin_tab
+    margin_data = get_margin_tab(code)
+    margin = margin_data.get("margin", {})
+
+    return {
+        "ai_prediction": ai_prediction,
+        "reliability": {
+            "label": margin.get("reliability_label", "未確定"),
+            "icon": margin.get("reliability_icon", "—"),
+            "css": margin.get("reliability_css", "reliability-unknown"),
+        },
+        "is_provisional": ai_prediction.get("is_provisional", True) if ai_prediction else True
     }
 
 

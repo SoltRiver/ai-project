@@ -7,15 +7,20 @@ import lightgbm as lgb
 from sklearn.metrics import brier_score_loss
 from sklearn.model_selection import TimeSeriesSplit
 
+from services.market_service import fetch_market_indicators, get_market_features
+from services.news_service import get_news_tendency
+from services.margin_service import get_margin_tab
+
 logger = logging.getLogger(__name__)
 
 class AIPredictor:
     """
-    利確先着確率（AI）を算出するための予測サービス (v1)
+    利確先着確率（AI）を算出するための予測サービス (v1.1)
     """
-    def __init__(self, target_days: int = 20, r_multiplier: float = 1.0):
+    def __init__(self, target_days: int = 20, r_multiplier: float = 1.0, cost_r: float = 0.02):
         self.target_days = target_days
         self.r_multiplier = r_multiplier
+        self.cost_r = cost_r
         self.model = None
         self.validation_results = {
             "brier_score": "-",
@@ -23,10 +28,10 @@ class AIPredictor:
             "period": "-"
         }
 
-    def engineer_features(self, df: pd.DataFrame) -> pd.DataFrame:
+    def engineer_features(self, df: pd.DataFrame, code: str = None) -> pd.DataFrame:
         """
-        特徴量エンジニアリング (v1固定)
-        将来データを含めないように注意
+        特徴量エンジニアリング (v1.1)
+        チャート、市場動向、ニュースを考慮する。
         """
         if df is None or len(df) < 75:
             return pd.DataFrame()
@@ -39,53 +44,45 @@ class AIPredictor:
         low = df['low']
         volume = df['volume']
 
-        # 1. MA25とMA75の乖離率
+        # 1. チャート特徴量
         sma25 = close.rolling(window=25).mean()
         sma75 = close.rolling(window=75).mean()
         feat['sma_divergence'] = (sma25 - sma75) / sma75
-
-        # 2. MA75の傾き（直近10日差分）
         feat['sma75_slope'] = sma75.diff(10) / sma75.shift(10)
-
-        # 3. RSI(14)
+        
         delta = close.diff()
         gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
         loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
         rs = gain / loss
         feat['rsi14'] = 100 - (100 / (1 + rs))
 
-        # 4. ATR(14) / 終値
         tr1 = high - low
         tr2 = abs(high - close.shift(1))
         tr3 = abs(low - close.shift(1))
         tr = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
         atr14 = tr.rolling(window=14).mean()
         feat['atr_ratio'] = atr14 / close
-
-        # 5. 出来高比（直近5日 vs 60日平均）
-        vol5 = volume.rolling(window=5).mean()
-        vol60 = volume.rolling(window=60).mean()
-        feat['volume_ratio'] = vol5 / vol60
-
-        # 6. 直近1日/5日リターン
+        feat['volume_ratio'] = volume.rolling(window=5).mean() / volume.rolling(window=60).mean()
         feat['return_1d'] = close.pct_change(1)
         feat['return_5d'] = close.pct_change(5)
-
-        # 7. ボラティリティ指標 (直近20日)
         feat['volatility_20'] = close.pct_change().rolling(window=20).std()
+
+        # 2. 市場動向特徴量 (TOPIX, N225)
+        feat['topix_ret_1d'] = 0.0
+        feat['topix_ret_5d'] = 0.0
+        feat['n225_ret_1d'] = 0.0
+        feat['n225_ret_5d'] = 0.0
+
+        # 3. ニュース傾向特徴量
+        feat['news_pos_7d'] = 0.0
+        feat['news_neg_7d'] = 0.0
 
         return feat.dropna()
 
     def label_data(self, df: pd.DataFrame) -> pd.Series:
         """
-        教師データの作成
-        次の20営業日以内に利確(+1R)に先に到達するか
-        R = ATR(14) を暫定的に使用（シナリオ定義に合わせる必要あり）
+        教師データの作成 (v1同様)
         """
-        # v1では R=1固定（リスク幅を1とするが、実際には価格変動率などに基づくべき）
-        # 要件「Rは1固定」は「利確ライン(+1R)」「損切りライン(-1R)」のRを指すと解釈。
-        # ここでは ATR(14) をリスク幅 1R と定義して検証する。
-        
         tr1 = df['high'] - df['low']
         tr2 = abs(df['high'] - df['close'].shift(1))
         tr3 = abs(df['low'] - df['close'].shift(1))
@@ -109,7 +106,6 @@ class AIPredictor:
             hit_tp = False
             hit_sl = False
             
-            # 実際には high/low で細かく判定
             for _, row in target_window.iterrows():
                 if row['high'] >= tp_price:
                     hit_tp = True
@@ -120,12 +116,7 @@ class AIPredictor:
             
             if hit_tp:
                 labels.append(1)
-            elif hit_sl:
-                labels.append(0)
             else:
-                # 20日以内にどちらにも到達しない場合
-                # v1では利確に到達しなかったものとして0（または除外するが、バイアスを避けるため0とするのが一般的）
-                # ただし「利確が先に到達する確率」なので、到達しなければ0。
                 labels.append(0)
                 
         return pd.Series(labels, index=df.index)
@@ -133,7 +124,6 @@ class AIPredictor:
     def train_and_validate(self, df: pd.DataFrame):
         """
         時系列分割(Walk-forward)で学習と検証を行う
-        全銘柄統合学習を想定するが、まずは単一銘柄または小規模セットで実装
         """
         features = self.engineer_features(df)
         labels = self.label_data(df)
@@ -146,35 +136,30 @@ class AIPredictor:
         X = data.drop(columns=['target'])
         y = data['target']
         
-        # 時系列分割
         tscv = TimeSeriesSplit(n_splits=5)
         scores = []
         
+        params = {
+            'n_estimators': 100,
+            'learning_rate': 0.05,
+            'num_leaves': 15,
+            'random_state': 42,
+            'verbose': -1,
+            'min_child_samples': 20
+        }
+
         for train_index, test_index in tscv.split(X):
             X_train, X_test = X.iloc[train_index], X.iloc[test_index]
             y_train, y_test = y.iloc[train_index], y.iloc[test_index]
             
-            model = lgb.LGBMClassifier(
-                n_estimators=100,
-                learning_rate=0.05,
-                num_leaves=31,
-                random_state=42,
-                verbose=-1
-            )
+            model = lgb.LGBMClassifier(**params)
             model.fit(X_train, y_train)
             
             probs = model.predict_proba(X_test)[:, 1]
             score = brier_score_loss(y_test, probs)
             scores.append(score)
             
-        # 最終モデルを全データで学習（または最新期間を除く）
-        self.model = lgb.LGBMClassifier(
-            n_estimators=100,
-            learning_rate=0.05,
-            num_leaves=31,
-            random_state=42,
-            verbose=-1
-        ).fit(X, y)
+        self.model = lgb.LGBMClassifier(**params).fit(X, y)
         
         self.validation_results = {
             "brier_score": round(np.mean(scores), 4) if scores else "-",
@@ -182,12 +167,14 @@ class AIPredictor:
             "period": f"{data.index[0].strftime('%Y-%m-%d')}〜{data.index[-1].strftime('%Y-%m-%d')}"
         }
 
-    def predict_latest(self, df: pd.DataFrame) -> Dict[str, Any]:
+    def predict_latest(self, df: pd.DataFrame, code: str) -> Dict[str, Any]:
         """
-        最新の足に対する予測値を返す
+        最新の足に対する予測値、期待値、矛盾チェックを返す (v1.1)
         """
+        if code is None:
+             return {"error": "銘柄コードが指定されていません"}
+
         if self.model is None:
-            # 本来はキャッシュからロードするか、全銘柄で事前学習しておく
             try:
                 self.train_and_validate(df)
             except Exception as e:
@@ -196,35 +183,89 @@ class AIPredictor:
         if self.model is None:
             return {
                 "probability": "-", 
+                "expected_return": "-",
                 "is_provisional": False,
-                "validation": self.validation_results
+                "validation": self.validation_results,
+                "attention": None
             }
 
-        features = self.engineer_features(df)
+        features = self.engineer_features(df, code)
         if features.empty:
             return {
                 "probability": "-", 
+                "expected_return": "-",
                 "is_provisional": False,
-                "validation": self.validation_results
+                "validation": self.validation_results,
+                "attention": None
             }
             
-        latest_features = features.iloc[[-1]]
+        latest_idx = features.index[-1]
+        latest_features = features.iloc[[-1]].copy()
+
+        # 市場動向とニュース傾向を最新データで更新
+        news_summary = ""
+        try:
+            market_dfs = fetch_market_indicators()
+            market_feats = get_market_features(market_dfs, latest_idx)
+            latest_features['topix_ret_1d'] = market_feats.get('TOPIX_ret_1d', 0.0)
+            latest_features['topix_ret_5d'] = market_feats.get('TOPIX_ret_5d', 0.0)
+            latest_features['n225_ret_1d'] = market_feats.get('N225_ret_1d', 0.0)
+            latest_features['n225_ret_5d'] = market_feats.get('N225_ret_5d', 0.0)
+            
+            news_tendency = get_news_tendency(code)
+            latest_features['news_pos_7d'] = news_tendency['counts']['last_7d']['pos']
+            latest_features['news_neg_7d'] = news_tendency['counts']['last_7d']['neg']
+            news_summary = news_tendency.get("summary_text", "")
+        except Exception as e:
+            logger.error(f"Feature update failed for {code}: {e}")
+
         prob = self.model.predict_proba(latest_features)[0, 1]
         
-        # 未確定足の判定
+        # 期待値計算 E_R = (2p - 1) - cR
+        expected_return = (2 * prob - 1) - self.cost_r
+        
+        # 未確定足の判定 (最新日付は常に未確定)
         is_provisional = False
         latest_date = df.index[-1]
-        if hasattr(latest_date, 'date'):
-            latest_date = latest_date.date()
         
-        # 簡易判定：最新の足が今日の足なら暫定
-        if latest_date >= datetime.now().date():
+        # pandas.Timestamp を datetime.date に変換
+        if hasattr(latest_date, 'date'):
+            latest_date_val = latest_date.date()
+        elif isinstance(latest_date, datetime):
+            latest_date_val = latest_date.date()
+        else:
+            try:
+                latest_date_val = pd.to_datetime(latest_date).date()
+            except:
+                latest_date_val = latest_date
+
+        if isinstance(latest_date_val, (datetime, pd.Timestamp)):
+             latest_date_val = latest_date_val.date()
+
+        if latest_date_val >= datetime.now().date():
             is_provisional = True
             
+        # 信頼度評価の取得（矛盾チェック用）
+        attention = None
+        try:
+            margin_tab = get_margin_tab(code)
+            reliability_label = margin_tab.get("margin", {}).get("reliability_label", "未確定")
+            
+            # 矛盾(注意)チェック
+            if reliability_label == "高" and expected_return < 0:
+                attention = "注意：AI期待値がマイナス（E_R<0）"
+            elif reliability_label == "低" and expected_return > 0.20:
+                attention = "注意：AI期待値が高め（E_R>+0.20）"
+        except Exception as e:
+            logger.error(f"Consistency check failed: {e}")
+
         return {
             "probability": round(float(prob), 2),
+            "expected_return": round(float(expected_return), 2),
             "is_provisional": is_provisional,
-            "validation": self.validation_results
+            "validation": self.validation_results,
+            "attention": attention,
+            "news_summary": news_summary
         }
 
 # シングルトン的利用

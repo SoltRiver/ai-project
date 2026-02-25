@@ -76,3 +76,53 @@ def fetch_and_analyze_market_news() -> List[Dict[str, Any]]:
         final_news.append(item)
 
     return final_news
+
+def get_news_tendency(code: str) -> Dict[str, Any]:
+    """
+    指定された銘柄のニュース傾向（ポジ/ネガ/中立の集計）を算出する。
+    AI予測の特徴量および「傾向」表示に使用する。
+    """
+    symbol = f"{code}.T" if code.isdigit() else code
+    news = fetch_news(symbol, limit=20)
+    
+    # 実際の実装では、ここで各ニュースのタイトル/サマリーを
+    # 軽量な感情分析器（あるいは特定のキーワードマッチング）にかける。
+    # v1.1では、将来的なAI分析を見据えたI/Fとして、ダミー集計または簡易なキーワードマッチングを行う。
+    
+    pos_keywords = ["上昇", "増益", "上方修正", "好調", "提携", "自社株買い", "増配"]
+    neg_keywords = ["下落", "減益", "下方修正", "不調", "解消", "訴訟", "減配", "赤字"]
+    
+    counts = {
+        "last_7d": {"pos": 0, "neg": 0, "neutral": 0},
+        "last_30d": {"pos": 0, "neg": 0, "neutral": 0}
+    }
+    
+    from datetime import datetime, timedelta
+    now = datetime.now()
+    seven_days_ago = now - timedelta(days=7)
+    thirty_days_ago = now - timedelta(days=30)
+    
+    for item in news:
+        title = item.get("title", "")
+        pub_at = item.get("published_at")
+        
+        if not pub_at:
+            continue
+            
+        sentiment = "neutral"
+        if any(k in title for k in pos_keywords):
+            sentiment = "pos"
+        elif any(k in title for k in neg_keywords):
+            sentiment = "neg"
+            
+        if pub_at >= seven_days_ago:
+            counts["last_7d"][sentiment] += 1
+            counts["last_30d"][sentiment] += 1
+        elif pub_at >= thirty_days_ago:
+            counts["last_30d"][sentiment] += 1
+            
+    return {
+        "counts": counts,
+        "total_fetched": len(news),
+        "summary_text": f"直近7日: ポジ{counts['last_7d']['pos']} / ネガ{counts['last_7d']['neg']} / 中立{counts['last_7d']['neutral']}"
+    }

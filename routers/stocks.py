@@ -181,3 +181,16 @@ async def search_stocks_api(q: str = ""):
     suggestions = [f"{item['name']} ({item['code']})" for item in results]
     return JSONResponse(content={"suggestions": suggestions})
 
+
+@router.get("/stocks/{code}/ai_assist", response_class=HTMLResponse)
+async def stock_ai_assist(code: str, request: Request):
+    interval = request.query_params.get("interval", "1d")
+    data = stock_service.get_ai_assist(code, interval=interval)
+    return templates.TemplateResponse("stocks/partials/_ai_assist.html", {"request": request, "stock": {"code": code}, **data})
+
+
+@router.get("/stocks/{code}/tendency", response_class=HTMLResponse)
+async def stock_tendency(code: str, request: Request):
+    from services.news_service import get_news_tendency
+    tendency = get_news_tendency(code)
+    return templates.TemplateResponse("stocks/partials/_tendency.html", {"request": request, "stock": {"code": code}, "news_tendency": tendency})
