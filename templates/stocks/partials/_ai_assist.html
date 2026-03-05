@@ -20,20 +20,32 @@
             </div>
 
             <!-- Part 2: AI Probability & Expected Value -->
-            <div class="ai-metrics border-l border-slate-200 dark:border-slate-800 pl-6">
+            <div class="ai-metrics border-l border-slate-200 dark:border-slate-800 pl-6 relative">
+                {% if ai_prediction and ai_prediction.guardrail_state == "hidden" %}
+                    <div class="absolute inset-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm flex items-center justify-center z-10 rounded-lg">
+                        <span class="text-sm font-bold text-slate-500">非表示（サンプル不足等）</span>
+                    </div>
+                {% endif %}
                 <div class="flex flex-col gap-4">
                     <div class="metric-item">
-                        <div class="text-xs text-slate-500 mb-1">利確先着確率（AI）</div>
+                        <div class="flex flex-wrap items-center gap-2 mb-1">
+                            <span class="text-xs text-slate-500">利確先着確率（AI）</span>
+                            {% if ai_prediction and ai_prediction.guardrail_state == "warning" %}
+                                <span class="badge bg-yellow-100 text-yellow-800 text-[10px] px-1.5 py-0.5 rounded">参考</span>
+                            {% elif ai_prediction and ai_prediction.guardrail_state == "strong_warning" %}
+                                <span class="badge bg-red-100 text-red-800 text-[10px] px-1.5 py-0.5 rounded">強い警告</span>
+                            {% endif %}
+                        </div>
                         <div
                             class="text-3xl font-bold {% if is_provisional %}text-slate-400{% else %}text-blue-600 dark:text-blue-400{% endif %}">
-                            {{ ai_prediction.probability if ai_prediction else '-' }}
+                            {{ "{:0.2f}".format(ai_prediction.probability * 100) ~ '%' if ai_prediction and ai_prediction.probability != '-' else '-' }}
                         </div>
                     </div>
                     <div class="metric-item">
                         <div class="text-xs text-slate-500 mb-1">期待値 (E_R)</div>
                         <div
-                            class="text-2xl font-mono font-bold {% if ai_prediction and ai_prediction.expected_return > 0 %}text-green-600{% elif ai_prediction and ai_prediction.expected_return < 0 %}text-red-600{% endif %}">
-                            {{ ai_prediction.expected_return if ai_prediction else '-' }} <span
+                            class="text-2xl font-mono font-bold {% if ai_prediction and ai_prediction.expected_return != '-' and ai_prediction.expected_return > 0 %}text-green-600{% elif ai_prediction and ai_prediction.expected_return != '-' and ai_prediction.expected_return < 0 %}text-red-600{% endif %}">
+                            {{ "{:+0.2f}".format(ai_prediction.expected_return) if ai_prediction and ai_prediction.expected_return != '-' else '-' }} <span
                                 class="text-sm font-normal text-slate-400">R</span>
                         </div>
                     </div>
@@ -43,22 +55,35 @@
             <!-- Part 3: Validation Info -->
             <div class="validation-info border-l border-slate-200 dark:border-slate-800 pl-6 text-xs space-y-2">
                 <div class="valid-item">
-                    <div class="text-slate-400">Brier Score</div>
-                    <div class="font-mono font-bold">{{ ai_prediction.validation.brier_score if ai_prediction else '-'
-                        }}</div>
-                </div>
-                <div class="valid-item">
                     <div class="text-slate-400">試行回数 (N)</div>
                     <div class="font-bold">
                         {{ ai_prediction.validation.n if ai_prediction else '0' }}
-                        {% if ai_prediction and ai_prediction.validation.n < 300 %} <span
-                            class="badge gray scale-75 transform -translate-y-0.5">参考</span>
-                            {% endif %}
+                        {% if ai_prediction and ai_prediction.validation.n < 50 %} <span
+                            class="badge bg-yellow-100 text-yellow-800 scale-75 transform -translate-y-0.5 ml-1">少</span>
+                        {% endif %}
                     </div>
                 </div>
+                <!-- 95%CI Half Width -->
                 <div class="valid-item">
-                    <div class="text-slate-400">検証期間</div>
-                    <div class="font-bold">{{ ai_prediction.validation.period if ai_prediction else '-' }}</div>
+                    <div class="text-slate-400">95%CI半幅</div>
+                    <div class="font-bold">
+                        {% if ai_prediction and ai_prediction.validation.ci_half_width %}
+                            ±{{ "{:0.1f}".format(ai_prediction.validation.ci_half_width * 100) }}%
+                        {% else %}
+                            -
+                        {% endif %}
+                    </div>
+                </div>
+                <!-- MDD -->
+                <div class="valid-item">
+                    <div class="text-slate-400">MDD (推定)</div>
+                    <div class="font-bold {% if ai_prediction and ai_prediction.validation.mdd_percent > 0.35 %}text-red-600{% endif %}">
+                        {% if ai_prediction and ai_prediction.validation.mdd_percent %}
+                            {{ "{:0.1f}".format(ai_prediction.validation.mdd_percent * 100) }}%
+                        {% else %}
+                            -
+                        {% endif %}
+                    </div>
                 </div>
             </div>
         </div>
