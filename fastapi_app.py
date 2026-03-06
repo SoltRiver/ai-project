@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
-from routers import stocks, fundamental, indices, news, ranking, edinet, edinet_docs, fundamentals, calendar, edinet_diff
+from routers import stocks, fundamental, indices, news, ranking, edinet, edinet_docs, fundamentals, calendar, edinet_diff, analysis_internal
 
 """
 メインのFastAPIアプリケーション定義ファイル。
@@ -26,6 +26,8 @@ def startup_event():
     from models import stock, master, edinet_file, company_info, stock_impact
     from models import event_source_policy, event
     from models import edinet_facts_snapshot, edinet_diff_summary
+    # AI分析SWRシステム用モデル
+    from models import analysis_snapshot, analysis_job, analysis_config
     stock.Base.metadata.create_all(bind=engine)
     master.Base.metadata.create_all(bind=engine)
     edinet_file.Base.metadata.create_all(bind=engine)
@@ -38,6 +40,10 @@ def startup_event():
     # EDINET差分比較用テーブル
     edinet_facts_snapshot.Base.metadata.create_all(bind=engine)
     edinet_diff_summary.Base.metadata.create_all(bind=engine)
+    # AI分析SWRシステム用テーブル
+    analysis_snapshot.Base.metadata.create_all(bind=engine)
+    analysis_job.Base.metadata.create_all(bind=engine)
+    analysis_config.Base.metadata.create_all(bind=engine)
 
     # 2. Seed Initial Watchlist (if empty)
     db = SessionLocal()
@@ -52,6 +58,21 @@ def startup_event():
         print(f"Error seeding watchlist: {e}")
     finally:
         db.close()
+
+    # 4. analysis_config の初期データ投入（未登録のキーのみ）
+    from models.analysis_config import AnalysisConfig, DEFAULT_CONFIG
+    db2 = SessionLocal()
+    try:
+        for cfg_key, cfg_val in DEFAULT_CONFIG.items():
+            exists = db2.query(AnalysisConfig).filter_by(key=cfg_key).first()
+            if not exists:
+                db2.add(AnalysisConfig(key=cfg_key, value=cfg_val))
+        db2.commit()
+    except Exception as e:
+        print(f"Error seeding analysis_config: {e}")
+        db2.rollback()
+    finally:
+        db2.close()
     
     # 3. Initialize Stock Master (Async Background)
     from services.stock_master_service import stock_master_service
@@ -75,6 +96,8 @@ app.include_router(edinet_docs.router, prefix="/api")
 app.include_router(fundamentals.router, prefix="/api")
 app.include_router(calendar.router)
 app.include_router(edinet_diff.router)
+# AI分析SWRシステム用ルーター
+app.include_router(analysis_internal.router)
 
 
 @app.get("/", include_in_schema=False)
