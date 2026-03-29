@@ -182,6 +182,17 @@ async def search_stocks_api(q: str = ""):
     return JSONResponse(content={"suggestions": suggestions})
 
 
+from pydantic import BaseModel
+
+class ReorderRequest(BaseModel):
+    codes: list[str]
+
+@router.post("/api/stocks/reorder")
+async def reorder_stocks(req: ReorderRequest, db: Session = Depends(get_db)):
+    success = stock_service.update_stock_order(db, req.codes)
+    return JSONResponse(content={"success": success})
+
+
 @router.get("/stocks/{code}/ai_assist", response_class=HTMLResponse)
 async def stock_ai_assist(code: str, request: Request):
     interval = request.query_params.get("interval", "1d")

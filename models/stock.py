@@ -8,3 +8,4 @@ class Stock(Base):
     id = Column(Integer, primary_key=True, index=True)
     code = Column(String, unique=True, index=True)
     added_at = Column(DateTime(timezone=True), server_default=func.now())
+    sort_order = Column(Integer, default=0)

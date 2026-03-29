@@ -18,15 +18,15 @@ dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800'
 
 {% macro card(title=None, footer=None, class='') %}
 <div
-    class="bg-white dark:bg-[#16161e] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-soft p-6 {{ class }}">
+    class="bg-white dark:bg-[#16161e] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-soft p-6 sm:p-8 overflow-hidden {{ class }}">
     {% if title %}
-    <div class="mb-4 flex items-center justify-between">
-        <h3 class="font-bold text-lg text-slate-900 dark:text-white">{{ title }}</h3>
+    <div class="mb-6 flex items-center justify-between">
+        <h3 class="font-bold text-xl text-slate-900 dark:text-white">{{ title }}</h3>
     </div>
     {% endif %}
     <div class="text-slate-700 dark:text-slate-300">{{ caller() }}</div>
     {% if footer %}
-    <div class="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800 text-sm text-slate-500">
+    <div class="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800 text-sm text-slate-500">
         {{ footer | safe }}
     </div>
     {% endif %}
@@ -34,14 +34,15 @@ dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800'
 {% endmacro %}
 
 {% macro form_input(label, name, value='', type='text', placeholder='', id=None, attr='', required=False) %}
-<div class="flex flex-col gap-1.5 w-full">
-    <label for="{{ id or name }}" class="text-sm font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">
+<div class="flex flex-col gap-2 w-full">
+    <label for="{{ id or name }}"
+        class="text-sm font-bold text-slate-700 dark:text-slate-400 flex items-center gap-1.5 ml-0.5">
         {{ label }}
         {% if required %}<span class="text-red-500">*</span>{% endif %}
     </label>
     <input type="{{ type }}" name="{{ name }}" id="{{ id or name }}" value="{{ value }}" placeholder="{{ placeholder }}"
         {% if required %}required{% endif %}
-        class="px-4 py-2.5 bg-white dark:bg-[#1a1b26] border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-shadow text-slate-900 dark:text-white"
+        class="px-5 py-3 bg-white dark:bg-[#1a1b26] border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-shadow text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-600 shadow-sm"
         {{ attr | safe }}>
 </div>
 {% endmacro %}

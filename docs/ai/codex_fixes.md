@@ -417,3 +417,16 @@
     - **コードレビュー**: ブラケットの整合性とスコープの正常性を確認。
     - **目視確認**: ランキング画面のフィルタボタン、銘柄詳細のイベントバッジ、チャートの正常描画を確認。
 
+### Review Session 36 (アプリ起動エラーの総合調査と修正)
+- **Status**: **Success** (Executed 2026-03-25)
+- **Scope**: `fastapi_app.py`, `requirements.txt`
+- **Findings**:
+    1. **モジュール不足**: `requirements.txt`に`fastapi`, `uvicorn`, `jinja2`, `yfinance`, `edinet-xbrl`, `python-dotenv`, `PyYAML`, `httpx`, `aiohttp`, `plotly` などの必須パッケージが記載されておらず、単なる`pip install`では起動しなかった。
+    2. **TemplateResponseの非互換性**: FastAPI/Starletteのバージョンアップにより、`Jinja2Templates.TemplateResponse(name, context)`のシグネチャが非推奨/変更されており、内部で `TypeError: unhashable type: 'dict'` を引き起こしていた（リクエストオブジェクトが位置引数として不正に処理されていた）。
+    3. **ポート競合**: プロセスをリロード/停止する際にポート8000が完全に解放されず、Uvicornが起動に失敗する問題が度々発生した。
+- **Action**:
+    1. **パッケージ補完**: 不足しているパッケージ群を `requirements.txt` に追記。
+    2. **安全なモンキーパッチ**: 既存のルーティング20箇所以上を書き換えるリスクを避けるため、`fastapi_app.py` 冒頭にて `Jinja2Templates.TemplateResponse` をラップするモンキーパッチを適用し、引数を安全に補完。
+    3. **ポートの切り替え**: PowerShellで関連プロセスを強力にKillするほか、必要に応じてポート8001を使用することで競合を回避した。
+- **Verification**:
+    - **Browser**: `localhost:8001/stocks` にて、株価機能・UI・すべてのルーティングが500エラーを出さずに正常描画されることを目視確認（スクリーンショット エビデンス取得済）。

@@ -47,7 +47,7 @@ analyzer = FinancialAnalyzer()
 
 def get_watchlist_codes(db: Session) -> List[str]:
     try:
-        stocks = db.query(stock_model.Stock).all()
+        stocks = db.query(stock_model.Stock).order_by(stock_model.Stock.sort_order.asc(), stock_model.Stock.id.asc()).all()
         return [s.code for s in stocks]
     except Exception as e:
         logger.error(f"Error fetching watchlist: {e}")
@@ -58,7 +58,11 @@ def add_stock_to_watchlist(db: Session, code: str) -> bool:
         existing = db.query(stock_model.Stock).filter(stock_model.Stock.code == code).first()
         if existing:
             return False
-        new_stock = stock_model.Stock(code=code)
+            
+        all_stocks = db.query(stock_model.Stock).all()
+        max_order = max([s.sort_order or 0 for s in all_stocks] + [0])
+        
+        new_stock = stock_model.Stock(code=code, sort_order=max_order + 1)
         db.add(new_stock)
         db.commit()
         return True
@@ -74,6 +78,19 @@ def remove_stocks_from_watchlist(db: Session, codes: List[str]):
     except Exception as e:
         logger.error(f"Error removing stocks {codes}: {e}")
         db.rollback()
+
+def update_stock_order(db: Session, codes: List[str]) -> bool:
+    try:
+        for idx, code in enumerate(codes):
+            stock = db.query(stock_model.Stock).filter(stock_model.Stock.code == code).first()
+            if stock:
+                stock.sort_order = idx
+        db.commit()
+        return True
+    except Exception as e:
+        logger.error(f"Error updating stock order: {e}")
+        db.rollback()
+        return False
 
 def search_stocks(query: str) -> List[Dict[str, str]]:
     query = query.lower().strip()
@@ -1185,10 +1202,16 @@ def get_stock_list(db: Session) -> List[Dict[str, Any]]:
         display_name = _jp_name(code, info.get("name"))
         history = fetch_stock_data(symbol, period="1mo", interval="1d")
         high_low_text = "N/A"
+        high_val_num = None
+        low_val_num = None
+        high_val_str = None
+        low_val_str = None
         if history is not None and not history.empty:
-            high_val = float(history["high"].max())
-            low_val = float(history["low"].min())
-            high_low_text = f"{math.floor(high_val):,} / {math.floor(low_val):,}"
+            high_val_num = float(history["high"].max())
+            low_val_num = float(history["low"].min())
+            high_low_text = f"{math.floor(high_val_num):,} / {math.floor(low_val_num):,}"
+            high_val_str = f"{math.floor(high_val_num):,}"
+            low_val_str = f"{math.floor(low_val_num):,}"
 
         change = _format_change(info.get("current_price"), info.get("previous_close"))
         stocks.append(
@@ -1200,6 +1223,10 @@ def get_stock_list(db: Session) -> List[Dict[str, Any]]:
                 "change_icon": change["icon"],
                 "change_text": change["text"],
                 "high_low": high_low_text,
+                "high_val": high_val_num,
+                "low_val": low_val_num,
+                "high_val_str": high_val_str,
+                "low_val_str": low_val_str,
             }
         )
     return stocks

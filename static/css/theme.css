@@ -1,3 +1,7 @@
+@import "tailwindcss";
+
+@variant dark (&:where(.dark, .dark *));
+
 :root {
     --bg: #0b0f17;
     --panel: #111827;
@@ -85,10 +89,10 @@ body.app-shell {
     --negative: #f7768e;
     /* Tokyo Night Red */
     --neutral: #a9b1d6;
-    --border: #414868;
+    --border: #24283b;
     --shadow: 0 30px 60px -35px rgba(0, 0, 0, 0.5);
-    --shadow-soft: 0 16px 30px rgba(0, 0, 0, 0.3);
-    --shadow-sm: 0 10px 18px rgba(0, 0, 0, 0.2);
+    --shadow-soft: 0 16px 30px rgba(0, 0, 0, 0.4);
+    --shadow-sm: 0 10px 18px rgba(0, 0, 0, 0.25);
 
     /* Chart specific */
     --chart-grid: rgba(169, 177, 214, 0.1);
@@ -183,56 +187,62 @@ a:hover {
 }
 
 .page-container {
-    max-width: 1100px;
+    max-width: 1280px;
     margin: 0 auto;
-    padding: 1.5rem;
+    padding: 2rem 1.5rem 4rem;
 }
 
 .page-header {
     display: flex;
     justify-content: space-between;
     align-items: flex-end;
-    gap: 1rem;
+    gap: 2rem;
+    margin-bottom: 3rem;
 }
 
 .page-header h1 {
-    margin: 0.2rem 0;
+    margin: 0.5rem 0;
+    line-height: 1.2;
 }
 
 .eyebrow {
     text-transform: uppercase;
     color: var(--muted);
-    letter-spacing: 0.08em;
-    margin: 0;
-    font-size: 0.8rem;
+    letter-spacing: 0.12em;
+    margin: 0 0 0.5rem;
+    font-size: 0.85rem;
+    font-weight: 600;
 }
 
 .muted {
     color: var(--muted);
-    font-size: 0.95rem;
+    font-size: 1rem;
+    line-height: 1.6;
 }
 
 .code {
     color: var(--muted);
     font-weight: 500;
+    font-family: var(--font-mono);
 }
 
 .small {
-    font-size: 0.85rem;
+    font-size: 0.9rem;
 }
 
 .card {
     background: var(--panel);
     border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 1.25rem;
+    border-radius: 16px;
+    padding: 2rem;
     box-shadow: var(--shadow-sm);
-    margin-top: 1.2rem;
-    transition: box-shadow 0.2s ease;
+    margin-top: 2rem;
+    transition: all 0.3s ease;
 }
 
 .card:hover {
     box-shadow: var(--shadow-soft);
+    transform: translateY(-2px);
 }
 
 .stock-table {
@@ -242,7 +252,7 @@ a:hover {
 
 .stock-table th,
 .stock-table td {
-    padding: 0.75rem;
+    padding: 1.25rem 1rem;
     border-bottom: 1px solid var(--border);
     text-align: left;
 }

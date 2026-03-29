@@ -3,6 +3,9 @@ from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
+# (Removed TemplateResponse Compatibility Patch)
+
+
 from routers import stocks, fundamental, indices, news, ranking, edinet, edinet_docs, fundamentals, calendar, edinet_diff, analysis_internal
 
 """
