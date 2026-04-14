@@ -184,9 +184,15 @@ def fetch_news(symbol: str, limit: int = 5) -> List[Dict[str, Any]]:
                 try:
                     if isinstance(valid_date, (int, float)):
                         published_at = datetime.fromtimestamp(valid_date)
-                    else:
-                        # 文字列の場合のパース（必要なら実装）
-                        pass
+                    elif isinstance(valid_date, str):
+                        # ISO8601形式の日時文字列をパース（yfinanceのpubDate対応）
+                        clean = valid_date.replace("Z", "+00:00")
+                        try:
+                            published_at = datetime.fromisoformat(clean)
+                        except ValueError:
+                            # その他の日時フォーマットをフォールバック
+                            from dateutil import parser as dateutil_parser
+                            published_at = dateutil_parser.parse(valid_date)
                 except Exception:
                     published_at = None
 

@@ -430,3 +430,27 @@
     3. **ポートの切り替え**: PowerShellで関連プロセスを強力にKillするほか、必要に応じてポート8001を使用することで競合を回避した。
 - **Verification**:
     - **Browser**: `localhost:8001/stocks` にて、株価機能・UI・すべてのルーティングが500エラーを出さずに正常描画されることを目視確認（スクリーンショット エビデンス取得済）。
+
+### Review Session 37 (ニュースAI要約アーキテクチャ全面改修)
+- **Status**: **Success** (Executed 2026-04-03)
+- **Scope**: 新規7ファイル + 修正5ファイル
+  - `models/news_article.py`, `models/news_ai_summary.py`, `models/news_related_ticker.py`
+  - `services/news_text_preprocessor.py`, `services/news_ai_filter.py`, `services/news_ticker_extractor.py`, `services/news_batch_service.py`
+  - `services/news_service.py`, `routers/news.py`, `templates/news/index.html`, `fastapi_app.py`, `services/data_fetcher.py`
+- **Findings**:
+    1. **joinedload + LIMIT バグ (Critical)**: `news_service.py` で `joinedload` と `.limit()` を併用していた。SQLAlchemy の joinedload は SQL JOIN を使用するため、LIMIT がJOIN後の行数に適用され、期待する記事数が返らない問題。
+    2. **neutral センチメント ロジックバグ**: `news_batch_service.py` でAI抽出銘柄の `impact_type` 判定時、`"positive" if ... == "positive" else "negative"` としていたため、neutral の場合も negative に分類されていた。
+    3. **未使用 import**: `news_batch_service.py` の `import hashlib` が未使用（`compute_text_hash` は別モジュールから import 済み）。
+    4. **Geminiモデル名不整合**: `AI_MODEL_NAME = "gemini-1.5-flash"` が既存コードの `"gemini-flash-latest"` と不一致で 404 エラーを引き起こしていた（実装中に検出・修正済み）。
+    5. **日付パース未実装**: `data_fetcher.py` の `fetch_news` で `pubDate` が文字列（ISO8601形式）の場合のパースが `pass` のままだった（実装中に検出・修正済み）。
+- **Action**:
+    1. `joinedload` → `subqueryload` に変更。`nullslast()` も追加して NULL 日時のソート安定化。
+    2. センチメント判定を 3分岐（positive/negative/neutral → positive）に修正。
+    3. 未使用 `import hashlib` を削除。
+    4. モデル名 → `"gemini-flash-latest"` に修正済み。
+    5. ISO8601文字列パース + `fromisoformat` フォールバック追加済み。
+- **Verification**:
+    - **Server**: 修正後サーバー正常リロード確認（pid 23972）。
+    - **HTTP**: `GET /news` → 200 OK 確認。
+    - **Browser**: ページ即時表示、ステータス別表示（失敗/対象外）正常動作確認。
+

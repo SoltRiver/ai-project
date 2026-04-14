@@ -11,13 +11,34 @@
     <div class="space-y-8">
         {% for item in news_items %}
         <article
-            class="bg-white dark:bg-[#16161e] border-l-4 border-blue-600 dark:border-blue-500 rounded-r-2xl shadow-soft p-6 transition-all hover:shadow-lg">
+            class="bg-white dark:bg-[#16161e] border-l-4 {% if item.ai_status == 'summarized' %}border-blue-600 dark:border-blue-500{% elif item.ai_status == 'failed' %}border-red-500 dark:border-red-400{% elif item.ai_status == 'skipped' %}border-slate-300 dark:border-slate-600{% else %}border-amber-500 dark:border-amber-400{% endif %} rounded-r-2xl shadow-soft p-6 transition-all hover:shadow-lg">
+            <!-- ヘッダー: ソース名 + 日時 + ステータスバッジ -->
             <div class="flex justify-between items-center text-xs font-bold text-slate-400 dark:text-slate-500 mb-3">
                 <span class="uppercase tracking-widest">{{ item.publisher }}</span>
-                <span class="font-mono">{{ item.published_at.strftime('%Y-%m-%d %H:%M') if item.published_at else '日時不明'
-                    }}</span>
+                <div class="flex items-center gap-2">
+                    <!-- ステータスバッジ -->
+                    {% if item.ai_status == 'summarized' %}
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                        ✅ 要約済み
+                    </span>
+                    {% elif item.ai_status in ('processing', 'queued', 'fetched') %}
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 animate-pulse">
+                        🔄 分析中...
+                    </span>
+                    {% elif item.ai_status == 'failed' %}
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
+                        ⚠️ 失敗
+                    </span>
+                    {% elif item.ai_status == 'skipped' %}
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                        ー 対象外
+                    </span>
+                    {% endif %}
+                    <span class="font-mono">{{ item.published_at.strftime('%Y-%m-%d %H:%M') if item.published_at else '日時不明' }}</span>
+                </div>
             </div>
 
+            <!-- タイトル -->
             <h2 class="text-xl font-bold text-slate-900 dark:text-white mb-4 leading-snug">
                 <a href="{{ item.link }}" target="_blank" rel="noopener noreferrer"
                     class="hover:text-blue-600 transition-colors">
@@ -25,15 +46,64 @@
                 </a>
             </h2>
 
+            <!-- AI要約セクション -->
             <div class="bg-slate-50 dark:bg-slate-900/40 rounded-xl p-5 border border-slate-100 dark:border-slate-800">
+
+                {% if item.ai_status == 'summarized' and item.ai_summary %}
+                <!-- 要約済み: 要約表示 -->
                 <div class="mb-4">
-                    <h3
-                        class="flex items-center gap-2 text-sm font-bold text-slate-500 dark:text-slate-400 mb-2 uppercase tracking-tight">
+                    <h3 class="flex items-center gap-2 text-sm font-bold text-slate-500 dark:text-slate-400 mb-2 uppercase tracking-tight">
                         <span class="text-base text-blue-500">🤖</span> AI要約
+                        {% if item.sentiment %}
+                        <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold
+                            {% if item.sentiment == 'positive' %}bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400
+                            {% elif item.sentiment == 'negative' %}bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400
+                            {% else %}bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400{% endif %}">
+                            {% if item.sentiment == 'positive' %}📈 ポジティブ{% elif item.sentiment == 'negative' %}📉 ネガティブ{% else %}➖ 中立{% endif %}
+                        </span>
+                        {% endif %}
                     </h3>
                     <p class="text-slate-700 dark:text-slate-300 leading-relaxed">{{ item.ai_summary }}</p>
+                    {% if item.reason %}
+                    <p class="text-xs text-slate-400 dark:text-slate-500 mt-2">理由: {{ item.reason }}</p>
+                    {% endif %}
                 </div>
 
+                {% elif item.ai_status in ('processing', 'queued', 'fetched') %}
+                <!-- 分析中: プレースホルダー -->
+                <div class="mb-4">
+                    <h3 class="flex items-center gap-2 text-sm font-bold text-slate-500 dark:text-slate-400 mb-2 uppercase tracking-tight">
+                        <span class="text-base">🔄</span> AI要約
+                    </h3>
+                    <div class="flex items-center gap-3">
+                        <div class="animate-spin h-4 w-4 border-2 border-amber-500 border-t-transparent rounded-full"></div>
+                        <p class="text-slate-400 dark:text-slate-500 italic">AIで分析中です。しばらくお待ちください。</p>
+                    </div>
+                </div>
+
+                {% elif item.ai_status == 'failed' %}
+                <!-- 失敗: エラー表示 -->
+                <div class="mb-4">
+                    <h3 class="flex items-center gap-2 text-sm font-bold text-red-500 dark:text-red-400 mb-2 uppercase tracking-tight">
+                        <span class="text-base">⚠️</span> AI要約
+                    </h3>
+                    <p class="text-red-400 dark:text-red-500 text-sm">要約の取得に失敗しました。次回のバッチ処理で再試行されます。</p>
+                </div>
+
+                {% elif item.ai_status == 'skipped' %}
+                <!-- AI対象外 -->
+                <div class="mb-4">
+                    <p class="text-slate-400 dark:text-slate-500 text-sm">この記事はAI分析の対象外です。</p>
+                </div>
+
+                {% else %}
+                <!-- その他（フォールバック） -->
+                <div class="mb-4">
+                    <p class="text-slate-400 dark:text-slate-500 text-sm italic">要約はまだありません。</p>
+                </div>
+                {% endif %}
+
+                <!-- 影響銘柄（ステータスに関わらず表示） -->
                 {% if item.impacted_stocks %}
                 <div class="pt-4 border-t border-slate-200 dark:border-slate-800">
                     <h3 class="text-sm font-bold text-slate-500 dark:text-slate-400 mb-3 uppercase tracking-tight">
@@ -47,10 +117,14 @@
                                 {{ badge(text=stock.name, color=color, class="px-3 shadow-sm border-2") }}
                             </span>
 
-                            <!-- Custom Tooltip -->
+                            <!-- ツールチップ -->
                             <div x-show="tooltip" x-transition.opacity
-                                class="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-48 p-3 bg-slate-900 text-white text-[10px] rounded-lg shadow-2xl z-20 text-center leading-relaxed pointer-events-none">
-                                <span x-text="'Reason: ' + '{{ stock.reason }}'"></span>
+                                class="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-52 p-3 bg-slate-900 text-white text-[10px] rounded-lg shadow-2xl z-20 text-center leading-relaxed pointer-events-none">
+                                <div class="font-bold mb-1">{{ stock.ticker_code }} {{ stock.name }}</div>
+                                <div>{{ stock.reason }}</div>
+                                {% if stock.extraction_type %}
+                                <div class="mt-1 text-slate-400">抽出: {{ stock.extraction_type }}</div>
+                                {% endif %}
                                 <div
                                     class="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-slate-900">
                                 </div>
@@ -65,7 +139,9 @@
         {% else %}
         <div
             class="text-center py-20 bg-slate-50 dark:bg-slate-900/20 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800">
-            <p class="text-slate-500">現在表示できるニュースはありません。</p>
+            <div class="text-4xl mb-4">📰</div>
+            <p class="text-slate-500 dark:text-slate-400 font-bold mb-2">現在表示できるニュースはありません。</p>
+            <p class="text-slate-400 dark:text-slate-500 text-sm">バックグラウンドで定期的にニュースを取得しています。しばらくお待ちください。</p>
         </div>
         {% endfor %}
     </div>

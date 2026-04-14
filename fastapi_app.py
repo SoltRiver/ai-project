@@ -31,6 +31,8 @@ def startup_event():
     from models import edinet_facts_snapshot, edinet_diff_summary
     # AI分析SWRシステム用モデル
     from models import analysis_snapshot, analysis_job, analysis_config
+    # ニュースAI要約システム用モデル
+    from models import news_article, news_ai_summary, news_related_ticker
     stock.Base.metadata.create_all(bind=engine)
     master.Base.metadata.create_all(bind=engine)
     edinet_file.Base.metadata.create_all(bind=engine)
@@ -47,6 +49,10 @@ def startup_event():
     analysis_snapshot.Base.metadata.create_all(bind=engine)
     analysis_job.Base.metadata.create_all(bind=engine)
     analysis_config.Base.metadata.create_all(bind=engine)
+    # ニュースAI要約システム用テーブル
+    news_article.Base.metadata.create_all(bind=engine)
+    news_ai_summary.Base.metadata.create_all(bind=engine)
+    news_related_ticker.Base.metadata.create_all(bind=engine)
 
     # 2. Seed Initial Watchlist (if empty)
     db = SessionLocal()
@@ -86,6 +92,10 @@ def startup_event():
 
     thread = threading.Thread(target=run_sync, daemon=True)
     thread.start()
+
+    # 4. ニュースバッチ処理スケジューラ起動
+    from services.news_batch_service import start_news_scheduler
+    start_news_scheduler()
 
 # Mount Static Files
 app.mount("/static", StaticFiles(directory="static"), name="static")
