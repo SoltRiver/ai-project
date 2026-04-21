@@ -454,3 +454,22 @@
     - **HTTP**: `GET /news` → 200 OK 確認。
     - **Browser**: ページ即時表示、ステータス別表示（失敗/対象外）正常動作確認。
 
+### Review Session 38 (APIキーハードコード除去 - セキュリティ修正)
+- **Status**: **Success** (Executed 2026-04-21)
+- **Scope**: `scripts/verify_jquants_v2.py`, `scripts/debug_jquants_token.py`, `scripts/debug_api.py`.
+- **Severity**: **CRITICAL** — APIキー/トークンが平文でハードコードされ、リモートブランチ `origin/review/spec-v1-3-beginner-support` にプッシュ済みだった。
+- **Findings**:
+    1. **`verify_jquants_v2.py` (L12)**: `JQUANTS_API_KEY` が平文でハードコード。
+    2. **`debug_jquants_token.py` (L9, L14)**: `REFRESH_TOKEN` が平文でハードコード＋print文でトークン全文を出力。
+    3. **`debug_api.py` (L10, L19)**: APIキーの先頭5文字を出力＋リクエストパラメータにキー値を含めたままprint出力。
+- **Action**:
+    1. **`verify_jquants_v2.py`**: ハードコードを `os.environ.get("JQUANTS_API_KEY")` に変更。未設定時の早期リターンガード追加。
+    2. **`debug_jquants_token.py`**: ハードコードを `os.environ.get("JQUANTS_REFRESH_TOKEN")` に変更。print出力を先頭4文字のみマスク表示に変更。レスポンスボディのprint出力もlength表示のみに制限。
+    3. **`debug_api.py`**: APIキー出力を先頭4文字＋マスクに変更。パラメータprint時に `Subscription-Key` の値を自動マスクする `safe_params` を導入。
+- **残対応**:
+    - 全APIキーのローテーション（再発行）が必要。
+    - Git履歴からの平文キー削除（`git filter-repo`）を実行済み。
+- **Verification**:
+    - 3ファイルとも正常な構文であることを確認。
+    - ハードコードされたキー文字列がプロジェクト内に残っていないことを grep で確認済み。
+    - git履歴を改竄してGitHubのリモートへforce push完了。

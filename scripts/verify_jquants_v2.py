@@ -1,18 +1,24 @@
 
+import os
 import requests
 import json
 import logging
 import datetime
 
-# Configure logging
+# ロギング設定
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# User provided key
-API_KEY = "***REDACTED_JQUANTS_API_KEY***"
+# 環境変数からAPIキーを取得（ハードコード禁止）
+API_KEY = os.environ.get("JQUANTS_API_KEY")
 BASE_URL = "https://api.jquants.com/v2"
 
 def verify_v2_access():
+    if not API_KEY:
+        print("ERROR: JQUANTS_API_KEY が設定されていません。")
+        print("  .env ファイルに JQUANTS_API_KEY=xxxxx を設定してください。")
+        return
+
     headers = {"x-api-key": API_KEY}
     
     # 1. Verify /equities/master (Listed Issues)
