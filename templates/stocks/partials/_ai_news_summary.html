@@ -1,0 +1,80 @@
+{% from "components/macros.html" import card, badge %}
+
+{% if error %}
+<div class="p-4 border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-900/10 rounded-xl text-red-600 dark:text-red-400 font-bold flex items-center gap-3 animate-in fade-in">
+    <span class="text-xl">⚠️</span>
+    <p>{{ error }}</p>
+</div>
+{% else %}
+<div class="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+    {% for item in summaries %}
+    {% call card(class="hover:border-blue-500/50 transition-colors") %}
+        <div class="flex flex-col gap-3">
+            <div class="flex justify-between items-start gap-4">
+                <h4 class="font-bold text-lg text-slate-900 dark:text-white leading-snug">
+                    {{ item.title }}
+                </h4>
+                <div class="flex-shrink-0">
+                    {% if item.sentiment == 'positive' %}
+                        {{ badge('ポジティブ', 'green') }}
+                    {% elif item.sentiment == 'negative' %}
+                        {{ badge('ネガティブ', 'red') }}
+                    {% else %}
+                        {{ badge('ニュートラル', 'gray') }}
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-3">
+                <span class="flex items-center gap-1">🏢 {{ item.publisher }}</span>
+                <span class="flex items-center gap-1">🕒 {{ item.published_at }}</span>
+            </div>
+
+            <div class="p-4 bg-slate-50 dark:bg-[#1a1b26] rounded-xl text-sm text-slate-700 dark:text-slate-300 leading-relaxed border border-slate-100 dark:border-slate-800">
+                <div class="font-bold mb-1 text-slate-900 dark:text-white flex items-center gap-1.5">
+                    <span class="text-blue-500">🤖</span> AI要約
+                </div>
+                {{ item.summary }}
+            </div>
+
+            {% if item.sentiment_reason %}
+            <div class="text-sm">
+                <span class="font-bold text-slate-700 dark:text-slate-300">判定理由:</span> 
+                <span class="text-slate-600 dark:text-slate-400">{{ item.sentiment_reason }}</span>
+            </div>
+            {% endif %}
+
+            {% if item.impacted_stocks %}
+            <div class="mt-2">
+                <span class="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-2">影響が予想される銘柄</span>
+                <div class="flex flex-wrap gap-2">
+                    {% for stock in item.impacted_stocks %}
+                        {% set badge_color = 'green' if stock.impact_type == 'positive' else 'red' if stock.impact_type == 'negative' else 'gray' %}
+                        <div class="group relative">
+                            {{ badge(stock.name, badge_color, class="cursor-help") }}
+                            <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max max-w-[200px] p-2 bg-slate-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 shadow-lg">
+                                {{ stock.reason }}
+                                <div class="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-900"></div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+            
+            <div class="mt-2 text-right">
+                <a href="{{ item.original_url }}" target="_blank" rel="noopener noreferrer" class="text-sm font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 inline-flex items-center gap-1 group transition-colors">
+                    元記事を読む
+                    <span class="group-hover:translate-x-1 transition-transform">→</span>
+                </a>
+            </div>
+        </div>
+    {% endcall %}
+    {% else %}
+    <div class="p-8 text-center text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-[#1a1b26] rounded-2xl border border-slate-200 dark:border-slate-800">
+        <span class="text-4xl block mb-2">📭</span>
+        要約可能なニュースが見つかりませんでした。
+    </div>
+    {% endfor %}
+</div>
+{% endif %}

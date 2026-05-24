@@ -6,7 +6,7 @@ from fastapi.staticfiles import StaticFiles
 # (Removed TemplateResponse Compatibility Patch)
 
 
-from routers import stocks, fundamental, indices, news, ranking, edinet, edinet_docs, fundamentals, calendar, edinet_diff, analysis_internal
+from routers import stocks, fundamental, indices, news, ranking, edinet, edinet_docs, fundamentals, calendar, edinet_diff, analysis_internal, stock_ai
 
 """
 メインのFastAPIアプリケーション定義ファイル。
@@ -111,6 +111,8 @@ app.include_router(calendar.router)
 app.include_router(edinet_diff.router)
 # AI分析SWRシステム用ルーター
 app.include_router(analysis_internal.router)
+# LangGraph AIニュース要約用ルーター
+app.include_router(stock_ai.router)
 
 
 @app.get("/", include_in_schema=False)

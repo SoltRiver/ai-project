@@ -59,8 +59,14 @@
             </div>
         </div>
 
-        <div id="tab-content" hx-get="/stocks/{{ stock.code }}/tab/chart" hx-trigger="load" hx-target="#tab-content"
-            hx-swap="innerHTML" hx-indicator="#tab-loading" class="transition-all duration-300">
+        <!-- 初期表示：チャートをサーバーサイドレンダリングで直接埋め込む -->
+        <!-- hx-trigger="load" を廃止し、Alpine.jsとHTMXの競合（htmx:targetError）を解消 -->
+        <div id="tab-content" class="transition-all duration-300">
+            {% if initial_chart_data %}
+                {% with stock=stock, **initial_chart_data %}
+                    {% include "stocks/partials/_tab_chart.html" %}
+                {% endwith %}
+            {% else %}
             <div class="animate-pulse space-y-4">
                 <div class="h-64 bg-slate-100 dark:bg-slate-800 rounded-2xl"></div>
                 <div class="grid grid-cols-3 gap-4">
@@ -68,6 +74,35 @@
                     <div class="h-32 bg-slate-100 dark:bg-slate-800 rounded-2xl"></div>
                     <div class="h-32 bg-slate-100 dark:bg-slate-800 rounded-2xl"></div>
                 </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- AIニュース要約 -->
+<div class="mb-8">
+    <div class="flex items-center justify-between mb-4">
+        <h3 class="font-bold text-xl text-slate-900 dark:text-white flex items-center gap-2">
+            <span class="text-blue-500">📰</span> AIニュース要約
+        </h3>
+        {{ button(
+            label='<i class="icon">🤖</i> AIでニュースを要約',
+            variant='primary',
+            attr='hx-get="/stocks/' ~ stock.code ~ '/ai/news-summary" hx-target="#ai-news-summary" hx-swap="innerHTML" hx-indicator="#ai-news-loading"'
+        ) }}
+    </div>
+    
+    <div class="relative min-h-[100px]">
+        <!-- ローディングインジケーター -->
+        <div id="ai-news-loading" class="htmx-indicator absolute inset-0 z-10 flex items-center justify-center bg-white/60 dark:bg-[#1a1b26]/60 backdrop-blur-[2px] rounded-2xl transition-opacity duration-300">
+            <div class="animate-spin rounded-full h-8 w-8 border-4 border-blue-500 border-t-transparent shadow-lg"></div>
+        </div>
+        
+        <!-- 結果表示エリア -->
+        <div id="ai-news-summary" class="transition-all duration-300">
+            <div class="p-8 text-center text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-[#1a1b26] rounded-2xl border border-slate-200 dark:border-slate-800 border-dashed">
+                上のボタンを押すと、最新ニュースを取得してAIが要約します。
             </div>
         </div>
     </div>
