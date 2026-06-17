@@ -28,7 +28,7 @@ def get_chat_model(provider: str = "openai", model_name: Optional[str] = None):
     Returns:
         BaseChatModel
     """
-    timeout = 8.0  # API呼び出しのタイムアウト秒数
+    timeout = 10.0  # API呼び出しのタイムアウト秒数（Geminiの制限により最低10秒が必要）
     max_retries = 1  # クォータ制限などのエラー発生時に何度もリトライしてフリーズするのを防ぐため、リトライ回数を制限
 
     if provider == "openai":
@@ -54,3 +54,27 @@ def get_chat_model(provider: str = "openai", model_name: Optional[str] = None):
         )
     else:
         raise ValueError(f"Unknown provider: {provider}")
+
+
+def get_default_model_name(
+    provider: str = "openai", model_name: Optional[str] = None
+) -> str:
+    """
+    指定されたプロバイダのデフォルトモデル名を返す。
+
+    トレースメタデータにモデル名を記録するためのヘルパー。
+
+    Args:
+        provider: "openai" または "google"
+        model_name: 明示的に指定されたモデル名
+
+    Returns:
+        実際に使用されるモデル名
+    """
+    if model_name:
+        return model_name
+    if provider == "openai":
+        return "gpt-4o-mini"
+    elif provider == "google":
+        return "gemini-2.0-flash"
+    return f"unknown-{provider}"

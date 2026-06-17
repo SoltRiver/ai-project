@@ -525,3 +525,34 @@ ews_service.py compared an offset-aware datetime (published_at) with an offset-n
 - **Verification**:
     - **Lint / Format**: 対象ファイルの `flake8` エラーゼロを確認。
     - **Logic**: RateLimitError 時のフォールバック文字列が正しく挿入されることをコード上で確認。
+
+## Date: 2026-06-17
+
+### Review Session 41 (LangSmith トレース・評価統合およびバグ修正)
+- **Status**: **Success** (Executed 2026-06-17).
+- **Scope**:
+  - `services/langsmith_config.py`
+  - `ai/chains/news_summarizer.py`
+  - `ai/prompts/news_prompts.py`
+  - `services/ai/llm_client.py`
+  - `services/langgraph/stock_news_graph.py`
+  - `services/ai_client.py`
+  - `fastapi_app.py`
+  - `scripts/create_langsmith_datasets.py`
+  - `scripts/run_langsmith_eval.py`
+  - `docs/langsmith.md`
+- **Findings**:
+  1. **Gemini API デッドラインエラー (Critical)**: `llm_client.py` に設定されていた `timeout = 8.0` が、Gemini APIの最小タイムアウト（デッドライン）制限である10秒を下回っており、`INVALID_ARGUMENT` エラーを引き起こしていた。
+  2. **FastAPIアプリの重複インポート・未使用インポート (Medium)**: `fastapi_app.py` で `SessionLocal`, `engine`, `stock` をモジュール定義中盤でインポートし、`startup_event` 内部で再定義されていたため、flake8 エラーが発生していた。
+  3. **静的解析 (Flake8) 警告 (Low)**: `scripts/run_langsmith_eval.py` で未使用インポート `List`、未使用変数 `context`、プレースホルダーなしの f-string が検出された。
+  4. **長い行とカンマ抜け (Low)**: `services/ai_client.py` で 88文字を超える長い f-string や print 文のカンマ抜けが検出された。
+- **Action**:
+  1. **タイムアウトの引き上げ**: `llm_client.py` 内の timeout 設定を `8.0` から `10.0` に変更し、Gemini API のデッドライン制限を解消した。
+  2. **インポート整理**: `fastapi_app.py` のインポート位置をファイル先頭に移動し、未使用・重複インポートを削除した。
+  3. **コードフォーマット・クリーンアップ**: `black` と `isort` で全ファイルを自動フォーマット。未使用インポート・変数を削除し、プレースホルダーなしの f-string の `f` を除去した。
+- **Verification**:
+  - **Lint / Format**: flake8 による静的解析ですべてのエラーがゼロ（クリーン）であることを確認。
+  - **Dataset Script**: `create_langsmith_datasets.py` の実行に成功し、ニュース要約、RAG、エージェントの評価用データセットが LangSmith 上に正しく登録されたことを確認。
+  - **Eval Script**: `run_langsmith_eval.py --dry-run` を実行し、事実性、関連性、明確さ、安全性などの評価関数群が正しく動作することを確認。
+  - **Server Startup**: アプリサーバーを起動し、起動完了ログ `INFO: Application startup complete` が出力されることを確認。
+

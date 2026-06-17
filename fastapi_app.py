@@ -1,26 +1,15 @@
 from fastapi import FastAPI
-
 # Trigger reload for new dependencies
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
+from database import SessionLocal
+from routers import (analysis_internal, calendar, edinet, edinet_diff,
+                     edinet_docs, fundamental, fundamentals, indices, news,
+                     ranking, stock_ai, stocks)
+
 # (Removed TemplateResponse Compatibility Patch)
 
-
-from routers import (
-    stocks,
-    fundamental,
-    indices,
-    news,
-    ranking,
-    edinet,
-    edinet_docs,
-    fundamentals,
-    calendar,
-    edinet_diff,
-    analysis_internal,
-    stock_ai,
-)
 
 """
 メインのFastAPIアプリケーション定義ファイル。
@@ -33,23 +22,24 @@ app = FastAPI(
 )
 
 # Database Setup
-from database import engine, SessionLocal
-from models import stock
 
 
 @app.on_event("startup")
 def startup_event():
+    # 0. LangSmithトレース設定の初期化（起動ログに状態を記録）
+    from services.langsmith_config import configure_langsmith
+
+    configure_langsmith()
+
     # 1. Create Tables
     from database import engine
-    from models import stock, master, edinet_file, company_info, stock_impact
-    from models import event_source_policy, event
-    from models import edinet_facts_snapshot, edinet_diff_summary
-
-    # AI分析SWRシステム用モデル
-    from models import analysis_snapshot, analysis_job, analysis_config
-
     # ニュースAI要約システム用モデル
-    from models import news_article, news_ai_summary, news_related_ticker
+    # AI分析SWRシステム用モデル
+    from models import (analysis_config, analysis_job, analysis_snapshot,
+                        company_info, edinet_diff_summary,
+                        edinet_facts_snapshot, edinet_file, event,
+                        event_source_policy, master, news_ai_summary,
+                        news_article, news_related_ticker, stock, stock_impact)
 
     stock.Base.metadata.create_all(bind=engine)
     master.Base.metadata.create_all(bind=engine)
@@ -87,7 +77,7 @@ def startup_event():
         db.close()
 
     # 4. analysis_config の初期データ投入（未登録のキーのみ）
-    from models.analysis_config import AnalysisConfig, DEFAULT_CONFIG
+    from models.analysis_config import DEFAULT_CONFIG, AnalysisConfig
 
     db2 = SessionLocal()
     try:
@@ -103,8 +93,9 @@ def startup_event():
         db2.close()
 
     # 3. Initialize Stock Master (Async Background)
-    from services.stock_master_service import stock_master_service
     import threading
+
+    from services.stock_master_service import stock_master_service
 
     def run_sync():
         stock_master_service.initialize_and_sync()

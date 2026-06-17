@@ -1,0 +1,77 @@
+[
+  {
+    "inputs": {
+      "question": "このニュースを初心者向けに要約してください",
+      "context": "米連邦準備制度理事会（FRB）は25日、政策金利を0.25ポイント引き下げ、4.50〜4.75%とすることを全会一致で決定した。パウエル議長は記者会見で「インフレは目標の2%に向けて持続的に低下している」と述べ、今後の利下げペースはデータ次第との姿勢を示した。市場では年内の追加利下げ観測が高まっている。"
+    },
+    "outputs": {
+      "expected": "FRBが0.25%の利下げを決定しました。インフレが落ち着いてきたためで、今後もデータを見ながら判断する方針です。株式市場にとっては追い風となる可能性があります。"
+    },
+    "metadata": {
+      "label": "good",
+      "category": "news_summary",
+      "difficulty": "normal",
+      "evaluation_criteria": "factuality, clarity, beginner_friendly"
+    }
+  },
+  {
+    "inputs": {
+      "question": "このニュースを初心者向けに要約してください",
+      "context": "トヨタ自動車は2026年3月期の連結純利益が前期比20%増の3兆5000億円になる見通しだと発表した。ハイブリッド車の販売が好調で、北米市場での販売台数が過去最高を更新。為替の円安効果も追い風となった。一方で、中国市場では現地メーカーとの競争が激化しており、シェア低下が課題となっている。"
+    },
+    "outputs": {
+      "expected": "トヨタの利益が20%増の3.5兆円見込み。ハイブリッド車の好調と円安が追い風。ただし中国市場での競争激化が課題として残ります。"
+    },
+    "metadata": {
+      "label": "good",
+      "category": "news_summary",
+      "difficulty": "normal",
+      "evaluation_criteria": "factuality, balance, conciseness"
+    }
+  },
+  {
+    "inputs": {
+      "question": "このニュースを要約してください",
+      "context": "半導体大手のTSMCは、AI向け先端半導体の需要急増を受け、日本の熊本第2工場の建設を前倒しすると発表した。投資額は約200億ドルで、2027年の量産開始を目指す。日本政府も最大1兆円規模の補助金を検討している。"
+    },
+    "outputs": {
+      "expected": "AIが盛り上がっているからTSMCの株価は絶対に上がります！今すぐ買うべきです！半導体関連銘柄は全部買い！"
+    },
+    "metadata": {
+      "label": "bad",
+      "category": "news_summary",
+      "difficulty": "normal",
+      "reason": "投資助言に寄りすぎている、断定的な表現、根拠のない推奨"
+    }
+  },
+  {
+    "inputs": {
+      "question": "このニュースを初心者向けに要約してください",
+      "context": "日銀は金融政策決定会合で、短期金利の誘導目標を0.5%に据え置くことを決定した。植田総裁は会見で「賃金と物価の好循環が確認されつつある」と述べつつも、海外経済の不確実性を理由に追加利上げには慎重な姿勢を示した。"
+    },
+    "outputs": {
+      "expected": "何かがあった。金融政策がどうなったか。"
+    },
+    "metadata": {
+      "label": "bad",
+      "category": "news_summary",
+      "difficulty": "normal",
+      "reason": "要約が曖昧すぎて具体的な情報が欠落している"
+    }
+  },
+  {
+    "inputs": {
+      "question": "このニュースを初心者向けに要約してください",
+      "context": "ソフトバンクグループの孫正義社長は、AI分野への投資を加速する方針を表明し、今後3年間で1000億ドル（約15兆円）の投資計画を発表した。投資先にはOpenAIやArmなどが含まれる見込み。"
+    },
+    "outputs": {
+      "expected": "ソフトバンクGが3年で約15兆円のAI投資計画を発表。OpenAIやArm等が対象です。大規模投資により短期的には財務負担が増えますが、AI市場の成長を見据えた長期戦略です。"
+    },
+    "metadata": {
+      "label": "good",
+      "category": "news_summary",
+      "difficulty": "normal",
+      "evaluation_criteria": "factuality, balance, beginner_friendly, impact_assessment"
+    }
+  }
+]

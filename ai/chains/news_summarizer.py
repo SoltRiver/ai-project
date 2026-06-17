@@ -16,20 +16,59 @@ import logging
 from typing import Any, Dict, List, Optional
 
 from dotenv import load_dotenv
-
 # LangChain コンポーネント
 from langchain_core.output_parsers import JsonOutputParser
 
 # プロンプト・出力スキーマ（ai/prompts に分離済み）
-from ai.prompts.news_prompts import NewsSummaryOutput, build_news_summary_prompt
-
+from ai.prompts.news_prompts import (PROMPT_NAME, PROMPT_VERSION,
+                                     NewsSummaryOutput,
+                                     build_news_summary_prompt)
 # LLMクライアント
-from services.ai.llm_client import get_chat_model
+from services.ai.llm_client import get_chat_model, get_default_model_name
+# LangSmithトレース設定
+from services.langsmith_config import build_trace_config, build_trace_metadata
 
 logger = logging.getLogger(__name__)
 
 # .envファイルから環境変数をロード
 load_dotenv()
+
+
+# ====================================================================
+# トレースメタデータ構築ヘルパー
+# ====================================================================
+
+
+def _build_news_trace_config(
+    provider: str,
+    model_name: Optional[str] = None,
+    **extra_metadata: Any,
+) -> Dict[str, Any]:
+    """
+    ニュース要約処理のLangSmithトレース config を構築する。
+
+    Args:
+        provider: LLMプロバイダ名
+        model_name: モデル名
+        **extra_metadata: 追加のメタデータ (symbol 等)
+
+    Returns:
+        chain.invoke() に渡す config 辞書
+    """
+    actual_model = get_default_model_name(provider=provider, model_name=model_name)
+    metadata = build_trace_metadata(
+        feature="news_summary",
+        prompt_version=PROMPT_VERSION,
+        prompt_name=PROMPT_NAME,
+        model=actual_model,
+        provider=provider,
+        **extra_metadata,
+    )
+    return build_trace_config(
+        tags=["news_summary"],
+        metadata=metadata,
+        run_name=f"news-summary-{PROMPT_VERSION}",
+    )
 
 
 # ====================================================================
@@ -116,19 +155,24 @@ def summarize_news_article(
         Exception: LLM呼び出しエラー時
     """
     logger.info(
-        f"ニュース要約開始: provider={provider}, language={language}, title='{title[:50]}...'"
+        f"ニュース要約開始: provider={provider}, language={language}, "
+        f"title='{title[:50]}...'"
     )
 
     chain = _build_news_summary_chain(provider=provider, model_name=model_name)
 
-    # チェーン実行（単発呼び出し）
+    # LangSmithトレース config を構築
+    trace_config = _build_news_trace_config(provider=provider, model_name=model_name)
+
+    # チェーン実行（単発呼び出し）- トレースメタデータ付き
     result = chain.invoke(
         {
             "title": title or "-",
             "publisher": publisher or "-",
             "body": body or "-",
             "language": language,
-        }
+        },
+        config=trace_config,
     )
 
     logger.info(f"ニュース要約完了: sentiment={result.get('sentiment', '-')}")
@@ -147,19 +191,23 @@ async def summarize_news_article_async(
     単一のニュース記事を非同期で要約する。
     """
     logger.info(
-        f"ニュース非同期要約開始: {provider=}, {language=}, title='{title[:40]}...'"
+        f"ニュース非同期要約開始: {provider=}, {language=}, " f"title='{title[:40]}...'"
     )
 
     chain = _build_news_summary_chain(provider=provider, model_name=model_name)
 
-    # チェーン実行（非同期呼び出し）
+    # LangSmithトレース config を構築
+    trace_config = _build_news_trace_config(provider=provider, model_name=model_name)
+
+    # チェーン実行（非同期呼び出し）- トレースメタデータ付き
     result = await chain.ainvoke(
         {
             "title": title or "-",
             "publisher": publisher or "-",
             "body": body or "-",
             "language": language,
-        }
+        },
+        config=trace_config,
     )
 
     logger.info(f"ニュース非同期要約完了: sentiment={result.get('sentiment', '-')}")
@@ -200,11 +248,19 @@ def summarize_news_batch(
         return []
 
     logger.info(
-        f"ニュースバッチ要約開始: {len(articles)}件, provider={provider}, language={language}"
+        f"ニュースバッチ要約開始: {len(articles)}件, "
+        f"provider={provider}, language={language}"
     )
 
     # チェーンを一度だけ構築（同じモデルを使い回す）
     chain = _build_news_summary_chain(provider=provider, model_name=model_name)
+
+    # LangSmithトレース config を構築（バッチ全体で共通）
+    trace_config = _build_news_trace_config(
+        provider=provider,
+        model_name=model_name,
+        batch_size=len(articles),
+    )
 
     results = []
     success_count = 0
@@ -226,7 +282,8 @@ def summarize_news_batch(
                     "publisher": article.get("publisher", "-"),
                     "body": body,
                     "language": language,
-                }
+                },
+                config=trace_config,
             )
 
             # 元記事のインデックスを付与
@@ -240,11 +297,11 @@ def summarize_news_batch(
 
             if "RateLimitError" in str(type(e).__name__) or "429" in str(e):
                 fail_content = (
-                    "現在、AI要約サービスの利用が集中しており、一時的に要約を生成できません。"
+                    "現在、AI要約サービスの利用が集中しており、"
+                    "一時的に要約を生成できません。"
                     if language == "日本語"
                     else (
-                        "AI summary is temporarily unavailable due to "
-                        "high traffic."
+                        "AI summary is temporarily unavailable due to " "high traffic."
                     )
                 )
             else:
@@ -266,7 +323,7 @@ def summarize_news_batch(
             )
 
     logger.info(
-        f"ニュースバッチ要約完了: 成功={success_count}件, エラー={error_count}件"
+        f"ニュースバッチ要約完了: 成功={success_count}件, " f"エラー={error_count}件"
     )
     return results
 
@@ -284,11 +341,19 @@ async def summarize_news_batch_async(
         return []
 
     logger.info(
-        f"ニュースバッチ非同期要約開始: {len(articles)}件, provider={provider}, language={language}"
+        f"ニュースバッチ非同期要約開始: {len(articles)}件, "
+        f"provider={provider}, language={language}"
     )
 
     # チェーンを一度だけ構築
     chain = _build_news_summary_chain(provider=provider, model_name=model_name)
+
+    # LangSmithトレース config を構築
+    trace_config = _build_news_trace_config(
+        provider=provider,
+        model_name=model_name,
+        batch_size=len(articles),
+    )
 
     inputs = []
     for article in articles:
@@ -308,8 +373,10 @@ async def summarize_news_batch_async(
         )
 
     try:
-        # abatch を使って並行実行
-        batch_results = await chain.abatch(inputs, return_exceptions=True)
+        # abatch を使って並行実行 - トレースメタデータ付き
+        batch_results = await chain.abatch(
+            inputs, config=trace_config, return_exceptions=True
+        )
 
         results = []
         success_count = 0
@@ -324,7 +391,8 @@ async def summarize_news_batch_async(
                     result
                 ):
                     fail_content = (
-                        "現在、AI要約サービスの利用が集中しており、一時的に要約を生成できません。"
+                        "現在、AI要約サービスの利用が集中しており、"
+                        "一時的に要約を生成できません。"
                         if language == "日本語"
                         else (
                             "AI summary is temporarily unavailable due to "
@@ -343,7 +411,7 @@ async def summarize_news_batch_async(
                         "translated_title": article.get("title", "-"),
                         "summarized_content": fail_content,
                         "sentiment": "neutral",
-                        "sentiment_reason": f"Error: {type(result).__name__}",
+                        "sentiment_reason": (f"Error: {type(result).__name__}"),
                         "impacted_stocks": [],
                     }
                 )
@@ -354,16 +422,16 @@ async def summarize_news_batch_async(
                     "translated_title": result.get("translated_title")
                     or article.get("title")
                     or "-",
-                    "summarized_content": result.get("summarized_content") or "-",
+                    "summarized_content": (result.get("summarized_content") or "-"),
                     "sentiment": result.get("sentiment") or "neutral",
-                    "sentiment_reason": result.get("sentiment_reason") or "-",
+                    "sentiment_reason": (result.get("sentiment_reason") or "-"),
                     "impacted_stocks": [],
                 }
                 for stock in result.get("impacted_stocks", []):
                     cleaned_result["impacted_stocks"].append(
                         {
                             "name": stock.get("name") or "-",
-                            "impact_type": stock.get("impact_type") or "neutral",
+                            "impact_type": (stock.get("impact_type") or "neutral"),
                             "reason": stock.get("reason") or "-",
                         }
                     )
@@ -371,7 +439,8 @@ async def summarize_news_batch_async(
                 success_count += 1
 
         logger.info(
-            f"ニュースバッチ非同期要約完了: 成功={success_count}件, エラー={error_count}件"
+            f"ニュースバッチ非同期要約完了: 成功={success_count}件, "
+            f"エラー={error_count}件"
         )
         return results
 
@@ -380,12 +449,10 @@ async def summarize_news_batch_async(
         results = []
         if "RateLimitError" in str(type(e).__name__) or "429" in str(e):
             fail_content = (
-                "現在、AI要約サービスの利用が集中しており、一時的に要約を生成できません。"
+                "現在、AI要約サービスの利用が集中しており、"
+                "一時的に要約を生成できません。"
                 if language == "日本語"
-                else (
-                    "AI summary is temporarily unavailable due to "
-                    "high traffic."
-                )
+                else ("AI summary is temporarily unavailable due to " "high traffic.")
             )
         else:
             fail_content = (

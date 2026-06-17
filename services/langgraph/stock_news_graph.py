@@ -7,13 +7,13 @@ from typing import Any, Dict
 
 from langgraph.graph import END, START, StateGraph
 
-from services.langgraph.stock_news_nodes import (
-    build_response_node,
-    classify_sentiment_node,
-    fetch_news_node,
-    summarize_news_node,
-)
+from services.langgraph.stock_news_nodes import (build_response_node,
+                                                 classify_sentiment_node,
+                                                 fetch_news_node,
+                                                 summarize_news_node)
 from services.langgraph.stock_news_state import StockNewsState
+# LangSmithトレース設定
+from services.langsmith_config import build_trace_config, build_trace_metadata
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +42,9 @@ def create_stock_news_graph():
         return "continue"
 
     workflow.add_conditional_edges(
-        "fetch_news", check_fetch_error, {"continue": "summarize_news", "end": END}
+        "fetch_news",
+        check_fetch_error,
+        {"continue": "summarize_news", "end": END},
     )
 
     # summarize_news でもエラー分岐
@@ -81,14 +83,32 @@ async def run_stock_news_workflow(
 ) -> Dict[str, Any]:
     """
     外部からグラフを実行するための公開関数（非同期版）。
+
+    LangSmithにトレースが記録され、各ノードの実行状況を
+    LangSmith UI上で確認できる。
     """
     logger.info(f"Starting news workflow for {stock_code} (language={language})")
     try:
         app = get_news_graph()
         initial_state = {"stock_code": stock_code, "language": language}
 
-        # graph.ainvoke() で非同期実行
-        final_state = await app.ainvoke(initial_state)
+        # LangSmithトレース config を構築
+        # LangGraphは各ノード実行を自動的に子スパンとして記録する
+        metadata = build_trace_metadata(
+            feature="news_summary",
+            prompt_version="v1",
+            model="-",
+            symbol=stock_code,
+            workflow="stock_news_graph",
+        )
+        trace_config = build_trace_config(
+            tags=["news_summary", "langgraph"],
+            metadata=metadata,
+            run_name=f"stock-news-workflow-{stock_code}",
+        )
+
+        # graph.ainvoke() で非同期実行 - トレースメタデータ付き
+        final_state = await app.ainvoke(initial_state, config=trace_config)
         return final_state
 
     except Exception as e:

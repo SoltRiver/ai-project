@@ -18,6 +18,7 @@ AIアシスタントは、新しいタスクに着手する前に本ファイル
 - LangGraphワークフローは `services/langgraph/` 配下に配置し、Graph定義(`*_graph.py`)、State定義(`*_state.py`)、Node関数(`*_nodes.py`)を分離して設計する。
 - LLMプロバイダ（OpenAI/Gemini等）は共通の `services.ai.llm_client.get_chat_model()` から取得し、LangChain・LangGraph双方で再利用する。
 - `gemini-1.5-flash` は2026年5月時点で廃止済み。Gemini利用時は `gemini-2.0-flash` を使用すること。
+- `gemini-2.0-flash` 等の Gemini API では、手動で設定するタイムアウト（デッドライン）が最小10秒と定められている。そのため、`ChatGoogleGenerativeAI` などのインスタンス生成時に `timeout` パラメータを設定する場合は、必ず10.0秒以上に設定すること（下回ると `INVALID_ARGUMENT (Manually set deadline is too short)` エラーが発生する）。
 - OpenAI/Gemini共にクォータ制限に注意。バッチ処理では1記事ずつエラーハンドリングし、失敗した記事をスキップして処理を継続する設計とする。
 
 ## 4. 要件定義・UI/UX

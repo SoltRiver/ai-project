@@ -1,0 +1,663 @@
+
+    <header class="top-bar sticky top-0 z-40 w-full backdrop-blur border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-[#111827]/80 flex items-center justify-between px-6 py-4">
+        <a href="/" class="brand" style="text-decoration: none;">
+            <span class="brand-icon">📈</span>
+            <span class="brand-title">StockAnalyst</span>
+            <span class="brand-sub">AI</span>
+        </a>
+        <nav class="nav-links flex gap-2 sm:gap-4 font-bold text-sm sm:text-base overflow-x-auto no-scrollbar whitespace-nowrap px-2">
+            <a href="/indices" class="px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition">主要指標</a>
+            <a href="/news" class="px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition">ニュース</a>
+            <a href="/stocks" class="px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition">株価リスト</a>
+            <a href="/ranking" class="px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition">ランキング</a>
+            <a href="/glossary" class="px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition">用語集</a>
+            <a href="/candle-patterns" class="px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition">ローソク足</a>
+            <a href="/calendar" class="px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition">カレンダー</a>
+        </nav>
+        <button @click="theme = (theme === 'light' ? 'dark' : 'light'); localStorage.setItem('theme', theme)" class="ghost-button flex items-center justify-center p-2 rounded-full border border-slate-300 dark:border-slate-600 hover:border-blue-500 transition" type="button">
+            <span x-show="theme === 'light'">🌙</span>
+            <span x-show="theme === 'dark'" style="display: none;">☀️</span>
+            <span class="ml-2 hidden sm:inline">テーマ切替</span>
+        </button>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12">
+        
+<section class="mb-10 flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
+    <div class="space-y-4">
+        <div>
+            <span class="text-sm font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-1 block">銘柄詳細</span>
+            <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight text-slate-900 dark:text-white">トヨタ自動車（7203）</h1>
+        </div>
+        <div class="flex items-baseline gap-6 sm:gap-10 flex-wrap">
+            <div class="text-5xl sm:text-6xl font-mono font-bold tracking-tighter text-slate-900 dark:text-white">
+                ¥2,913.0
+            </div>
+            
+            <div class="flex items-center">
+                
+
+<span class="inline-flex items-center justify-center px-3 py-1 rounded-full text-[10px] sm:text-xs font-bold border w-fit shrink-0 whitespace-nowrap leading-none shadow-sm bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-900/30 dark:text-rose-400 dark:border-rose-800 px-5 py-2 text-lg border-2 shadow-sm">
+    <span class="animate-bounce inline-block rotate-180">↓</span> <span class="ml-2">-¥65（-2.18%）</span>
+</span>
+
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- イベントカード（htmx遅延ロード） -->
+<div id="event-card-container" hx-get="/partials/events/stock/7203" hx-trigger="load" hx-swap="innerHTML" class="mb-8"><div class="event-card">
+    <h3 class="event-card-title">📅 イベント</h3>
+
+    
+    <div class="event-empty">
+        イベント情報はまだ取得されていません。
+    </div>
+    
+
+    <!-- カレンダーリンク -->
+    <a href="/calendar?code=7203" class="event-calendar-link">📅 カレンダーで確認</a>
+</div></div>
+
+<div x-data="{ activeTab: 'chart' }" class="mb-8">
+    <div class="flex flex-wrap gap-2 border-b border-slate-200 dark:border-slate-800 mb-6" role="tablist">
+        
+        <button type="button" class="px-6 py-3 font-bold text-sm transition-all border-b-2 flex items-center gap-2 border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-900/10" :class="activeTab === 'chart' 
+                ? 'border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-900/10' 
+                : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'" @click="activeTab = 'chart'" hx-get="/stocks/7203/tab/chart" hx-target="#tab-content" hx-swap="innerHTML" hx-indicator="#tab-loading">
+            <span>📈</span>
+            <span>テクニカル分析</span>
+        </button>
+        
+        <button type="button" class="px-6 py-3 font-bold text-sm transition-all border-b-2 flex items-center gap-2 border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300" :class="activeTab === 'fundamental' 
+                ? 'border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-900/10' 
+                : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'" @click="activeTab = 'fundamental'" hx-get="/stocks/7203/tab/fundamental" hx-target="#tab-content" hx-swap="innerHTML" hx-indicator="#tab-loading">
+            <span>📊</span>
+            <span>ファンダメンタル分析</span>
+        </button>
+        
+        <button type="button" class="px-6 py-3 font-bold text-sm transition-all border-b-2 flex items-center gap-2 border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300" :class="activeTab === 'dividend' 
+                ? 'border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-900/10' 
+                : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'" @click="activeTab = 'dividend'" hx-get="/stocks/7203/tab/dividend" hx-target="#tab-content" hx-swap="innerHTML" hx-indicator="#tab-loading">
+            <span>💰</span>
+            <span>配当</span>
+        </button>
+        
+        <button type="button" class="px-6 py-3 font-bold text-sm transition-all border-b-2 flex items-center gap-2 border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300" :class="activeTab === 'margin' 
+                ? 'border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-900/10' 
+                : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'" @click="activeTab = 'margin'" hx-get="/stocks/7203/tab/margin" hx-target="#tab-content" hx-swap="innerHTML" hx-indicator="#tab-loading">
+            <span>⚖️</span>
+            <span>需給</span>
+        </button>
+        
+        <button type="button" class="px-6 py-3 font-bold text-sm transition-all border-b-2 flex items-center gap-2 border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300" :class="activeTab === 'shareholder' 
+                ? 'border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-900/10' 
+                : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'" @click="activeTab = 'shareholder'" hx-get="/stocks/7203/tab/shareholder" hx-target="#tab-content" hx-swap="innerHTML" hx-indicator="#tab-loading">
+            <span>🎁</span>
+            <span>株主優待</span>
+        </button>
+        
+    </div>
+
+    <div class="relative min-h-[400px]">
+        <div id="tab-loading" class="htmx-indicator absolute inset-0 z-10 flex items-center justify-center bg-white/60 dark:bg-[#1a1b26]/60 backdrop-blur-[2px] rounded-2xl transition-opacity duration-300">
+            <div class="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent shadow-lg">
+            </div>
+        </div>
+
+        <div class="card ai-prediction-section">
+    <div class="section-header">
+        <div class="section-title">AIアシスト分析</div>
+        
+        <span class="badge blue">確定</span>
+        
+    </div>
+
+    <div class="ai-prediction-content py-4">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
+            <!-- Part 1: Reliability -->
+            <div class="reliability-eval">
+                <div class="text-xs text-slate-500 mb-1">需給信頼度（ルール）</div>
+                <div class="flex items-center gap-2">
+                    <span class="text-3xl font-bold reliability-unknown">—</span>
+                    <span class="text-lg font-bold">未確定</span>
+                </div>
+            </div>
+
+            <!-- Part 2: AI Probability & Expected Value -->
+            <div class="ai-metrics border-l border-slate-200 dark:border-slate-800 pl-6 relative">
+                
+                <div class="flex flex-col gap-4">
+                    <div class="metric-item">
+                        <div class="flex flex-wrap items-center gap-2 mb-1">
+                            <span class="text-xs text-slate-500">利確先着確率（AI）</span>
+                            
+                        </div>
+                        <div class="text-3xl font-bold text-blue-600 dark:text-blue-400">
+                            69.06%
+                        </div>
+                    </div>
+                    <div class="metric-item">
+                        <div class="text-xs text-slate-500 mb-1">期待値 (E_R)</div>
+                        <div class="text-2xl font-mono font-bold text-green-600">
+                            +0.36 <span class="text-sm font-normal text-slate-400">R</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Part 3: Validation Info -->
+            <div class="validation-info border-l border-slate-200 dark:border-slate-800 pl-6 text-xs space-y-2">
+                <div class="valid-item">
+                    <div class="text-slate-400">試行回数 (N)</div>
+                    <div class="font-bold">
+                        1118
+                        
+                    </div>
+                </div>
+                <!-- 95%CI Half Width -->
+                <div class="valid-item">
+                    <div class="text-slate-400">95%CI半幅</div>
+                    <div class="font-bold">
+                        
+                            ±2.7%
+                        
+                    </div>
+                </div>
+                <!-- MDD -->
+                <div class="valid-item">
+                    <div class="text-slate-400">MDD (推定)</div>
+                    <div class="font-bold ">
+                        
+                            21.7%
+                        
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Attention Badge / Contradiction -->
+        
+
+        <div class="mt-4 p-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl text-[10px] text-slate-500 leading-relaxed">
+            
+            <p>※本指標は過去の傾向に基づく確率的な推定であり、投資成果を保証するものではありません。</p>
+        </div>
+    </div>
+</div>
+
+<style class="">
+    .provisional-gray {
+        filter: grayscale(0.5) opacity(0.8);
+    }
+
+    .reliability-high {
+        color: #22c55e;
+    }
+
+    /* Green-500 */
+    .reliability-mid {
+        color: #3b82f6;
+    }
+
+    /* Blue-500 */
+    .reliability-low {
+        color: #f59e0b;
+    }
+
+    /* Amber-500 */
+    .reliability-unknown {
+        color: #94a3b8;
+    }
+
+    /* Slate-400 */
+</style>
+    </div>
+</div>
+
+<!-- AI分析カード（SWRスナップショット）: タブとは独立して遅延ロード -->
+<div class="mb-8 space-y-4">
+    <!-- デイリー分析 -->
+    <div id="analysis-card-daily-container" hx-get="/partials/analysis/7203?type=ai_assist_daily" hx-trigger="load" hx-swap="innerHTML" class=""><div id="analysis-card-ai_assist_daily" class="card analysis-card mb-4 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
+
+    <!-- ヘッダー -->
+    <div class="section-header flex items-center justify-between p-4 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-950/30 dark:to-purple-950/30 border-b border-slate-200 dark:border-slate-800">
+        <div class="flex items-center gap-3">
+            <span class="text-xl">🤖</span>
+            <div class="section-title text-lg font-bold text-slate-900 dark:text-white">
+                
+                AIアシスト分析（デイリー）
+                
+            </div>
+        </div>
+        <div class="flex items-center gap-2">
+            <!-- ステータスバッジ -->
+            
+            <span class="inline-flex items-center gap-1 px-3 py-1 text-xs font-bold rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                更新中
+            </span>
+            
+        </div>
+    </div>
+
+    <!-- コンテンツ -->
+    <div class="p-4">
+        
+        <!-- 分析テキスト表示 -->
+        <div class="analysis-content text-sm leading-relaxed text-slate-700 dark:text-slate-300 whitespace-pre-line">
+            **テクニカル分析状態（2026/03/06）**
+
+トヨタ自動車（7203）は現在、SMA25（短期移動平均線）がSMA75（中期移動平均線）を上回る強気配置で推移しています。
+
+RSIは52.3で中立圏に位置しており、過度な買われすぎ/売られすぎの状態にはありません。直近の出来高は平均対比でやや増加傾向にあります。
+
+**注目ポイント：** 現在値は直近のレジスタンスラインに接近しており、この水準での値動きに注目が集まっています。
+        </div>
+
+        <!-- メタ情報 -->
+        <div class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex flex-wrap gap-4 text-[11px] text-slate-400">
+            <div class="flex items-center gap-1">
+                <span>🕐</span>
+                <span>最終更新: 2026/03/06 11:21</span>
+            </div>
+            <div class="flex items-center gap-1">
+                <span>📊</span>
+                <span>基準時刻: 2026/03/06 11:21</span>
+            </div>
+            
+            <div class="flex items-center gap-1">
+                <span>🧠</span>
+                <span>gemini-1.5-flash</span>
+            </div>
+            
+        </div>
+
+        <!-- エラー表示（前回成功結果を維持しつつエラー情報を表示） -->
+        
+
+        <!-- stale時の自動更新 -->
+        
+        <div class="mt-3 p-2 bg-amber-50 dark:bg-amber-900/10 rounded-lg text-xs text-amber-600 dark:text-amber-400 flex items-center gap-2">
+            <span class="animate-spin text-base">⏳</span>
+            <span>最新ではない可能性があります。バックグラウンドで更新中です。</span>
+        </div>
+        <!-- htmxで数秒後に再取得（最大3回まで） -->
+        <div hx-get="/partials/analysis/7203?type=ai_assist_daily" hx-trigger="every 8s [pollCount &lt; 3]" hx-target="#analysis-card-ai_assist_daily" hx-swap="outerHTML" hx-on::before-request="this.pollCount = (this.pollCount || 0) + 1; if(this.pollCount &gt;= 3) this.remove();" style="display:none;">
+        </div>
+        
+
+        
+    </div>
+
+    <!-- 免責事項（金融安全） -->
+    <div class="px-4 pb-3">
+        <div class="p-2 bg-slate-50 dark:bg-slate-900/50 rounded-lg text-[10px] text-slate-400 leading-relaxed">
+            ※ 本分析は市場データに基づく状態説明であり、売買推奨ではありません。投資判断はご自身の責任で行ってください。
+        </div>
+    </div>
+</div></div>
+    <!-- イントラデイ分析 -->
+    <div id="analysis-card-intraday-container" hx-get="/partials/analysis/7203?type=ai_assist_intraday" hx-trigger="load" hx-swap="innerHTML" class=""><div id="analysis-card-ai_assist_intraday" class="card analysis-card mb-4 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
+
+    <!-- ヘッダー -->
+    <div class="section-header flex items-center justify-between p-4 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-950/30 dark:to-purple-950/30 border-b border-slate-200 dark:border-slate-800">
+        <div class="flex items-center gap-3">
+            <span class="text-xl">🤖</span>
+            <div class="section-title text-lg font-bold text-slate-900 dark:text-white">
+                
+                AIアシスト分析（リアルタイム）
+                
+            </div>
+        </div>
+        <div class="flex items-center gap-2">
+            <!-- ステータスバッジ -->
+            
+            <span class="inline-flex items-center gap-1 px-3 py-1 text-xs font-bold rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                更新中
+            </span>
+            
+        </div>
+    </div>
+
+    <!-- コンテンツ -->
+    <div class="p-4">
+        
+        <!-- 分析テキスト表示 -->
+        <div class="analysis-content text-sm leading-relaxed text-slate-700 dark:text-slate-300 whitespace-pre-line">
+            トヨタ自動車は前日比+0.3%、RSI52で中立圏を維持。出来高は平均並み。
+        </div>
+
+        <!-- メタ情報 -->
+        <div class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex flex-wrap gap-4 text-[11px] text-slate-400">
+            <div class="flex items-center gap-1">
+                <span>🕐</span>
+                <span>最終更新: 2026/03/06 11:21</span>
+            </div>
+            <div class="flex items-center gap-1">
+                <span>📊</span>
+                <span>基準時刻: 2026/03/06 11:21</span>
+            </div>
+            
+            <div class="flex items-center gap-1">
+                <span>🧠</span>
+                <span>gemini-1.5-flash</span>
+            </div>
+            
+        </div>
+
+        <!-- エラー表示（前回成功結果を維持しつつエラー情報を表示） -->
+        
+
+        <!-- stale時の自動更新 -->
+        
+        <div class="mt-3 p-2 bg-amber-50 dark:bg-amber-900/10 rounded-lg text-xs text-amber-600 dark:text-amber-400 flex items-center gap-2">
+            <span class="animate-spin text-base">⏳</span>
+            <span>最新ではない可能性があります。バックグラウンドで更新中です。</span>
+        </div>
+        <!-- htmxで数秒後に再取得（最大3回まで） -->
+        <div hx-get="/partials/analysis/7203?type=ai_assist_intraday" hx-trigger="every 8s [pollCount &lt; 3]" hx-target="#analysis-card-ai_assist_intraday" hx-swap="outerHTML" hx-on::before-request="this.pollCount = (this.pollCount || 0) + 1; if(this.pollCount &gt;= 3) this.remove();" style="display:none;">
+        </div>
+        
+
+        
+    </div>
+
+    <!-- 免責事項（金融安全） -->
+    <div class="px-4 pb-3">
+        <div class="p-2 bg-slate-50 dark:bg-slate-900/50 rounded-lg text-[10px] text-slate-400 leading-relaxed">
+            ※ 本分析は市場データに基づく状態説明であり、売買推奨ではありません。投資判断はご自身の責任で行ってください。
+        </div>
+    </div>
+</div></div>
+</div>
+
+    </main>
+    
+<div x-data="{ 
+    open: false, 
+    pattern: {},
+    init() {
+        window.showPatternCardModal = (patternId) =&gt; {
+            const chartWrappers = document.querySelectorAll('.chart-wrapper');
+            let found = null;
+            for (const wrap of chartWrappers) {
+                const script = wrap.querySelector('#chart-payload-json');
+                if (script) {
+                    try {
+                        const payload = JSON.parse(script.textContent);
+                        if (payload.candle_patterns) {
+                            found = payload.candle_patterns.find(p =&gt; p.id === patternId);
+                        }
+                    } catch (e) { }
+                }
+                if (found) break;
+            }
+            if (found) {
+                this.pattern = found;
+                this.open = true;
+            }
+        }
+    }
+}" @keydown.window.escape="open = false" @open-pattern-modal.window="pattern = $event.detail; open = true">
+    <template x-teleport="body" data-teleport-template="true">
+        <div x-show="open" class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm" x-transition.opacity="">
+
+            <div x-show="open" x-transition.scale.95="" @click.outside="open = false" class="bg-white dark:bg-[#16161e] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto relative p-6 md:p-8">
+
+                <button @click="open = false" class="absolute top-4 right-4 text-2xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">×</button>
+
+                <div class="flex flex-col md:flex-row gap-8 items-start">
+                    <!-- Left: Visual -->
+                    <div class="w-full md:w-1/3 flex justify-center bg-slate-50 dark:bg-slate-900/50 rounded-xl p-4 border border-slate-100 dark:border-slate-800">
+                        <img :src="pattern.image || (pattern.type === '陽線' ? '/static/images/big_bull.svg' : '/static/images/big_bear.svg')" :alt="pattern.name" class="max-w-[120px] h-auto drop-shadow-lg">
+                    </div>
+
+                    <!-- Right: Content -->
+                    <div class="w-full md:w-2/3">
+                        <h2 x-text="pattern.name" class="text-3xl font-extrabold text-slate-900 dark:text-white mb-6">
+                        </h2>
+
+                        <div class="space-y-6">
+                            <section>
+                                <h3 class="text-sm font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 mb-2">
+                                    特徴</h3>
+                                <p class="text-slate-700 dark:text-slate-300">
+                                    <strong x-text="pattern.desc_lead" class="block mb-1 text-lg"></strong>
+                                    <span x-text="pattern.desc_body" class="leading-relaxed"></span>
+                                </p>
+                            </section>
+
+                            <section>
+                                <h3 class="text-sm font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 mb-2">
+                                    推奨アクション</h3>
+                                <div class="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800 rounded-xl p-4 text-emerald-800 dark:text-emerald-200" x-text="pattern.action"></div>
+                            </section>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <section>
+                                    <h3 class="text-sm font-bold uppercase tracking-wider text-slate-500 mb-2">出現しやすい場面
+                                    </h3>
+                                    <p class="text-sm text-slate-600 dark:text-slate-400" x-text="pattern.scene || 'ー'">
+                                    </p>
+                                </section>
+                                <section>
+                                    <h3 class="text-sm font-bold uppercase tracking-wider text-slate-500 mb-2">攻略のポイント
+                                    </h3>
+                                    <p class="text-sm text-slate-600 dark:text-slate-400" x-text="pattern.howto || 'ー'">
+                                    </p>
+                                </section>
+                            </div>
+
+                            <section x-show="pattern.tips &amp;&amp; pattern.tips.length &gt; 0">
+                                <h3 class="text-sm font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 mb-2">
+                                    実践アドバイス</h3>
+                                <ul class="list-disc list-inside text-sm text-slate-600 dark:text-slate-400 space-y-1">
+                                    <template x-for="tip in (pattern.tips || [])" :key="tip">
+                                        <li x-text="tip"></li>
+                                    </template>
+                                </ul>
+                            </section>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </template>
+</div>
+    
+<div x-data="{ 
+    open: false, 
+    data: {},
+    init() {
+        window.showCrossHelpModal = (e, data) =&gt; {
+            if (e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            this.data = data;
+            this.open = true;
+        }
+    }
+}" @keydown.window.escape="open = false">
+    <template x-teleport="body" data-teleport-template="true">
+        <div x-show="open" class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm" x-transition.opacity="">
+
+            <div x-show="open" x-transition.scale.95="" @click.outside="open = false" class="bg-white dark:bg-[#16161e] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl max-w-lg w-full relative p-6 md:p-8">
+
+                <button @click="open = false" class="absolute top-4 right-4 text-2xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">×</button>
+
+                <div class="flex flex-col gap-6">
+                    <div class="flex items-center gap-6">
+                        <div class="text-6xl p-4 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-slate-100 dark:border-slate-800 flex items-center justify-center" :class="data.type === 'golden' ? 'text-amber-500' : 'text-blue-500'">
+                            <span x-text="data.type === 'golden' ? '☀' : '☠'"></span>
+                        </div>
+                        <div>
+                            <h2 class="text-2xl font-extrabold text-slate-900 dark:text-white">信頼度評価詳細</h2>
+                            <div class="mt-2">
+                                <span class="px-3 py-1 rounded-full text-xs font-bold border" :class="data.colorClass || 'border-slate-300 text-slate-500'" x-text="(data.level || 'ー') + (data.icon ? ' ' + data.icon : '')"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-4">
+                        <section class="bg-slate-50 dark:bg-slate-900/30 p-4 rounded-xl border border-slate-100 dark:border-slate-800">
+                            <h3 class="text-sm font-bold uppercase tracking-wider text-slate-500 mb-1">評価理由</h3>
+                            <p class="text-slate-900 dark:text-slate-200 font-medium" x-text="data.reason || 'ー'"></p>
+                        </section>
+
+                        <section>
+                            <h3 class="text-sm font-bold uppercase tracking-wider text-slate-500 mb-2">評価基準について</h3>
+                            <p class="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                                基準線（短期・長期MA）の状態から、長期MAの傾き、現在値の乖離、発生タイミングなどを総合的に評価しています。
+                            </p>
+                        </section>
+
+                        <section class="space-y-3">
+                            <h3 class="text-sm font-bold uppercase tracking-wider text-slate-500 mb-1">判定の目安</h3>
+                            <div class="flex gap-4 items-start">
+                                <span class="shrink-0 w-12 text-center py-1 rounded-full bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 text-xs font-bold border border-emerald-200 dark:border-emerald-800">高
+                                    ◎</span>
+                                <p class="text-xs text-slate-500">トレンドが強力で、価格がMAの優位方向にある安定した反発・反落サイン。</p>
+                            </div>
+                            <div class="flex gap-4 items-start">
+                                <span class="shrink-0 w-12 text-center py-1 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 text-xs font-bold border border-blue-200 dark:border-blue-800">中
+                                    〇</span>
+                                <p class="text-xs text-slate-500">クロスは成立しているが、MAの傾きや価格位置にわずかに懸念がある状態。</p>
+                            </div>
+                            <div class="flex gap-4 items-start">
+                                <span class="shrink-0 w-12 text-center py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-xs font-bold border border-slate-200 dark:border-slate-800">低
+                                    △</span>
+                                <p class="text-xs text-slate-500">もみ合い局面や、トレンドが不明確な状態でのサイン。</p>
+                            </div>
+                        </section>
+                    </div>
+
+                    <div class="text-[10px] text-slate-400 bg-slate-50 dark:bg-slate-900/20 p-3 rounded-lg border border-slate-100 dark:border-slate-800 italic">
+                        ※ 本評価は統計的・技術的基準に基づくものであり、売買を推奨するものではありません。
+                    </div>
+                </div>
+            </div>
+        </div>
+    </template>
+</div>
+
+
+<div x-show="open" class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm" x-transition.opacity="" data-teleport-target="true" style="display: none;">
+
+            <div x-show="open" x-transition.scale.95="" @click.outside="open = false" class="bg-white dark:bg-[#16161e] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto relative p-6 md:p-8" style="display: none;">
+
+                <button @click="open = false" class="absolute top-4 right-4 text-2xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">×</button>
+
+                <div class="flex flex-col md:flex-row gap-8 items-start">
+                    <!-- Left: Visual -->
+                    <div class="w-full md:w-1/3 flex justify-center bg-slate-50 dark:bg-slate-900/50 rounded-xl p-4 border border-slate-100 dark:border-slate-800">
+                        <img :src="pattern.image || (pattern.type === '陽線' ? '/static/images/big_bull.svg' : '/static/images/big_bear.svg')" :alt="pattern.name" class="max-w-[120px] h-auto drop-shadow-lg" src="/static/images/big_bear.svg" alt="">
+                    </div>
+
+                    <!-- Right: Content -->
+                    <div class="w-full md:w-2/3">
+                        <h2 x-text="pattern.name" class="text-3xl font-extrabold text-slate-900 dark:text-white mb-6"></h2>
+
+                        <div class="space-y-6">
+                            <section>
+                                <h3 class="text-sm font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 mb-2">
+                                    特徴</h3>
+                                <p class="text-slate-700 dark:text-slate-300">
+                                    <strong x-text="pattern.desc_lead" class="block mb-1 text-lg"></strong>
+                                    <span x-text="pattern.desc_body" class="leading-relaxed"></span>
+                                </p>
+                            </section>
+
+                            <section>
+                                <h3 class="text-sm font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 mb-2">
+                                    推奨アクション</h3>
+                                <div class="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800 rounded-xl p-4 text-emerald-800 dark:text-emerald-200" x-text="pattern.action"></div>
+                            </section>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <section>
+                                    <h3 class="text-sm font-bold uppercase tracking-wider text-slate-500 mb-2">出現しやすい場面
+                                    </h3>
+                                    <p class="text-sm text-slate-600 dark:text-slate-400" x-text="pattern.scene || 'ー'">ー</p>
+                                </section>
+                                <section>
+                                    <h3 class="text-sm font-bold uppercase tracking-wider text-slate-500 mb-2">攻略のポイント
+                                    </h3>
+                                    <p class="text-sm text-slate-600 dark:text-slate-400" x-text="pattern.howto || 'ー'">ー</p>
+                                </section>
+                            </div>
+
+                            <section x-show="pattern.tips &amp;&amp; pattern.tips.length &gt; 0" style="display: none;">
+                                <h3 class="text-sm font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 mb-2">
+                                    実践アドバイス</h3>
+                                <ul class="list-disc list-inside text-sm text-slate-600 dark:text-slate-400 space-y-1">
+                                    <template x-for="tip in (pattern.tips || [])" :key="tip">
+                                        <li x-text="tip"></li>
+                                    </template>
+                                </ul>
+                            </section>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div><div x-show="open" class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm" x-transition.opacity="" data-teleport-target="true" style="display: none;">
+
+            <div x-show="open" x-transition.scale.95="" @click.outside="open = false" class="bg-white dark:bg-[#16161e] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl max-w-lg w-full relative p-6 md:p-8" style="display: none;">
+
+                <button @click="open = false" class="absolute top-4 right-4 text-2xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">×</button>
+
+                <div class="flex flex-col gap-6">
+                    <div class="flex items-center gap-6">
+                        <div class="text-6xl p-4 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-slate-100 dark:border-slate-800 flex items-center justify-center text-blue-500" :class="data.type === 'golden' ? 'text-amber-500' : 'text-blue-500'">
+                            <span x-text="data.type === 'golden' ? '☀' : '☠'">☠</span>
+                        </div>
+                        <div>
+                            <h2 class="text-2xl font-extrabold text-slate-900 dark:text-white">信頼度評価詳細</h2>
+                            <div class="mt-2">
+                                <span class="px-3 py-1 rounded-full text-xs font-bold border border-slate-300 text-slate-500" :class="data.colorClass || 'border-slate-300 text-slate-500'" x-text="(data.level || 'ー') + (data.icon ? ' ' + data.icon : '')">ー</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-4">
+                        <section class="bg-slate-50 dark:bg-slate-900/30 p-4 rounded-xl border border-slate-100 dark:border-slate-800">
+                            <h3 class="text-sm font-bold uppercase tracking-wider text-slate-500 mb-1">評価理由</h3>
+                            <p class="text-slate-900 dark:text-slate-200 font-medium" x-text="data.reason || 'ー'">ー</p>
+                        </section>
+
+                        <section>
+                            <h3 class="text-sm font-bold uppercase tracking-wider text-slate-500 mb-2">評価基準について</h3>
+                            <p class="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                                基準線（短期・長期MA）の状態から、長期MAの傾き、現在値の乖離、発生タイミングなどを総合的に評価しています。
+                            </p>
+                        </section>
+
+                        <section class="space-y-3">
+                            <h3 class="text-sm font-bold uppercase tracking-wider text-slate-500 mb-1">判定の目安</h3>
+                            <div class="flex gap-4 items-start">
+                                <span class="shrink-0 w-12 text-center py-1 rounded-full bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 text-xs font-bold border border-emerald-200 dark:border-emerald-800">高
+                                    ◎</span>
+                                <p class="text-xs text-slate-500">トレンドが強力で、価格がMAの優位方向にある安定した反発・反落サイン。</p>
+                            </div>
+                            <div class="flex gap-4 items-start">
+                                <span class="shrink-0 w-12 text-center py-1 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 text-xs font-bold border border-blue-200 dark:border-blue-800">中
+                                    〇</span>
+                                <p class="text-xs text-slate-500">クロスは成立しているが、MAの傾きや価格位置にわずかに懸念がある状態。</p>
+                            </div>
+                            <div class="flex gap-4 items-start">
+                                <span class="shrink-0 w-12 text-center py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-xs font-bold border border-slate-200 dark:border-slate-800">低
+                                    △</span>
+                                <p class="text-xs text-slate-500">もみ合い局面や、トレンドが不明確な状態でのサイン。</p>
+                            </div>
+                        </section>
+                    </div>
+
+                    <div class="text-[10px] text-slate-400 bg-slate-50 dark:bg-slate-900/20 p-3 rounded-lg border border-slate-100 dark:border-slate-800 italic">
+                        ※ 本評価は統計的・技術的基準に基づくものであり、売買を推奨するものではありません。
+                    </div>
+                </div>
+            </div>
+        </div>

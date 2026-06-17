@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "edinet-db": {
+      "command": "python",
+      "args": ["c:\\Users\\curem\\ai-project\\mcp_server.py"],
+      "env": {
+        "DATABASE_URL": "sqlite:///./ai_project.db"
+      }
+    }
+  }
+}

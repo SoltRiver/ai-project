@@ -8,6 +8,13 @@
 チェーンロジックに影響を与えない。
 """
 
+# ====================================================================
+# プロンプトバージョン管理
+# 変更時はバージョンを更新し、LangSmithのトレースメタデータに反映させる
+# ====================================================================
+PROMPT_NAME = "news_summary"
+PROMPT_VERSION = "v1"
+
 from typing import List
 
 from langchain_core.prompts import ChatPromptTemplate

@@ -1,0 +1,51 @@
+[
+  {
+    "inputs": {
+      "question": "トヨタ自動車の最新の決算と株価の状況を分析してください",
+      "available_tools": ["stock_price_lookup", "financial_data_lookup", "news_search"]
+    },
+    "outputs": {
+      "expected_tool_calls": ["stock_price_lookup", "financial_data_lookup"],
+      "expected_summary": "トヨタ自動車の現在の株価と最新決算データに基づいた分析結果。テクニカル指標とファンダメンタルズの両面からの評価。"
+    },
+    "metadata": {
+      "label": "good",
+      "category": "agent",
+      "difficulty": "normal",
+      "evaluation_criteria": "tool_selection, answer_quality, efficiency"
+    }
+  },
+  {
+    "inputs": {
+      "question": "日経平均の今日の終値を教えてください",
+      "available_tools": ["stock_price_lookup", "financial_data_lookup", "news_search"]
+    },
+    "outputs": {
+      "expected_tool_calls": ["stock_price_lookup"],
+      "expected_summary": "日経平均株価の当日終値を簡潔に回答。"
+    },
+    "metadata": {
+      "label": "good",
+      "category": "agent",
+      "difficulty": "easy",
+      "evaluation_criteria": "tool_selection, efficiency, directness"
+    }
+  },
+  {
+    "inputs": {
+      "question": "ソニーの株価を教えてください",
+      "available_tools": ["stock_price_lookup", "financial_data_lookup", "news_search"]
+    },
+    "outputs": {
+      "expected_tool_calls": ["stock_price_lookup"],
+      "bad_tool_calls": ["stock_price_lookup", "financial_data_lookup", "news_search", "stock_price_lookup"],
+      "expected_summary": "ソニーグループの現在の株価を回答。"
+    },
+    "metadata": {
+      "label": "bad",
+      "category": "agent",
+      "difficulty": "easy",
+      "reason": "単純な質問に対して不要なツールを過剰に呼び出している"
+    }
+  }
+]
