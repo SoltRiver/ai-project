@@ -40,7 +40,9 @@ def _check_circuit_breaker() -> bool:
 
     # クールダウン期間が過ぎたらリセット
     if _circuit_breaker_last_open:
-        elapsed = (datetime.now(timezone.utc) - _circuit_breaker_last_open).total_seconds()
+        elapsed = (
+            datetime.now(timezone.utc) - _circuit_breaker_last_open
+        ).total_seconds()
         if elapsed > cooldown_sec:
             _circuit_breaker_failures = 0
             _circuit_breaker_last_open = None
@@ -182,11 +184,12 @@ def _gather_market_data(stock_code: str) -> Dict[str, Any]:
             closes = df["close"].dropna()
             if len(closes) > 5:
                 from utils.analyzer import get_direction_label
+
                 result["trend_label"] = get_direction_label(
                     closes,
                     positive_label="上昇トレンド",
                     negative_label="下落トレンド",
-                    neutral_label="レンジ"
+                    neutral_label="レンジ",
                 )
 
         return result
@@ -213,6 +216,7 @@ def _call_ai(prompt: str, model_name: str = "gemini-1.5-flash") -> str:
     # まず Gemini を試行
     try:
         from services.ai_client import get_gemini_model
+
         model = get_gemini_model(model_name)
         if model:
             response = model.generate_content(prompt)
@@ -224,6 +228,7 @@ def _call_ai(prompt: str, model_name: str = "gemini-1.5-flash") -> str:
     # フォールバック: OpenAI
     try:
         from services.ai_client import get_ai_client
+
         client = get_ai_client()
         if client:
             response = client.chat.completions.create(
@@ -300,6 +305,7 @@ def run_worker_cycle(worker_id: str = None) -> Dict[str, Any]:
 
             # TTL取得
             from services.analysis_snapshot_service import get_config_int
+
             if job.analysis_type == "ai_assist_intraday":
                 ttl = get_config_int("TTL_INTRADAY_SEC", 3600, db)
             else:

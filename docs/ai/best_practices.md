@@ -4,7 +4,9 @@
 AIアシスタントは、新しいタスクに着手する前に本ファイルを参照し、一貫した高品質なコードを提供します。
 
 ## 1. パフォーマンス・実行速度
-*(ここに今後の実装で得られた実行速度改善のノウハウを追記していきます)*
+- **重いライブラリの遅延インポート**: yfinance等の外部APIクライアントライブラリはインポートに約1.7秒かかる。使用する関数の中でのみ `from services.data_fetcher import fetch_news` のように遅延インポートし、ページ表示に不要な場合はモジュールトップに置かない。（例: `news_service.py` で `/news` ページ表示が63%高速化）
+- **Alpine.js `x-data` を CSS `group-hover` に置換**: 繰り返し要素（影響銘柄バッジ等）でAlpine.jsのリアクティブインスタンスを個別に生成するとJinja2レンダリングとクライアント初期化の双方にオーバーヘッドが発生する。ツールチップのような単純なホバー表示は Tailwind の `group`/`group-hover:opacity-100` で実装し、テンプレートレンダリングを89%改善。
+- **SQLite PRAGMA 最適化**: `database.py` で SQLAlchemy の `event.listens_for(engine, "connect")` を使用し、`journal_mode=WAL`、`synchronous=NORMAL`、`cache_size=-65536`（64MB）、`mmap_size=268435456`（256MB）、`temp_store=MEMORY` を設定。読み取り中心のページ表示で並行アクセス性能とキャッシュ効率を大幅改善。
 
 ## 2. 実装方針・コーディング規約
 *(ここにコードの書き方や共通化のルールなどを追記していきます)*

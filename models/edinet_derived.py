@@ -1,18 +1,35 @@
-
-from sqlalchemy import Column, Integer, String, Text, ForeignKey, DateTime, func, Numeric, Index, JSON
+from sqlalchemy import (
+    Column,
+    Integer,
+    String,
+    Text,
+    ForeignKey,
+    DateTime,
+    func,
+    Numeric,
+    Index,
+    JSON,
+)
 from sqlalchemy.orm import relationship
 from database import Base
+
 
 class EdinetFinancialDerived(Base):
     __tablename__ = "edinet_financial_derived"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    doc_id = Column(String(8), ForeignKey("edinet_documents.doc_id", ondelete="CASCADE"), nullable=False)
+    doc_id = Column(
+        String(8),
+        ForeignKey("edinet_documents.doc_id", ondelete="CASCADE"),
+        nullable=False,
+    )
 
     derived_key = Column(String, nullable=False)
     derived_label = Column(String, nullable=False)
 
-    value_numeric = Column(Numeric, nullable=True) # Check if SQLite supports Numeric properly (it treats as Real/Text)
+    value_numeric = Column(
+        Numeric, nullable=True
+    )  # Check if SQLite supports Numeric properly (it treats as Real/Text)
 
     period_type = Column(String, nullable=True)
     duration_days = Column(Integer, nullable=True)
@@ -24,11 +41,11 @@ class EdinetFinancialDerived(Base):
     source_values = Column(JSON, nullable=False)
     calculation_formula = Column(Text, nullable=False)
 
-    confidence = Column(String, nullable=True) # HIGH/MID/LOW
+    confidence = Column(String, nullable=True)  # HIGH/MID/LOW
     reason = Column(Text, nullable=True)
 
     variant_key = Column(String, nullable=True)
-    
+
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
@@ -37,6 +54,6 @@ class EdinetFinancialDerived(Base):
     __table_args__ = (
         Index("idx_derived_unique", "doc_id", "derived_key", unique=True),
     )
-    
+
     # Relationships
     # document = relationship("EdinetDocument", back_populates="derived_metrics")

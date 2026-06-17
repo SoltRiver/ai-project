@@ -15,6 +15,7 @@ class EventSourcePolicy(Base):
     ソース管理テーブル（合法性強制チェック）
     自動取得の可否・有効期限・法的根拠を管理する。
     """
+
     __tablename__ = "event_source_policy"
 
     # ソース名（主キー）: 例 "EDINET_API", "RSS_JPX", "MANUAL", "TDNET_API"
@@ -30,7 +31,9 @@ class EventSourcePolicy(Base):
     # 自動取得許可フラグ
     auto_fetch_allowed = Column(Boolean, nullable=False, default=False)
     # 確認日時
-    checked_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    checked_at = Column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
     # 承認者
     approved_by = Column(String(100), nullable=False, default="SYSTEM")
     # 有効期限（checked_at + 180日を推奨）
@@ -42,6 +45,7 @@ class EventIngestState(Base):
     冪等管理テーブル（日付単位の取得状態）
     同一ソース・同一日付の重複巡回を防止する。
     """
+
     __tablename__ = "event_ingest_state"
 
     # ソース名（event_source_policyと紐づく）

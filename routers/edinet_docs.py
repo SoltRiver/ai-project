@@ -1,4 +1,3 @@
-
 from fastapi import APIRouter, HTTPException, Query, BackgroundTasks, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
@@ -16,61 +15,68 @@ router = APIRouter(prefix="/edinet/documents", tags=["edinet_docs"])
 templates = Jinja2Templates(directory="templates")
 logger = logging.getLogger(__name__)
 
+
 @router.get("/ui/search", response_class=HTMLResponse, include_in_schema=False)
-async def search_documents_ui(request: Request, date: str = Query(None), sec_code: str = Query(None)):
+async def search_documents_ui(
+    request: Request, date: str = Query(None), sec_code: str = Query(None)
+):
     """
     UI for searching EDINET documents.
     """
     if not date:
-        return templates.TemplateResponse("edinet_search.html", {"request": request, "date": "", "documents": []})
-    
+        return templates.TemplateResponse(
+            "edinet_search.html", {"request": request, "date": "", "documents": []}
+        )
+
     try:
         client = EdinetClient()
         try:
             # Type 2 = List of documents
             data = await client.get_documents(date, type_code=2)
             results = data.get("results", [])
-            
+
             filtered = []
             for doc in results:
-                # Filter for Annual Securities Report (120) mainly, 
-                # but let's allow users to see what's there if needed? 
+                # Filter for Annual Securities Report (120) mainly,
+                # but let's allow users to see what's there if needed?
                 # For now strict to 120 as per plan to reduce noise.
                 # Actually, strictly 120 might be too limited if they want 'Correction Reports' etc.
                 # Let's keep it simple: Code 120 (Annual)
-                
+
                 # Filter by Sec Code if provided
                 doc_sec_code = doc.get("secCode")
                 if sec_code:
                     # Input 5410 -> Match 54100
                     if not doc_sec_code or not doc_sec_code.startswith(sec_code):
                         continue
-                
+
                 # Filter by Doc Type (Annual Report = 120, 130=Quarterly, 140=Semi)
                 # Let's show 120, 130, 140 for now so it's useful.
                 dtype = doc.get("docTypeCode")
-                if dtype not in ["120"]: # Plan said Annual search
-                     continue
-                     
+                if dtype not in ["120"]:  # Plan said Annual search
+                    continue
+
                 filtered.append(doc)
-            
-            return templates.TemplateResponse("edinet_search.html", {
-                "request": request, 
-                "date": date, 
-                "sec_code": sec_code,
-                "documents": filtered
-            })
-            
+
+            return templates.TemplateResponse(
+                "edinet_search.html",
+                {
+                    "request": request,
+                    "date": date,
+                    "sec_code": sec_code,
+                    "documents": filtered,
+                },
+            )
+
         finally:
             await client.close()
-            
+
     except Exception as e:
         logger.error(f"Search failed: {e}")
-        return templates.TemplateResponse("edinet_search.html", {
-            "request": request, 
-            "date": date, 
-            "error": str(e)
-        })
+        return templates.TemplateResponse(
+            "edinet_search.html", {"request": request, "date": date, "error": str(e)}
+        )
+
 
 @router.get("/{doc_id}/download", response_model=EdinetDownloadResponse)
 async def download_document(doc_id: str, force: bool = False) -> Dict[str, Any]:
@@ -79,10 +85,12 @@ async def download_document(doc_id: str, force: bool = False) -> Dict[str, Any]:
     """
     try:
         store = EdinetDocumentStore()
-        
+
         # Check if already processed
         try:
-            unzipped_dir = store.extract_document(doc_id) # Won't re-extract if exists unless force
+            unzipped_dir = store.extract_document(
+                doc_id
+            )  # Won't re-extract if exists unless force
             if force:
                 raise ValueError("Force update")
         except ValueError:
@@ -98,14 +106,14 @@ async def download_document(doc_id: str, force: bool = False) -> Dict[str, Any]:
         # Locate XBRL
         locator = EdinetXbrlLocator()
         location_result = await locator.locate_xbrl_files(unzipped_dir)
-        
+
         return {
             "doc_id": doc_id,
             "saved_zip": str(store.get_doc_dir(doc_id) / f"{doc_id}.zip"),
             "unzipped_dir": str(unzipped_dir),
             "xbrl_files": location_result["xbrl_files"],
             "inline_xbrl_files": location_result.get("inline_xbrl_files", []),
-            "primary_xbrl": location_result["primary_xbrl"]
+            "primary_xbrl": location_result["primary_xbrl"],
         }
 
     except EdinetAPIError as e:
@@ -114,8 +122,10 @@ async def download_document(doc_id: str, force: bool = False) -> Dict[str, Any]:
     except Exception as e:
         logger.error(f"Download failed: {e}")
         import traceback
+
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Processing failed: {str(e)}")
+
 
 @router.get("/{doc_id}/financials", response_model=EdinetFinancialsResponse)
 async def extract_financials(doc_id: str) -> Dict[str, Any]:
@@ -125,33 +135,37 @@ async def extract_financials(doc_id: str) -> Dict[str, Any]:
     """
     try:
         store = EdinetDocumentStore()
-        unzipped_dir = store.extract_document(doc_id) # Throws if no ZIP
-        
+        unzipped_dir = store.extract_document(doc_id)  # Throws if no ZIP
+
         locator = EdinetXbrlLocator()
         location_result = await locator.locate_xbrl_files(unzipped_dir)
         primary_xbrl = location_result.get("primary_xbrl")
-        
+
         if not primary_xbrl:
-            raise HTTPException(status_code=404, detail="Primary XBRL not found in document.")
-            
+            raise HTTPException(
+                status_code=404, detail="Primary XBRL not found in document."
+            )
+
         extractor = EdinetFinancialExtractor()
-        # Mock extraction for now if library fails or to be safe? 
-        # Plan says "Use edinet-xbrl". 
-        # Ideally we should run this in a threadpool if it's CPU intensive, 
+        # Mock extraction for now if library fails or to be safe?
+        # Plan says "Use edinet-xbrl".
+        # Ideally we should run this in a threadpool if it's CPU intensive,
         # but for now async def will block. It's okay for an internal/admin tool.
-        
+
         financials = extractor.extract_financials(primary_xbrl)
-        
+
         return {
             "doc_id": doc_id,
             "primary_xbrl": primary_xbrl,
             "financials": financials,
-            "note": "Experimental extraction using edinet-xbrl."
+            "note": "Experimental extraction using edinet-xbrl.",
         }
 
     except ValueError:
         # Document not found in store
-        raise HTTPException(status_code=404, detail="Document not found. Call /download first.")
+        raise HTTPException(
+            status_code=404, detail="Document not found. Call /download first."
+        )
     except Exception as e:
         logger.error(f"Financial extraction failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))

@@ -22,6 +22,7 @@ router = APIRouter()
 # 画面表示用パーシャルエンドポイント（htmx swap用）
 # ============================================================
 
+
 @router.get("/partials/analysis/{code}", response_class=HTMLResponse)
 async def get_analysis_partial(
     code: str,
@@ -34,7 +35,9 @@ async def get_analysis_partial(
     常にDBスナップショットを即返す。古い場合はジョブ投入してバックグラウンド更新。
     """
     from services.analysis_snapshot_service import (
-        get_snapshot, is_stale, snapshot_to_dict,
+        get_snapshot,
+        is_stale,
+        snapshot_to_dict,
     )
     from services.analysis_job_service import submit_job, compute_input_hash
 
@@ -70,6 +73,7 @@ async def get_analysis_partial(
 # 内部API（認証は将来追加。現状は内部ネットワーク前提）
 # ============================================================
 
+
 @router.post("/internal/jobs/scan")
 async def trigger_scan():
     """
@@ -78,6 +82,7 @@ async def trigger_scan():
     """
     try:
         from services.analysis_scanner import run_scan
+
         result = run_scan()
         return JSONResponse(content=result)
     except Exception as e:
@@ -96,6 +101,7 @@ async def trigger_worker(count: int = 1):
     """
     try:
         from services.analysis_worker import run_worker_cycle
+
         results = []
         for _ in range(count):
             result = run_worker_cycle()
@@ -119,6 +125,7 @@ async def trigger_init_batch():
     """
     try:
         from services.analysis_scanner import run_initial_batch
+
         result = run_initial_batch()
         return JSONResponse(content=result)
     except Exception as e:
@@ -137,6 +144,7 @@ async def get_stats():
     """
     try:
         from services.analysis_job_service import get_job_stats
+
         stats = get_job_stats()
         return JSONResponse(content=stats)
     except Exception as e:

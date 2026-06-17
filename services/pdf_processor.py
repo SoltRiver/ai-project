@@ -1,4 +1,3 @@
-
 import logging
 import io
 from pathlib import Path
@@ -18,11 +17,13 @@ from services.text_normalizer import TextNormalizer
 try:
     from pdfminer.high_level import extract_pages
     from pdfminer.layout import LTTextContainer
+
     HAS_PDFMINER = True
 except ImportError:
     HAS_PDFMINER = False
 
 logger = logging.getLogger(__name__)
+
 
 class PdfProcessor:
     def __init__(self, db: Session = None):
@@ -47,23 +48,33 @@ class PdfProcessor:
         try:
             # 2. Find PDF File
             # Look for PDF_TYPE2 with status OK
-            ef = self.db.query(EdinetFile).filter_by(doc_id=doc_id, file_type="PDF_TYPE2", status="OK").first()
+            ef = (
+                self.db.query(EdinetFile)
+                .filter_by(doc_id=doc_id, file_type="PDF_TYPE2", status="OK")
+                .first()
+            )
             if not ef:
-                return self._record_status(doc_id, "SKIP", error_message="No PDF_TYPE2 found")
+                return self._record_status(
+                    doc_id, "SKIP", error_message="No PDF_TYPE2 found"
+                )
 
             pdf_path = self.storage.get_absolute_path(ef.storage_path)
             if not pdf_path.exists():
-                 return self._record_status(doc_id, "NG", error_message="PDF file missing on disk")
+                return self._record_status(
+                    doc_id, "NG", error_message="PDF file missing on disk"
+                )
 
             # 3. Extract Pages
             logger.info(f"Extracting PDF for {doc_id}...")
             pages_data = self._extract_pages(pdf_path)
-            
+
             # 4. Save to DB
             total_chars = self._save_text(doc_id, pages_data)
-            
+
             # 5. Success Status
-            return self._record_status(doc_id, "OK", page_count=len(pages_data), total_chars=total_chars)
+            return self._record_status(
+                doc_id, "OK", page_count=len(pages_data), total_chars=total_chars
+            )
 
         except Exception as e:
             logger.error(f"PDF Extract Error {doc_id}: {e}")
@@ -80,33 +91,31 @@ class PdfProcessor:
 
         results = []
         page_num = 1
-        
-        with open(pdf_path, 'rb') as fp:
+
+        with open(pdf_path, "rb") as fp:
             rsrcmgr = PDFResourceManager()
             laparams = LAParams()
             device = PDFPageAggregator(rsrcmgr, laparams=laparams)
             interpreter = PDFPageInterpreter(rsrcmgr, device)
-            
+
             # check_extractable=False to bypass "PDFTextExtractionNotAllowed"
             for page in PDFPage.get_pages(fp, check_extractable=False):
                 interpreter.process_page(page)
                 layout = device.get_result()
-                
+
                 page_text = ""
                 for element in layout:
                     if isinstance(element, LTTextContainer):
                         page_text += element.get_text()
-                
+
                 # Normalize
                 norm_text = TextNormalizer.normalize_text(page_text)
-                
-                results.append({
-                    "page_no": page_num,
-                    "text": norm_text,
-                    "len": len(norm_text)
-                })
+
+                results.append(
+                    {"page_no": page_num, "text": norm_text, "len": len(norm_text)}
+                )
                 page_num += 1
-            
+
         return results
 
     def _save_text(self, doc_id: str, pages_data: List[Dict]) -> int:
@@ -115,49 +124,53 @@ class PdfProcessor:
         """
         total_chars = 0
         objects = []
-        
+
         # Delete existing (if re-processing NG)
         self.db.query(EdinetPdfText).filter_by(doc_id=doc_id).delete()
-        
+
         for p in pages_data:
             obj = EdinetPdfText(
                 doc_id=doc_id,
                 page_no=p["page_no"],
                 text_body=p["text"],
-                text_len=p["len"]
+                text_len=p["len"],
             )
             objects.append(obj)
             total_chars += p["len"]
-            
+
         if objects:
             self.db.bulk_save_objects(objects)
             self.db.commit()
-            
+
         return total_chars
 
-    def _record_status(self, doc_id, status, page_count=None, total_chars=None, error_message=None):
+    def _record_status(
+        self, doc_id, status, page_count=None, total_chars=None, error_message=None
+    ):
         # Upsert status
         # Note: SQLite upsert support in simple SQLA is tricky, but here we can just delete/insert or merge.
         # EdinetPdfExtractStatus has doc_id primary key.
-        
-        s = self.db.merge(EdinetPdfExtractStatus(
-            doc_id=doc_id,
-            status=status,
-            page_count=page_count,
-            total_chars=total_chars,
-            error_message=error_message,
-            rule_version="v1",
-            processed_at=datetime.now()
-        ))
+
+        s = self.db.merge(
+            EdinetPdfExtractStatus(
+                doc_id=doc_id,
+                status=status,
+                page_count=page_count,
+                total_chars=total_chars,
+                error_message=error_message,
+                rule_version="v1",
+                processed_at=datetime.now(),
+            )
+        )
         self.db.commit()
         return {
-            "status": status, 
-            "doc_id": doc_id, 
-            "page_count": page_count, 
+            "status": status,
+            "doc_id": doc_id,
+            "page_count": page_count,
             "total_chars": total_chars,
-            "reason": error_message or "Success"
+            "reason": error_message or "Success",
         }
 
     def __del__(self):
-        # self.db.close() 
+        # self.db.close()
         pass

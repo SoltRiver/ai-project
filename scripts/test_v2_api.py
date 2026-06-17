@@ -1,7 +1,9 @@
 """
 J-Quants V2 API 修正後の疎通テスト
 """
+
 import sys
+
 sys.path.insert(0, ".")
 
 from services.jquants_client import client

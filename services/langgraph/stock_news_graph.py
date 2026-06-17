@@ -3,19 +3,20 @@ LangGraph: Stock News Workflow Graph
 """
 
 import logging
-from typing import Dict, Any
+from typing import Any, Dict
 
-from langgraph.graph import StateGraph, START, END
+from langgraph.graph import END, START, StateGraph
 
-from services.langgraph.stock_news_state import StockNewsState
 from services.langgraph.stock_news_nodes import (
+    build_response_node,
+    classify_sentiment_node,
     fetch_news_node,
     summarize_news_node,
-    classify_sentiment_node,
-    build_response_node
 )
+from services.langgraph.stock_news_state import StockNewsState
 
 logger = logging.getLogger(__name__)
+
 
 def create_stock_news_graph():
     """
@@ -32,21 +33,16 @@ def create_stock_news_graph():
 
     # 3. エッジの接続 (フローの定義)
     workflow.add_edge(START, "fetch_news")
-    
+
     # 簡単な条件分岐を追加
     # fetch_news でエラーが出た場合は END へ直行
     def check_fetch_error(state: StockNewsState) -> str:
         if "error" in state:
             return "end"
         return "continue"
-    
+
     workflow.add_conditional_edges(
-        "fetch_news",
-        check_fetch_error,
-        {
-            "continue": "summarize_news",
-            "end": END
-        }
+        "fetch_news", check_fetch_error, {"continue": "summarize_news", "end": END}
     )
 
     # summarize_news でもエラー分岐
@@ -58,10 +54,7 @@ def create_stock_news_graph():
     workflow.add_conditional_edges(
         "summarize_news",
         check_summarize_error,
-        {
-            "continue": "classify_sentiment",
-            "end": END
-        }
+        {"continue": "classify_sentiment", "end": END},
     )
 
     workflow.add_edge("classify_sentiment", "build_response")
@@ -75,6 +68,7 @@ def create_stock_news_graph():
 # シングルトンとしてグラフインスタンスを保持
 _news_graph_app = None
 
+
 def get_news_graph():
     global _news_graph_app
     if _news_graph_app is None:
@@ -82,19 +76,21 @@ def get_news_graph():
     return _news_graph_app
 
 
-def run_stock_news_workflow(stock_code: str) -> Dict[str, Any]:
+async def run_stock_news_workflow(
+    stock_code: str, language: str = "日本語"
+) -> Dict[str, Any]:
     """
-    外部からグラフを実行するための公開関数。
+    外部からグラフを実行するための公開関数（非同期版）。
     """
-    logger.info(f"Starting news workflow for {stock_code}")
+    logger.info(f"Starting news workflow for {stock_code} (language={language})")
     try:
         app = get_news_graph()
-        initial_state = {"stock_code": stock_code}
-        
-        # graph.invoke() で同期実行
-        final_state = app.invoke(initial_state)
+        initial_state = {"stock_code": stock_code, "language": language}
+
+        # graph.ainvoke() で非同期実行
+        final_state = await app.ainvoke(initial_state)
         return final_state
-        
+
     except Exception as e:
         logger.error(f"Workflow execution failed: {e}")
         return {"error": f"システムエラーが発生しました: {e}"}

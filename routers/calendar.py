@@ -108,19 +108,23 @@ def _build_calendar_context(
 
         # 表示タグ（最大2件 + "+N"）
         tags_display = day_data["tags"][:2]
-        extra_count = max(0, len(day_data["tags"]) - 2) if len(day_data["tags"]) > 2 else 0
+        extra_count = (
+            max(0, len(day_data["tags"]) - 2) if len(day_data["tags"]) > 2 else 0
+        )
 
-        cells.append({
-            "day": d,
-            "is_empty": False,
-            "date_str": cell_date.isoformat(),
-            "is_today": cell_date == today,
-            "is_selected": cell_date == selected_date,
-            "has_events": day_data["count"] > 0,
-            "event_count": day_data["count"],
-            "tags": tags_display,
-            "extra_count": extra_count,
-        })
+        cells.append(
+            {
+                "day": d,
+                "is_empty": False,
+                "date_str": cell_date.isoformat(),
+                "is_today": cell_date == today,
+                "is_selected": cell_date == selected_date,
+                "has_events": day_data["count"] > 0,
+                "event_count": day_data["count"],
+                "tags": tags_display,
+                "extra_count": extra_count,
+            }
+        )
 
     # 末尾の空セル（7の倍数になるまで）
     while len(cells) % 7 != 0:
@@ -140,6 +144,7 @@ def _build_calendar_context(
 
 
 # ─── メインページ ──────────────────────────
+
 
 @router.get("/calendar", response_class=HTMLResponse)
 async def calendar_page(
@@ -163,14 +168,21 @@ async def calendar_page(
 
     # 月グリッドデータ
     month_events = event_query_service.get_month_events(
-        db=db, year=year, month=mon,
-        code=code, types=type_list, watchlist_codes=watchlist_codes,
+        db=db,
+        year=year,
+        month=mon,
+        code=code,
+        types=type_list,
+        watchlist_codes=watchlist_codes,
     )
 
     # 当日リストデータ
     day_events = event_query_service.get_day_events(
-        db=db, target_date=selected_date,
-        code=code, types=type_list, watchlist_codes=watchlist_codes,
+        db=db,
+        target_date=selected_date,
+        code=code,
+        types=type_list,
+        watchlist_codes=watchlist_codes,
     )
 
     # カレンダーコンテキスト
@@ -198,6 +210,7 @@ async def calendar_page(
 
 # ─── 部分テンプレート ──────────────────────────
 
+
 @router.get("/partials/calendar/day", response_class=HTMLResponse)
 async def partial_day_list(
     request: Request,
@@ -209,7 +222,11 @@ async def partial_day_list(
 ):
     """右側当日リストのみ返す（htmx用）"""
     try:
-        selected_date = datetime.strptime(date, "%Y-%m-%d").date() if date else __import__("datetime").date.today()
+        selected_date = (
+            datetime.strptime(date, "%Y-%m-%d").date()
+            if date
+            else __import__("datetime").date.today()
+        )
     except ValueError:
         selected_date = __import__("datetime").date.today()
 
@@ -219,8 +236,11 @@ async def partial_day_list(
         watchlist_codes = _get_watchlist_codes(db)
 
     day_events = event_query_service.get_day_events(
-        db=db, target_date=selected_date,
-        code=code, types=type_list, watchlist_codes=watchlist_codes,
+        db=db,
+        target_date=selected_date,
+        code=code,
+        types=type_list,
+        watchlist_codes=watchlist_codes,
     )
 
     return templates.TemplateResponse(
@@ -254,8 +274,12 @@ async def partial_month_grid(
     selected_date = _parse_date_str(None, year, mon)
 
     month_events = event_query_service.get_month_events(
-        db=db, year=year, month=mon,
-        code=code, types=type_list, watchlist_codes=watchlist_codes,
+        db=db,
+        year=year,
+        month=mon,
+        code=code,
+        types=type_list,
+        watchlist_codes=watchlist_codes,
     )
 
     cal_ctx = _build_calendar_context(year, mon, selected_date, month_events)
@@ -299,6 +323,7 @@ async def partial_stock_events(
 
 # ─── アクション ──────────────────────────
 
+
 @router.post("/actions/events/refresh", response_class=HTMLResponse)
 async def refresh_events(
     request: Request,
@@ -327,13 +352,16 @@ async def refresh_events(
     # 3ヶ月先の末日
     future = today + timedelta(days=92)
     import calendar as cal_module
+
     _, last_day = cal_module.monthrange(future.year, future.month)
     to_dt = future.replace(day=last_day)
 
     # 同期実行
     try:
         sync_result = event_sync_service.sync_events(target_codes, from_dt, to_dt)
-        logger.info(f"イベント同期完了: upserted={sync_result['upserted']}, errors={len(sync_result['errors'])}")
+        logger.info(
+            f"イベント同期完了: upserted={sync_result['upserted']}, errors={len(sync_result['errors'])}"
+        )
     except Exception as e:
         logger.error(f"イベント同期エラー: {e}", exc_info=True)
         sync_result = {"upserted": 0, "errors": [str(e)]}
@@ -348,12 +376,19 @@ async def refresh_events(
         watchlist_codes = _get_watchlist_codes(db)
 
     month_events = event_query_service.get_month_events(
-        db=db, year=year, month=mon,
-        code=code, types=type_list, watchlist_codes=watchlist_codes,
+        db=db,
+        year=year,
+        month=mon,
+        code=code,
+        types=type_list,
+        watchlist_codes=watchlist_codes,
     )
     day_events = event_query_service.get_day_events(
-        db=db, target_date=selected_date,
-        code=code, types=type_list, watchlist_codes=watchlist_codes,
+        db=db,
+        target_date=selected_date,
+        code=code,
+        types=type_list,
+        watchlist_codes=watchlist_codes,
     )
 
     cal_ctx = _build_calendar_context(year, mon, selected_date, month_events)

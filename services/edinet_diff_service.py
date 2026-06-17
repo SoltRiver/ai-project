@@ -58,10 +58,10 @@ UNIT_CONVERSION = {
 CATEGORY_PRIORITY = {"PL": 0, "CF": 1, "BS": 2}
 
 # 閾値定数
-THRESHOLD_A_RATIO = Decimal("0.005")      # 相対条件: 0.5%
-THRESHOLD_B_PREV_MIN = Decimal("0.01")    # prev安定化条件: 1%
-THRESHOLD_B_PCT = Decimal("0.10")         # 率条件: 10%
-PCT_CLIP_MAX = Decimal("3.0")             # pct_part 上限 300%
+THRESHOLD_A_RATIO = Decimal("0.005")  # 相対条件: 0.5%
+THRESHOLD_B_PREV_MIN = Decimal("0.01")  # prev安定化条件: 1%
+THRESHOLD_B_PCT = Decimal("0.10")  # 率条件: 10%
+PCT_CLIP_MAX = Decimal("3.0")  # pct_part 上限 300%
 
 # metric_key → EdinetFinancialHighlight の metric_key マッピング
 # EdinetFinancialHighlight は net_sales, operating_income 等の名称を使う場合がある
@@ -82,7 +82,9 @@ HIGHLIGHT_KEY_MAP = {
 
 def _load_metrics_config() -> List[Dict[str, Any]]:
     """edinet_metrics.yml を読み込む"""
-    config_path = os.path.join(os.path.dirname(__file__), "..", "config", "edinet_metrics.yml")
+    config_path = os.path.join(
+        os.path.dirname(__file__), "..", "config", "edinet_metrics.yml"
+    )
     try:
         with open(config_path, "r", encoding="utf-8") as f:
             data = yaml.safe_load(f)
@@ -104,10 +106,11 @@ def _get_metric_config(metric_key: str) -> Optional[Dict[str, Any]]:
 # 単位正規化
 # ==============================================================
 
+
 def normalize_unit(value: Any, unit: Optional[str]) -> Tuple[Optional[Decimal], str]:
     """
     値と単位を受け取り、JPY基準に正規化する。
-    
+
     Returns:
         (normalized_value, "JPY") or (None, "unknown") — 変換不能の場合
     """
@@ -128,7 +131,7 @@ def normalize_unit(value: Any, unit: Optional[str]) -> Tuple[Optional[Decimal], 
 
     if factor is not None:
         return dec_value * factor, "JPY"
-    
+
     # 変換不能な単位
     logger.warning(f"変換不能な単位: {unit_clean}（欠損扱い）")
     return None, "unknown"
@@ -138,10 +141,9 @@ def normalize_unit(value: Any, unit: Optional[str]) -> Tuple[Optional[Decimal], 
 # prev 決定ロジック
 # ==============================================================
 
+
 def find_prev_doc(
-    db: Session,
-    current_doc: EdinetDocument,
-    current_scope: Optional[str] = None
+    db: Session, current_doc: EdinetDocument, current_scope: Optional[str] = None
 ) -> Optional[EdinetDocument]:
     """
     prev（前回比較対象）を決定する。
@@ -170,14 +172,10 @@ def find_prev_doc(
             EdinetDocument.submit_datetime < current_doc.submit_datetime
         )
     elif current_doc.target_date:
-        query = query.filter(
-            EdinetDocument.target_date < current_doc.target_date
-        )
+        query = query.filter(EdinetDocument.target_date < current_doc.target_date)
 
     # submit_datetime 降順で候補を取得（最大5件で十分）
-    candidates = query.order_by(
-        desc(EdinetDocument.submit_datetime)
-    ).limit(5).all()
+    candidates = query.order_by(desc(EdinetDocument.submit_datetime)).limit(5).all()
 
     if not candidates:
         return None
@@ -196,11 +194,15 @@ def find_prev_doc(
 
 def _get_doc_scope(db: Session, doc_id: str) -> Optional[str]:
     """指定書類の consolidation_scope を取得（facts_snapshot から）"""
-    fact = db.query(EdinetFactsSnapshot).filter(
-        EdinetFactsSnapshot.doc_id == doc_id,
-        EdinetFactsSnapshot.consolidation_scope.isnot(None),
-        EdinetFactsSnapshot.consolidation_scope != "unknown",
-    ).first()
+    fact = (
+        db.query(EdinetFactsSnapshot)
+        .filter(
+            EdinetFactsSnapshot.doc_id == doc_id,
+            EdinetFactsSnapshot.consolidation_scope.isnot(None),
+            EdinetFactsSnapshot.consolidation_scope != "unknown",
+        )
+        .first()
+    )
     return fact.consolidation_scope if fact else None
 
 
@@ -208,19 +210,20 @@ def _get_doc_scope(db: Session, doc_id: str) -> Optional[str]:
 # ファクトスナップショット構築
 # ==============================================================
 
+
 def build_facts_snapshot(db: Session, doc_id: str) -> Dict[str, Dict[str, Any]]:
     """
     EdinetFinancialHighlight からデータを読み取り、
     edinet_facts_snapshot テーブルに正規化して保存する。
-    
+
     Returns:
         metric_key → {value, unit, consolidation_scope, source_locator} の辞書
     """
     # 既存の snapshot があれば返す
-    existing = db.query(EdinetFactsSnapshot).filter(
-        EdinetFactsSnapshot.doc_id == doc_id
-    ).all()
-    
+    existing = (
+        db.query(EdinetFactsSnapshot).filter(EdinetFactsSnapshot.doc_id == doc_id).all()
+    )
+
     if existing:
         result = {}
         for snap in existing:
@@ -233,9 +236,11 @@ def build_facts_snapshot(db: Session, doc_id: str) -> Dict[str, Dict[str, Any]]:
         return result
 
     # EdinetFinancialHighlight から取得
-    highlights = db.query(EdinetFinancialHighlight).filter(
-        EdinetFinancialHighlight.doc_id == doc_id
-    ).all()
+    highlights = (
+        db.query(EdinetFinancialHighlight)
+        .filter(EdinetFinancialHighlight.doc_id == doc_id)
+        .all()
+    )
 
     if not highlights:
         logger.warning(f"doc_id={doc_id} の FinancialHighlight データなし")
@@ -259,7 +264,7 @@ def build_facts_snapshot(db: Session, doc_id: str) -> Dict[str, Dict[str, Any]]:
             if hk in hl_map:
                 hl = hl_map[hk]
                 break
-        
+
         if hl is None:
             continue
 
@@ -301,6 +306,7 @@ def build_facts_snapshot(db: Session, doc_id: str) -> Dict[str, Dict[str, Any]]:
 # 差分計算
 # ==============================================================
 
+
 def _compute_metric_diff(
     current_val: Optional[Decimal],
     prev_val: Optional[Decimal],
@@ -308,7 +314,7 @@ def _compute_metric_diff(
 ) -> Dict[str, Any]:
     """
     個別指標の差分を計算する。
-    
+
     Returns:
         {current_value, prev_value, delta, delta_pct, is_missing}
     """
@@ -333,7 +339,7 @@ def _compute_metric_diff(
         }
 
     delta = current_val - prev_val
-    
+
     # delta_pct: prev_value が 0 の場合は null
     delta_pct = None
     if prev_val != 0:
@@ -357,7 +363,7 @@ def compute_fixed_six(
 
     equity_ratio は equity / total_assets で算出する。
     equity が欠損の場合は固定 notes を追加する。
-    
+
     Returns:
         (fixed_six_list, notes_list)
     """
@@ -383,18 +389,20 @@ def compute_fixed_six(
 
         diff = _compute_metric_diff(current_val, prev_val, key)
 
-        results.append({
-            "metric_key": key,
-            "metric_label": label,
-            "current_value": diff["current_value"],
-            "prev_value": diff["prev_value"],
-            "delta": diff["delta"],
-            "delta_pct": diff["delta_pct"],
-            "is_missing": diff["is_missing"],
-            "unit": current_data.get("unit", "—"),
-            "consolidation_scope": current_data.get("consolidation_scope", "—"),
-            "source_locator": current_data.get("source_locator", "—"),
-        })
+        results.append(
+            {
+                "metric_key": key,
+                "metric_label": label,
+                "current_value": diff["current_value"],
+                "prev_value": diff["prev_value"],
+                "delta": diff["delta"],
+                "delta_pct": diff["delta_pct"],
+                "is_missing": diff["is_missing"],
+                "unit": current_data.get("unit", "—"),
+                "consolidation_scope": current_data.get("consolidation_scope", "—"),
+                "source_locator": current_data.get("source_locator", "—"),
+            }
+        )
 
     return results, notes
 
@@ -435,6 +443,7 @@ def _compute_equity_ratio(
 # 変化大3件の抽出
 # ==============================================================
 
+
 def extract_top_changes(
     current_facts: Dict[str, Dict[str, Any]],
     prev_facts: Dict[str, Dict[str, Any]],
@@ -456,12 +465,18 @@ def extract_top_changes(
     scale_factor_val = total_assets_data.get("value")
 
     if scale_factor_val is None:
-        return [], "総資産（scale_factor）が未取得のため、変化大抽出は実行できません（情報不足）"
+        return (
+            [],
+            "総資産（scale_factor）が未取得のため、変化大抽出は実行できません（情報不足）",
+        )
 
     try:
         scale_factor = Decimal(str(scale_factor_val))
     except (InvalidOperation, ValueError):
-        return [], "総資産（scale_factor）が未取得のため、変化大抽出は実行できません（情報不足）"
+        return (
+            [],
+            "総資産（scale_factor）が未取得のため、変化大抽出は実行できません（情報不足）",
+        )
 
     if scale_factor == 0:
         return [], "総資産（scale_factor）が0のため、変化大抽出は実行できません"
@@ -530,21 +545,23 @@ def extract_top_changes(
         cat_priority = CATEGORY_PRIORITY.get(category, 2)
         label = config["metric_label"] if config else key
 
-        scored_items.append({
-            "metric_key": key,
-            "metric_label": label,
-            "current_value": str(cv),
-            "prev_value": str(pv),
-            "delta": str(delta),
-            "delta_pct": float(delta_pct) if delta_pct is not None else None,
-            "score": score,
-            "cat_priority": cat_priority,
-            "norm_part": float(norm_part),
-            "unit": current_data.get("unit", "—"),
-            "consolidation_scope": current_data.get("consolidation_scope", "—"),
-            "source_locator": current_data.get("source_locator", "—"),
-            "category": category,
-        })
+        scored_items.append(
+            {
+                "metric_key": key,
+                "metric_label": label,
+                "current_value": str(cv),
+                "prev_value": str(pv),
+                "delta": str(delta),
+                "delta_pct": float(delta_pct) if delta_pct is not None else None,
+                "score": score,
+                "cat_priority": cat_priority,
+                "norm_part": float(norm_part),
+                "unit": current_data.get("unit", "—"),
+                "consolidation_scope": current_data.get("consolidation_scope", "—"),
+                "source_locator": current_data.get("source_locator", "—"),
+                "category": category,
+            }
+        )
 
     # ---- 並べ替え ----
     # score 降順 → カテゴリ優先（PL > CF > BS）→ norm_part 降順
@@ -566,10 +583,11 @@ def extract_top_changes(
 # メイン生成処理
 # ==============================================================
 
+
 def generate_diff_summary(db: Session, doc_id: str) -> Dict[str, Any]:
     """
     指定された doc_id の差分サマリーを生成し、DB に保存する。
-    
+
     Returns:
         差分データ全体の辞書
     """
@@ -578,9 +596,9 @@ def generate_diff_summary(db: Session, doc_id: str) -> Dict[str, Any]:
 
     try:
         # 1. 現在の書類を取得
-        current_doc = db.query(EdinetDocument).filter(
-            EdinetDocument.doc_id == doc_id
-        ).first()
+        current_doc = (
+            db.query(EdinetDocument).filter(EdinetDocument.doc_id == doc_id).first()
+        )
 
         if not current_doc:
             return _failed_result(db, doc_id, "指定された書類が見つかりません")
@@ -601,7 +619,7 @@ def generate_diff_summary(db: Session, doc_id: str) -> Dict[str, Any]:
         if prev_doc:
             prev_doc_id = prev_doc.doc_id
             prev_facts = build_facts_snapshot(db, prev_doc_id)
-            
+
             # consolidation_scope 不一致チェック
             prev_scope = _get_doc_scope(db, prev_doc_id)
             if current_scope and prev_scope and current_scope != prev_scope:
@@ -631,7 +649,9 @@ def generate_diff_summary(db: Session, doc_id: str) -> Dict[str, Any]:
         payload = {
             "current_doc_id": doc_id,
             "prev_doc_id": prev_doc_id,
-            "current_submit_date": str(current_doc.submit_datetime or current_doc.target_date or "—"),
+            "current_submit_date": str(
+                current_doc.submit_datetime or current_doc.target_date or "—"
+            ),
             "current_period": _format_period(current_doc),
             "prev_submit_date": None,
             "prev_period": None,
@@ -644,7 +664,9 @@ def generate_diff_summary(db: Session, doc_id: str) -> Dict[str, Any]:
         }
 
         if prev_doc:
-            payload["prev_submit_date"] = str(prev_doc.submit_datetime or prev_doc.target_date or "—")
+            payload["prev_submit_date"] = str(
+                prev_doc.submit_datetime or prev_doc.target_date or "—"
+            )
             payload["prev_period"] = _format_period(prev_doc)
 
         # 8. DB に保存
@@ -694,9 +716,11 @@ def _save_diff_summary(
 ) -> None:
     """差分サマリーを DB に保存（既存があれば更新）"""
     try:
-        existing = db.query(EdinetDiffSummary).filter(
-            EdinetDiffSummary.current_doc_id == current_doc_id
-        ).first()
+        existing = (
+            db.query(EdinetDiffSummary)
+            .filter(EdinetDiffSummary.current_doc_id == current_doc_id)
+            .first()
+        )
 
         if existing:
             existing.prev_doc_id = prev_doc_id
@@ -724,29 +748,36 @@ def _save_diff_summary(
 # キャッシュ付き取得
 # ==============================================================
 
-def get_or_generate_diff(db: Session, doc_id: str, force: bool = False) -> Dict[str, Any]:
+
+def get_or_generate_diff(
+    db: Session, doc_id: str, force: bool = False
+) -> Dict[str, Any]:
     """
     キャッシュ済みの差分があればそれを返し、無ければ生成する。
-    
+
     Args:
         db: DB セッション
         doc_id: 対象書類 ID
         force: True の場合、キャッシュを無視して再生成
-    
+
     Returns:
         差分データの辞書
     """
     if not force:
         # キャッシュを確認
-        cached = db.query(EdinetDiffSummary).filter(
-            EdinetDiffSummary.current_doc_id == doc_id
-        ).first()
+        cached = (
+            db.query(EdinetDiffSummary)
+            .filter(EdinetDiffSummary.current_doc_id == doc_id)
+            .first()
+        )
 
         if cached:
             result = cached.json_payload or {}
             result["status"] = cached.status
             result["notes"] = cached.notes
-            result["generated_at"] = str(cached.generated_at) if cached.generated_at else "—"
+            result["generated_at"] = (
+                str(cached.generated_at) if cached.generated_at else "—"
+            )
             result["current_doc_id"] = doc_id
             result["prev_doc_id"] = cached.prev_doc_id
             return result

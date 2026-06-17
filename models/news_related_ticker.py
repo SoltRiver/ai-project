@@ -4,7 +4,14 @@
 """
 
 from sqlalchemy import (
-    Column, Integer, String, Float, Text, DateTime, ForeignKey, Index,
+    Column,
+    Integer,
+    String,
+    Float,
+    Text,
+    DateTime,
+    ForeignKey,
+    Index,
 )
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
@@ -17,6 +24,7 @@ class NewsRelatedTicker(Base):
     1つの記事に対して複数の影響銘柄を紐付ける。
     抽出方法（ルールベース/AI/ハイブリッド）を記録する。
     """
+
     __tablename__ = "news_related_tickers"
 
     # 主キー
@@ -24,8 +32,10 @@ class NewsRelatedTicker(Base):
 
     # 対象記事への外部キー
     news_article_id = Column(
-        Integer, ForeignKey("news_articles.id", ondelete="CASCADE"),
-        nullable=False, index=True
+        Integer,
+        ForeignKey("news_articles.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
 
     # 証券コード（例: "7203"）

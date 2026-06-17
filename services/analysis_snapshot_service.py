@@ -83,9 +83,7 @@ def get_snapshot(
             db.close()
 
 
-def get_snapshots_for_stock(
-    stock_code: str, db: Session = None
-) -> list:
+def get_snapshots_for_stock(stock_code: str, db: Session = None) -> list:
     """
     指定した銘柄の全分析タイプのスナップショットを取得する。
     銘柄詳細画面でまとめて表示する際に使用。
@@ -95,11 +93,7 @@ def get_snapshots_for_stock(
         db = SessionLocal()
         close_db = True
     try:
-        return (
-            db.query(AnalysisSnapshot)
-            .filter_by(stock_code=stock_code)
-            .all()
-        )
+        return db.query(AnalysisSnapshot).filter_by(stock_code=stock_code).all()
     except Exception as e:
         logger.error(f"スナップショット一覧取得エラー {stock_code}: {e}")
         return []
@@ -128,6 +122,7 @@ def is_stale(snapshot: Optional[AnalysisSnapshot]) -> bool:
         generated = generated.replace(tzinfo=timezone.utc)
 
     from datetime import timedelta
+
     expiry = generated + timedelta(seconds=snapshot.ttl_sec)
     return now > expiry
 
@@ -230,7 +225,9 @@ def update_snapshot_error(
             existing.last_error_message = error_message
             db.commit()
     except Exception as e:
-        logger.error(f"スナップショットエラー更新失敗 {stock_code}/{analysis_type}: {e}")
+        logger.error(
+            f"スナップショットエラー更新失敗 {stock_code}/{analysis_type}: {e}"
+        )
         db.rollback()
     finally:
         if close_db:
@@ -259,12 +256,10 @@ def snapshot_to_dict(snapshot: Optional[AnalysisSnapshot]) -> Dict[str, Any]:
     stale = is_stale(snapshot)
     generated_str = (
         snapshot.generated_at.strftime("%Y/%m/%d %H:%M")
-        if snapshot.generated_at else "-"
+        if snapshot.generated_at
+        else "-"
     )
-    asof_str = (
-        snapshot.asof_ts.strftime("%Y/%m/%d %H:%M")
-        if snapshot.asof_ts else "-"
-    )
+    asof_str = snapshot.asof_ts.strftime("%Y/%m/%d %H:%M") if snapshot.asof_ts else "-"
 
     return {
         "exists": True,

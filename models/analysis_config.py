@@ -13,6 +13,7 @@ class AnalysisConfig(Base):
     分析設定: key-value形式の運用パラメータ。
     閾値やTTLなどを運用中にDB上で変更可能にする。
     """
+
     __tablename__ = "analysis_config"
 
     # 設定キー（例: "TH_PRICE_PCT", "TTL_DAILY_SEC"）

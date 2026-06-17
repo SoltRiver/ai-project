@@ -7,6 +7,7 @@ sys.path.append(os.getcwd())
 print("Attempting to import fastapi_app...")
 try:
     from fastapi_app import app, startup_event
+
     print("Import successful.")
 except Exception as e:
     print(f"Import failed: {e}")

@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 
 class SourcePolicyError(Exception):
     """ソースポリシー違反時のエラー"""
+
     pass
 
 
@@ -36,9 +37,11 @@ class EventSourceChecker:
         Raises:
             SourcePolicyError: 取得不可の場合
         """
-        policy = self.db.query(EventSourcePolicy).filter(
-            EventSourcePolicy.source_name == source_name
-        ).first()
+        policy = (
+            self.db.query(EventSourcePolicy)
+            .filter(EventSourcePolicy.source_name == source_name)
+            .first()
+        )
 
         if policy is None:
             msg = f"ソースポリシー未登録: {source_name}"
@@ -52,7 +55,11 @@ class EventSourceChecker:
             raise SourcePolicyError(msg)
 
         # 有効期限チェック
-        now = datetime.now(policy.expires_at.tzinfo) if policy.expires_at.tzinfo else datetime.now()
+        now = (
+            datetime.now(policy.expires_at.tzinfo)
+            if policy.expires_at.tzinfo
+            else datetime.now()
+        )
         if now >= policy.expires_at:
             msg = (
                 f"ソースポリシー期限切れ: {source_name} "
@@ -69,9 +76,11 @@ class EventSourceChecker:
 
     def get_policy_info(self, source_name: str) -> dict:
         """ポリシー情報を辞書形式で取得（デバッグ用）"""
-        policy = self.db.query(EventSourcePolicy).filter(
-            EventSourcePolicy.source_name == source_name
-        ).first()
+        policy = (
+            self.db.query(EventSourcePolicy)
+            .filter(EventSourcePolicy.source_name == source_name)
+            .first()
+        )
 
         if policy is None:
             return {"error": "未登録"}

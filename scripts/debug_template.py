@@ -3,9 +3,11 @@ from starlette.requests import Request
 import os
 import sys
 
+
 # Mock request
 class MockRequest:
     pass
+
 
 templates = Jinja2Templates(directory="templates")
 
@@ -24,14 +26,17 @@ context = {
     "timings": {"Test": "Date"},
     "risks": ["Risk 1"],
     "glossary": [],
-    "analysis": {"error": "Mock analysis error"} # Test error path first
+    "analysis": {"error": "Mock analysis error"},  # Test error path first
 }
 
 try:
-    rendered = templates.get_template("stocks/partials/_tab_fundamental.html").render(context)
+    rendered = templates.get_template("stocks/partials/_tab_fundamental.html").render(
+        context
+    )
     print("Render Success")
     # print(rendered[:100])
 except Exception as e:
     print("Render Error:", e)
     import traceback
+
     traceback.print_exc()

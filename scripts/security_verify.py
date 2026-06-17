@@ -3,6 +3,7 @@ import html
 
 BASE_URL = "http://localhost:8000"
 
+
 def test_xss_search():
     print("Testing XSS in Search API...")
     # Inject script tag
@@ -23,6 +24,7 @@ def test_xss_search():
     except Exception as e:
         print(f"ERROR: {e}")
 
+
 def test_traversal_detail():
     print("\nTesting Directory Traversal in Detail Page...")
     # Try logical traversal logic
@@ -34,22 +36,29 @@ def test_traversal_detail():
         if resp.status_code == 404:
             print(f"PASS: Traversal payload '{bad_code}' returned 404.")
         elif resp.status_code == 500:
-            print(f"PASS: Traversal payload '{bad_code}' caused 500 (Likely yfinance error, safe from file read).")
+            print(
+                f"PASS: Traversal payload '{bad_code}' caused 500 (Likely yfinance error, safe from file read)."
+            )
         else:
             # If 200, check content
             if "root:" in resp.text:
                 print("CRITICAL FAIL: /etc/passwd content leaked!")
             else:
-                print(f"PASS: Returned {resp.status_code} but no file leakage detected.")
+                print(
+                    f"PASS: Returned {resp.status_code} but no file leakage detected."
+                )
     except Exception as e:
         print(f"ERROR: {e}")
+
 
 def test_add_injection():
     print("\nTesting Injection in Add Stock...")
     payload = "7203; rm -rf /"
     try:
         # We need to simulate form submission
-        resp = requests.post(f"{BASE_URL}/stocks/add", data={"code": payload}, allow_redirects=False)
+        resp = requests.post(
+            f"{BASE_URL}/stocks/add", data={"code": payload}, allow_redirects=False
+        )
         # Should redirect to /stocks
         if resp.status_code == 303:
             print(f"PASS: Injection payload '{payload}' redirected (303).")
@@ -57,18 +66,19 @@ def test_add_injection():
             # Check list
             list_resp = requests.get(f"{BASE_URL}/stocks")
             if payload in list_resp.text:
-                 # It might be added as a code if logic failed, but "rm -rf" shouldn't execute
-                 # HTML escaping should handle display
-                 if html.escape(payload) in list_resp.text:
-                     print("NOTE: Payload added to list but HTML escaped properly.")
-                 else:
-                     print("WARN: Payload added raw to HTML? Check escapes.")
+                # It might be added as a code if logic failed, but "rm -rf" shouldn't execute
+                # HTML escaping should handle display
+                if html.escape(payload) in list_resp.text:
+                    print("NOTE: Payload added to list but HTML escaped properly.")
+                else:
+                    print("WARN: Payload added raw to HTML? Check escapes.")
             else:
-                 print("PASS: Payload not found in list.")
+                print("PASS: Payload not found in list.")
         else:
             print(f"FAIL: Add stock returned {resp.status_code}")
     except Exception as e:
         print(f"ERROR: {e}")
+
 
 if __name__ == "__main__":
     test_xss_search()

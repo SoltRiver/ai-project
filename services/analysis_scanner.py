@@ -31,6 +31,7 @@ def _get_all_stock_codes() -> List[str]:
     db = SessionLocal()
     try:
         from models.master import StockMaster
+
         codes = [row.code for row in db.query(StockMaster.code).all()]
         return codes
     except Exception as e:
@@ -50,6 +51,7 @@ def _get_latest_market_summary(stock_code: str) -> Dict[str, Any]:
             fetch_stock_info,
             format_symbol_for_yfinance,
         )
+
         symbol = format_symbol_for_yfinance(stock_code)
         info = fetch_stock_info(symbol) or {}
         return {

@@ -18,7 +18,9 @@ from services.analysis_snapshot_service import get_config_int
 logger = logging.getLogger(__name__)
 
 
-def compute_dedupe_key(stock_code: str, analysis_type: str, desired_input_hash: str) -> str:
+def compute_dedupe_key(
+    stock_code: str, analysis_type: str, desired_input_hash: str
+) -> str:
     """
     重複排除キーを計算する。
     同一銘柄×分析タイプ×入力ハッシュで同一キーになる。
@@ -27,7 +29,9 @@ def compute_dedupe_key(stock_code: str, analysis_type: str, desired_input_hash: 
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
 
-def compute_input_hash(stock_code: str, analysis_type: str, data_summary: str = "") -> str:
+def compute_input_hash(
+    stock_code: str, analysis_type: str, data_summary: str = ""
+) -> str:
     """
     入力データのハッシュを計算する。
     data_summaryは価格・指標等の要約文字列。
@@ -268,6 +272,7 @@ def get_job_stats(db: Session = None) -> dict:
         close_db = True
     try:
         from sqlalchemy import func
+
         stats = {}
         for status_val in ["queued", "running", "done", "failed", "canceled"]:
             count = (

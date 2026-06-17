@@ -7,9 +7,10 @@ import sqlite3
 BASE_URL = "http://localhost:8000"
 DB_PATH = "ai_project.db"
 
+
 def test_persistence():
     print("Testing persistence...")
-    
+
     # Wait for server
     print("Waiting for server...")
     try:
@@ -65,13 +66,18 @@ def test_persistence():
     print("4. Removing stock 9101...")
     try:
         payload = {"selected_stocks": ["9101"]}
-        r = requests.post(f"{BASE_URL}/stocks/delete", data=payload, allow_redirects=True)
+        r = requests.post(
+            f"{BASE_URL}/stocks/delete", data=payload, allow_redirects=True
+        )
         if "9101" not in r.text:
-             print("   CHECK OK: Stock 9101 removed successfully.")
+            print("   CHECK OK: Stock 9101 removed successfully.")
         else:
-             print("   WARNING: Stock 9101 still present after delete (or list verify failed).")
+            print(
+                "   WARNING: Stock 9101 still present after delete (or list verify failed)."
+            )
     except Exception as e:
         print(f"   Exception removing stock: {e}")
+
 
 if __name__ == "__main__":
     test_persistence()

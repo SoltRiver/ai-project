@@ -1,6 +1,17 @@
-
-from sqlalchemy import Column, Integer, String, Text, ForeignKey, DateTime, func, Numeric, Index, JSON
+from sqlalchemy import (
+    Column,
+    Integer,
+    String,
+    Text,
+    ForeignKey,
+    DateTime,
+    func,
+    Numeric,
+    Index,
+    JSON,
+)
 from database import Base
+
 
 class EdinetMetricTimeseries(Base):
     __tablename__ = "edinet_metric_timeseries"
@@ -20,10 +31,18 @@ class EdinetMetricTimeseries(Base):
     selection_notes = Column(JSON, nullable=False)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    updated_at = Column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
 
     __table_args__ = (
-        Index("idx_timeseries_unique", "sec_code", "metric_key", "period_end_year", unique=True),
+        Index(
+            "idx_timeseries_unique",
+            "sec_code",
+            "metric_key",
+            "period_end_year",
+            unique=True,
+        ),
     )
 
 
@@ -51,8 +70,16 @@ class EdinetMetricComparison(Base):
     calc_notes = Column(JSON, nullable=False)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    updated_at = Column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
 
     __table_args__ = (
-        Index("idx_comparison_unique", "sec_code", "metric_key", "period_end_year", unique=True),
+        Index(
+            "idx_comparison_unique",
+            "sec_code",
+            "metric_key",
+            "period_end_year",
+            unique=True,
+        ),
     )

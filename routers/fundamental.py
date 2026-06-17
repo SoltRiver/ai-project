@@ -8,6 +8,7 @@ from services.financial_analyzer import FinancialAnalyzer
 from services.impact_bias_service import ImpactBiasService
 from database import get_db
 
+
 def format_currency(value):
     if value is None:
         value = 0
@@ -19,16 +20,16 @@ def format_currency(value):
         amount = 0
     return f"{amount:,} 円"
 
+
 router = APIRouter(prefix="/stocks", tags=["stocks"])
 templates = Jinja2Templates(directory="templates")
 templates.env.filters["format_currency"] = format_currency
 analyzer = FinancialAnalyzer()
 
+
 @router.get("/{symbol}/fundamental", response_class=HTMLResponse)
 async def get_fundamental_analysis(
-    request: Request, 
-    symbol: str, 
-    db: Session = Depends(get_db)
+    request: Request, symbol: str, db: Session = Depends(get_db)
 ):
     """
     Render the Fundamental Analysis page.
@@ -47,7 +48,7 @@ async def get_fundamental_analysis(
         # StockNews table uses 'sec_code' which is usually 4-5 digits string.
         # analyzer.analyze_stock takes "1234" usually.
         # If symbol arrives as "1234", we use it as is.
-        sec_code = symbol.replace(".T", "") 
+        sec_code = symbol.replace(".T", "")
         impact_service = ImpactBiasService(db)
         impact_bias = impact_service.get_impact_bias(sec_code)
     except Exception as e:
@@ -64,10 +65,10 @@ async def get_fundamental_analysis(
     return templates.TemplateResponse(
         "fundamental_analysis.html",
         {
-            "request": request, 
-            "analysis": data, 
+            "request": request,
+            "analysis": data,
             "symbol": symbol,
             "impact_bias": impact_bias,
-            "doc_id": doc_id_val
-        }
+            "doc_id": doc_id_val,
+        },
     )

@@ -28,11 +28,15 @@ async def news_index(request: Request, db: Session = Depends(get_db)):
     except Exception as e:
         # DB読み込みエラーでもページは表示する
         import logging
+
         logging.getLogger(__name__).error(f"ニュース取得エラー: {e}")
         news_items = []
 
-    return templates.TemplateResponse("news/index.html", {
-        "request": request,
-        "page_title": "マーケットニュース",
-        "news_items": news_items
-    })
+    return templates.TemplateResponse(
+        "news/index.html",
+        {
+            "request": request,
+            "page_title": "マーケットニュース",
+            "news_items": news_items,
+        },
+    )

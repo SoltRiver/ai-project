@@ -3,6 +3,7 @@ import sys
 
 BASE_URL = "http://127.0.0.1:8001"
 
+
 def check_url(url, description):
     print(f"Checking {description} ({url})...", end=" ")
     try:
@@ -17,10 +18,11 @@ def check_url(url, description):
         print(f"FAIL (Error: {e})")
         return False
 
+
 def regression_test():
     print("\n--- Regression Testing ---")
     all_pass = True
-    
+
     # Check key pages
     pages = [
         ("/", "Home/Stock List"),
@@ -29,17 +31,20 @@ def regression_test():
         ("/candle-patterns", "Candle Patterns"),
         ("/ranking", "Ranking Page"),
     ]
-    
+
     for url, desc in pages:
         if not check_url(f"{BASE_URL}{url}", desc):
             all_pass = False
-        
+
         # Rankings 画面の特定要素チェック（デグレード防止）
         if url == "/ranking":
             print("Verifying Ranking Page content...", end=" ")
             try:
                 resp = requests.get(f"{BASE_URL}{url}")
-                if "銘柄騰落ランキング" in resp.text and "主要銘柄の中から" in resp.text:
+                if (
+                    "銘柄騰落ランキング" in resp.text
+                    and "主要銘柄の中から" in resp.text
+                ):
                     if "AIによるランキング分析" in resp.text:
                         print("OK (Visual elements verified)")
                     else:
@@ -61,12 +66,19 @@ def regression_test():
             html = resp.text
             # Simple parsing to find a link like /stocks/XXXX
             import re
-            match = re.search(r'/stocks/(\d{4})', html)
+
+            match = re.search(r"/stocks/(\d{4})", html)
             if match:
                 code = match.group(1)
                 print(f"Found stock code {code} in list. Checking detail tabs...")
-                
-                tabs = ["", "/tab/chart", "/tab/fundamental", "/tab/dividend", "/tab/shareholder"]
+
+                tabs = [
+                    "",
+                    "/tab/chart",
+                    "/tab/fundamental",
+                    "/tab/dividend",
+                    "/tab/shareholder",
+                ]
                 for tab in tabs:
                     url = f"{BASE_URL}/stocks/{code}{tab}"
                     if not check_url(url, f"Detail {code} Tab{tab}"):
@@ -81,6 +93,7 @@ def regression_test():
         all_pass = False
 
     return all_pass
+
 
 if __name__ == "__main__":
     success = regression_test()

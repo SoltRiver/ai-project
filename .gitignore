@@ -17,3 +17,4 @@ services/ai_prediction_service.py
 services/ai_client.py
 services/market_service.py
 services/news_service.py
+.agent/

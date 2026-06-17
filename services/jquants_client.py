@@ -1,4 +1,3 @@
-
 import os
 import logging
 import time
@@ -15,25 +14,29 @@ load_dotenv()
 
 logger = logging.getLogger(__name__)
 
+
 class JQuantsClient:
     """
     J-Quants API Client Wrapper (Adapter for jquants-api-client v2)
     """
+
     BASE_URL = "https://api.jquants.com/v2"
-    
+
     def __init__(self):
         self.api_key = os.environ.get("JQUANTS_API_KEY")
-        
+
         if not self.api_key:
-             logger.warning("JQUANTS_API_KEY not set. J-Quants features will be unavailable.")
-             self.jq = None
+            logger.warning(
+                "JQUANTS_API_KEY not set. J-Quants features will be unavailable."
+            )
+            self.jq = None
         else:
-             try:
-                 # Initialize official client (V2)
-                 self.jq = jquantsapi.ClientV2(api_key=self.api_key)
-             except Exception as e:
-                 logger.error(f"Failed to initialize JQuantsClientV2: {e}")
-                 self.jq = None
+            try:
+                # Initialize official client (V2)
+                self.jq = jquantsapi.ClientV2(api_key=self.api_key)
+            except Exception as e:
+                logger.error(f"Failed to initialize JQuantsClientV2: {e}")
+                self.jq = None
 
     def get(self, endpoint: str, params: Dict[str, Any] = None) -> Dict[str, Any]:
         """
@@ -43,10 +46,10 @@ class JQuantsClient:
         """
         if not self.api_key:
             return {}
-            
+
         url = f"{self.BASE_URL}{endpoint}"
         headers = {"x-api-key": self.api_key}
-        
+
         try:
             resp = requests.get(url, headers=headers, params=params, timeout=20)
             resp.raise_for_status()
@@ -55,7 +58,9 @@ class JQuantsClient:
             logger.error(f"J-Quants API Request Failed ({endpoint}): {e}")
             return {}
 
-    def get_all(self, endpoint: str, params: Dict[str, Any] = None) -> List[Dict[str, Any]]:
+    def get_all(
+        self, endpoint: str, params: Dict[str, Any] = None
+    ) -> List[Dict[str, Any]]:
         """
         [Deprecated] ページネーション対応の全件取得。
         公式クライアント移行に伴い、このメソッドは直接使用せず
@@ -63,8 +68,10 @@ class JQuantsClient:
         """
         # 既存ロジック維持
         return self._legacy_get_all(endpoint, params)
-        
-    def _legacy_get_all(self, endpoint: str, params: Dict[str, Any] = None) -> List[Dict[str, Any]]:
+
+    def _legacy_get_all(
+        self, endpoint: str, params: Dict[str, Any] = None
+    ) -> List[Dict[str, Any]]:
         all_data: List[Dict[str, Any]] = []
         current_params = dict(params) if params else {}
 
@@ -84,64 +91,80 @@ class JQuantsClient:
 
         return all_data
 
-    def get_daily_quotes(self, code: str, date: str = None, from_date: str = None, to_date: str = None) -> Dict[str, Any]:
+    def get_daily_quotes(
+        self, code: str, date: str = None, from_date: str = None, to_date: str = None
+    ) -> Dict[str, Any]:
         """
         /equities/bars/daily
         """
         if not self.jq:
             return {}
-            
+
         try:
             # jquants-api-client params: code, date, from_yyyymmdd, to_yyyymmdd
             # Note: library might use different param names. Checking assumed signature.
             # ClientV2.get_eq_bars_daily(code=..., date=..., from_yyyymmdd=..., to_yyyymmdd=...) usually
-            # But let's verify params based on previous method list. 
+            # But let's verify params based on previous method list.
             # Assuming widely used kwargs like code, date, from_date, to_date or standardized.
             # safe approach: pass keys as compatible via kwargs if needed or specific mapping.
-            
+
             # Using keyword arguments based on library V2 conventions (usually matches API params or standard)
             # API query params: code, date, from, to
             # Library often maps 'from' -> 'from_yyyymmdd' to avoid usage of reserved keyword.
-            
+
             # Since I cannot verify exact signature without help(), I will try standard args.
-            
+
             kwargs = {"code": code}
-            if date: kwargs["date"] = date.replace("-", "")
-            if from_date: kwargs["from_yyyymmdd"] = from_date.replace("-", "")
-            if to_date: kwargs["to_yyyymmdd"] = to_date.replace("-", "")
+            if date:
+                kwargs["date"] = date.replace("-", "")
+            if from_date:
+                kwargs["from_yyyymmdd"] = from_date.replace("-", "")
+            if to_date:
+                kwargs["to_yyyymmdd"] = to_date.replace("-", "")
 
             # Call official client
             df = self.jq.get_eq_bars_daily(**kwargs)
-            
+
             if df.empty:
                 return {}
-                
+
             # Convert to list of dicts
             data_list = df.to_dict(orient="records")
-            
+
             # Standardize keys (O -> Open, etc)
             # V2 API returns Open, High, Low, Close, Volume.
             # If library returns exact API columns, we might need no mapping if already correct.
             # But for safety, ensure "Open" etc exist.
-            
+
             standardized = []
             for item in data_list:
                 new_item = item.copy()
-                
+
                 # Check mapping if short names (O, H, L, C) are present
                 mapping = {
-                    "O": "Open", "H": "High", "L": "Low", "C": "Close", "Vo": "Volume",
-                    "AdjO": "AdjOpen", "AdjH": "AdjHigh", "AdjL": "AdjLow", "AdjC": "AdjClose", "AdjVo": "AdjVolume"
+                    "O": "Open",
+                    "H": "High",
+                    "L": "Low",
+                    "C": "Close",
+                    "Vo": "Volume",
+                    "AdjO": "AdjOpen",
+                    "AdjH": "AdjHigh",
+                    "AdjL": "AdjLow",
+                    "AdjC": "AdjClose",
+                    "AdjVo": "AdjVolume",
                 }
                 for old_k, new_k in mapping.items():
                     if old_k in new_item and new_k not in new_item:
-                         new_item[new_k] = new_item.pop(old_k)
-                
+                        new_item[new_k] = new_item.pop(old_k)
+
                 # If library already returns "Open", keys are preserved.
                 standardized.append(new_item)
-            
-            return {"daily_quotes": standardized, "data": standardized} # Return compatible structure
-            
+
+            return {
+                "daily_quotes": standardized,
+                "data": standardized,
+            }  # Return compatible structure
+
         except Exception as e:
             logger.error(f"J-Quants Lib `get_eq_bars_daily` failed: {e}")
             return {}
@@ -160,7 +183,9 @@ class JQuantsClient:
             return df.to_dict(orient="records")
         except Exception as e:
             # Free plan 403 or other error
-            logger.warning(f"J-Quants Lib `get_fin_dividend` failed (possibly 403): {e}")
+            logger.warning(
+                f"J-Quants Lib `get_fin_dividend` failed (possibly 403): {e}"
+            )
             return []
 
     def get_listed_info(self, code: str = None, date: str = None) -> Dict[str, Any]:
@@ -172,16 +197,18 @@ class JQuantsClient:
             return {}
         try:
             kwargs = {}
-            if code: kwargs["code"] = self._normalize_code(code)
-            if date: kwargs["date"] = date.replace("-", "")
+            if code:
+                kwargs["code"] = self._normalize_code(code)
+            if date:
+                kwargs["date"] = date.replace("-", "")
             else:
-                 # Default logic handled by usage side or library?
-                 pass 
-                 
+                # Default logic handled by usage side or library?
+                pass
+
             df = self.jq.get_eq_master(**kwargs)
             if df.empty:
                 return {}
-            
+
             return {"data": df.to_dict(orient="records")}
         except Exception as e:
             logger.error(f"J-Quants Lib `get_eq_master` failed: {e}")
@@ -217,7 +244,7 @@ class JQuantsClient:
         """
         if not self.jq:
             return []
-            
+
         strategies = [
             ("today", datetime.now().strftime("%Y%m%d")),
             ("13w_ago", (datetime.now() - timedelta(weeks=13)).strftime("%Y%m%d")),
@@ -234,7 +261,9 @@ class JQuantsClient:
                 if not df.empty:
                     data = df.to_dict(orient="records")
                     if data:
-                        logger.info(f"J-Quants: マスターデータ取得成功 date={date_str} ({label})")
+                        logger.info(
+                            f"J-Quants: マスターデータ取得成功 date={date_str} ({label})"
+                        )
                         return data
             except Exception:
                 pass
@@ -254,7 +283,7 @@ class JQuantsClient:
             df = self.jq.get_mkt_margin_interest(code=code)
             if df.empty:
                 return []
-            
+
             data = df.to_dict(orient="records")
             # Sort by date desc
             data.sort(key=lambda x: x.get("Date", ""), reverse=True)
@@ -262,7 +291,9 @@ class JQuantsClient:
         except Exception as e:
             # Free plan 403 expected
             if "403" in str(e):
-                logger.warning(f"J-Quants API 403 Forbidden (margin-interest): Free プランでは利用不可")
+                logger.warning(
+                    f"J-Quants API 403 Forbidden (margin-interest): Free プランでは利用不可"
+                )
             else:
                 logger.error(f"J-Quants Lib `get_mkt_margin_interest` failed: {e}")
             return []
@@ -281,10 +312,13 @@ class JQuantsClient:
             return df.to_dict(orient="records")
         except Exception as e:
             if "403" in str(e):
-                logger.warning("J-Quants API 403 Forbidden (earnings_cal): Free プランでは利用不可の可能性")
+                logger.warning(
+                    "J-Quants API 403 Forbidden (earnings_cal): Free プランでは利用不可の可能性"
+                )
             else:
                 logger.error(f"J-Quants Lib `get_eq_earnings_cal` failed: {e}")
             return []
+
 
 # Global instance
 client = JQuantsClient()

@@ -63,7 +63,9 @@ class EdinetEventCrawler:
             "errors": 0,
         }
 
-    async def crawl(self, days: int = 7, start_date: Optional[date] = None) -> Dict[str, Any]:
+    async def crawl(
+        self, days: int = 7, start_date: Optional[date] = None
+    ) -> Dict[str, Any]:
         """
         EDINET APIを日付単位で巡回し、イベントを抽出・保存する。
 
@@ -94,6 +96,7 @@ class EdinetEventCrawler:
 
         # 既存のEdinetClient（async httpx）を使用
         from services.edinet_client import EdinetClient
+
         client = EdinetClient()
 
         try:
@@ -112,10 +115,14 @@ class EdinetEventCrawler:
         date_str = target_date.strftime("%Y-%m-%d")
 
         # 冪等チェック: 既にDONEなら即スキップ
-        existing_state = self.db.query(EventIngestState).filter(
-            EventIngestState.source_name == self.source_name,
-            EventIngestState.ingest_date == target_date,
-        ).first()
+        existing_state = (
+            self.db.query(EventIngestState)
+            .filter(
+                EventIngestState.source_name == self.source_name,
+                EventIngestState.ingest_date == target_date,
+            )
+            .first()
+        )
 
         if existing_state and existing_state.status == "DONE":
             logger.debug(f"スキップ（処理済み）: {date_str}")
@@ -164,7 +171,9 @@ class EdinetEventCrawler:
             self.stats["days_processed"] += 1
 
             self.db.commit()
-            logger.info(f"完了: {date_str} (文書={len(results)}, イベント={extracted_count})")
+            logger.info(
+                f"完了: {date_str} (文書={len(results)}, イベント={extracted_count})"
+            )
 
         except Exception as e:
             logger.error(f"エラー: {date_str} - {e}")
@@ -189,10 +198,14 @@ class EdinetEventCrawler:
 
         # 重複チェック（doc_id + event_type）
         if doc_id:
-            existing = self.db.query(StockEvent).filter(
-                StockEvent.doc_id == doc_id,
-                StockEvent.event_type == event_type,
-            ).first()
+            existing = (
+                self.db.query(StockEvent)
+                .filter(
+                    StockEvent.doc_id == doc_id,
+                    StockEvent.event_type == event_type,
+                )
+                .first()
+            )
             if existing:
                 logger.debug(f"重複スキップ: doc_id={doc_id}, event_type={event_type}")
                 return False

@@ -4,7 +4,12 @@ AI分析ジョブキューモデル
 """
 
 from sqlalchemy import (
-    Column, Integer, String, Text, DateTime, Index,
+    Column,
+    Integer,
+    String,
+    Text,
+    DateTime,
+    Index,
     UniqueConstraint,
 )
 from sqlalchemy.sql import func
@@ -16,6 +21,7 @@ class AnalysisJob(Base):
     分析ジョブキュー: 再分析が必要な銘柄の処理要求を管理。
     ワーカーが優先度順に取り出してAI生成を実行する。
     """
+
     __tablename__ = "analysis_job"
 
     # 主キー（SQLite互換のためIntegerを使用）

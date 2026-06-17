@@ -1,4 +1,3 @@
-
 import os
 import requests
 import json
@@ -13,6 +12,7 @@ logger = logging.getLogger(__name__)
 API_KEY = os.environ.get("JQUANTS_API_KEY")
 BASE_URL = "https://api.jquants.com/v2"
 
+
 def verify_v2_access():
     if not API_KEY:
         print("ERROR: JQUANTS_API_KEY が設定されていません。")
@@ -20,15 +20,15 @@ def verify_v2_access():
         return
 
     headers = {"x-api-key": API_KEY}
-    
+
     # 1. Verify /equities/master (Listed Issues)
     # Note: V2 might require 'date' or 'code'. Trying with date.
     print("--- Verifying /equities/master ---")
     url = f"{BASE_URL}/equities/master"
     # Try yesterday (2026-02-10)
     # If today is 2026-02-11, yesterday was Tue.
-    params = {"date": "20260210"} 
-    
+    params = {"date": "20260210"}
+
     try:
         resp = requests.get(url, headers=headers, params=params, timeout=10)
         print(f"Status: {resp.status_code}")
@@ -39,24 +39,24 @@ def verify_v2_access():
             # Search execution said it returns pandas DataFrame in Python client, but raw API returns JSON.
             # Let's inspect the type.
             if isinstance(data, dict):
-                 print(f"Response Keys: {list(data.keys())}")
-                 # Check if 'data' key exists? Wait, the output said Response Keys: ['data']?
-                 # No, requests .json() returns the dict. The keys of that dict are ['data']?
-                 # Wait, my previous code printed: Response Keys: ['data']
-                 # So yes, the dict has a key "data".
-                 
-                 if "data" in data:
-                     inner = data["data"]
-                     print(f"Inner Data Type: {type(inner)}")
-                     if isinstance(inner, list):
-                         print(f"Inner List Count: {len(inner)}")
-                         if len(inner) > 0:
-                             print(f"Sample Item: {inner[0]}")
-                     elif isinstance(inner, dict):
-                         print(f"Inner Dict Keys: {list(inner.keys())}")
-                         # Maybe equities is here?
-                 else:
-                     print("No 'data' key found, but keys are:", list(data.keys()))
+                print(f"Response Keys: {list(data.keys())}")
+                # Check if 'data' key exists? Wait, the output said Response Keys: ['data']?
+                # No, requests .json() returns the dict. The keys of that dict are ['data']?
+                # Wait, my previous code printed: Response Keys: ['data']
+                # So yes, the dict has a key "data".
+
+                if "data" in data:
+                    inner = data["data"]
+                    print(f"Inner Data Type: {type(inner)}")
+                    if isinstance(inner, list):
+                        print(f"Inner List Count: {len(inner)}")
+                        if len(inner) > 0:
+                            print(f"Sample Item: {inner[0]}")
+                    elif isinstance(inner, dict):
+                        print(f"Inner Dict Keys: {list(inner.keys())}")
+                        # Maybe equities is here?
+                else:
+                    print("No 'data' key found, but keys are:", list(data.keys()))
         else:
             print(f"Error Body: {resp.text}")
 
@@ -66,8 +66,8 @@ def verify_v2_access():
     # 2. Verify /equities/bars/daily (Daily Quotes)
     print("\n--- Verifying /equities/bars/daily ---")
     url = f"{BASE_URL}/equities/bars/daily"
-    params = {"code": "7203", "date": "20240104"} 
-    
+    params = {"code": "7203", "date": "20240104"}
+
     try:
         resp = requests.get(url, headers=headers, params=params, timeout=10)
         print(f"Status: {resp.status_code}")
@@ -78,17 +78,19 @@ def verify_v2_access():
                 if "data" in data:
                     inner = data["data"]
                     if isinstance(inner, list) and len(inner) > 0:
-                         print(f"Sample Quote Keys: {list(inner[0].keys())}")
+                        print(f"Sample Quote Keys: {list(inner[0].keys())}")
                     elif isinstance(inner, dict):
-                         # Maybe daily_quotes is inside?
-                         if "daily_quotes" in inner:
-                             print(f"Sample Quote Keys: {list(inner['daily_quotes'][0].keys())}")
-                         else:
-                             print(f"Inner Dict Keys: {list(inner.keys())}")
-
+                        # Maybe daily_quotes is inside?
+                        if "daily_quotes" in inner:
+                            print(
+                                f"Sample Quote Keys: {list(inner['daily_quotes'][0].keys())}"
+                            )
+                        else:
+                            print(f"Inner Dict Keys: {list(inner.keys())}")
 
     except Exception as e:
         print(f"Exception: {e}")
+
 
 if __name__ == "__main__":
     verify_v2_access()

@@ -4,7 +4,12 @@ AI分析スナップショットモデル
 """
 
 from sqlalchemy import (
-    Column, Integer, String, Text, DateTime, Index,
+    Column,
+    Integer,
+    String,
+    Text,
+    DateTime,
+    Index,
     UniqueConstraint,
 )
 from sqlalchemy.sql import func
@@ -16,6 +21,7 @@ class AnalysisSnapshot(Base):
     分析スナップショット: 各銘柄×分析タイプごとの最新表示用データ。
     ユーザー閲覧時は常にこのテーブルから即時返却する。
     """
+
     __tablename__ = "analysis_snapshot"
 
     # 主キー（SQLite互換のためIntegerを使用）

@@ -5,7 +5,13 @@ AI要約とは分離して管理し、再分析や重複排除に対応する。
 """
 
 from sqlalchemy import (
-    Column, Integer, String, Text, DateTime, Boolean, Index,
+    Column,
+    Integer,
+    String,
+    Text,
+    DateTime,
+    Boolean,
+    Index,
     UniqueConstraint,
 )
 from sqlalchemy.sql import func
@@ -18,6 +24,7 @@ class NewsArticle(Base):
     ニュース記事テーブル
     yfinance等から取得した記事の本体を保持する。
     """
+
     __tablename__ = "news_articles"
 
     # 主キー
@@ -70,13 +77,19 @@ class NewsArticle(Base):
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
     updated_at = Column(
-        DateTime(timezone=True), nullable=False,
-        server_default=func.now(), onupdate=func.now()
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now(),
     )
 
     # リレーション
-    ai_summaries = relationship("NewsAiSummary", back_populates="article", cascade="all, delete-orphan")
-    related_tickers = relationship("NewsRelatedTicker", back_populates="article", cascade="all, delete-orphan")
+    ai_summaries = relationship(
+        "NewsAiSummary", back_populates="article", cascade="all, delete-orphan"
+    )
+    related_tickers = relationship(
+        "NewsRelatedTicker", back_populates="article", cascade="all, delete-orphan"
+    )
 
     # テーブル制約・インデックス
     __table_args__ = (

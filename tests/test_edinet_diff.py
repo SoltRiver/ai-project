@@ -18,10 +18,10 @@ from services.edinet_diff_service import (
     FIXED_SIX_KEYS,
 )
 
-
 # ==============================================================
 # normalize_unit テスト
 # ==============================================================
+
 
 class TestNormalizeUnit:
     """単位正規化のテスト"""
@@ -95,6 +95,7 @@ class TestNormalizeUnit:
 # compute_fixed_six テスト
 # ==============================================================
 
+
 class TestComputeFixedSix:
     """固定6項目の差分計算テスト"""
 
@@ -113,12 +114,20 @@ class TestComputeFixedSix:
     def test_正常な差分計算(self):
         """全項目揃っている場合の差分計算"""
         current = self._make_facts(
-            revenue=100000, operating_profit=20000, net_income=10000,
-            operating_cf=15000, total_assets=500000, equity=200000,
+            revenue=100000,
+            operating_profit=20000,
+            net_income=10000,
+            operating_cf=15000,
+            total_assets=500000,
+            equity=200000,
         )
         prev = self._make_facts(
-            revenue=90000, operating_profit=18000, net_income=9000,
-            operating_cf=14000, total_assets=480000, equity=190000,
+            revenue=90000,
+            operating_profit=18000,
+            net_income=9000,
+            operating_cf=14000,
+            total_assets=480000,
+            equity=190000,
         )
         results, notes = compute_fixed_six(current, prev)
 
@@ -132,8 +141,12 @@ class TestComputeFixedSix:
     def test_prev無しの場合(self):
         """prev が None の場合は差分なし（今回のみ）"""
         current = self._make_facts(
-            revenue=100000, operating_profit=20000, net_income=10000,
-            operating_cf=15000, total_assets=500000, equity=200000,
+            revenue=100000,
+            operating_profit=20000,
+            net_income=10000,
+            operating_cf=15000,
+            total_assets=500000,
+            equity=200000,
         )
         results, notes = compute_fixed_six(current, None)
 
@@ -155,8 +168,12 @@ class TestComputeFixedSix:
     def test_equity_ratio_計算(self):
         """equity_ratio が正しく算出されること"""
         current = self._make_facts(
-            revenue=100000, operating_profit=20000, net_income=10000,
-            operating_cf=15000, total_assets=500000, equity=200000,
+            revenue=100000,
+            operating_profit=20000,
+            net_income=10000,
+            operating_cf=15000,
+            total_assets=500000,
+            equity=200000,
         )
         results, notes = compute_fixed_six(current, None)
 
@@ -168,8 +185,11 @@ class TestComputeFixedSix:
     def test_equity_欠損時の固定notes(self):
         """equity が無い場合は固定 notes を出力"""
         current = self._make_facts(
-            revenue=100000, operating_profit=20000, net_income=10000,
-            operating_cf=15000, total_assets=500000,
+            revenue=100000,
+            operating_profit=20000,
+            net_income=10000,
+            operating_cf=15000,
+            total_assets=500000,
         )
         results, notes = compute_fixed_six(current, None)
         assert any("自己資本が未取得のため算出不可" in n for n in notes)
@@ -177,12 +197,20 @@ class TestComputeFixedSix:
     def test_prev_value_0の場合delta_pctはnull(self):
         """prev_value が 0 の場合、delta_pct は None"""
         current = self._make_facts(
-            revenue=100000, operating_profit=20000, net_income=10000,
-            operating_cf=15000, total_assets=500000, equity=200000,
+            revenue=100000,
+            operating_profit=20000,
+            net_income=10000,
+            operating_cf=15000,
+            total_assets=500000,
+            equity=200000,
         )
         prev = self._make_facts(
-            revenue=0, operating_profit=18000, net_income=9000,
-            operating_cf=14000, total_assets=480000, equity=190000,
+            revenue=0,
+            operating_profit=18000,
+            net_income=9000,
+            operating_cf=14000,
+            total_assets=480000,
+            equity=190000,
         )
         results, notes = compute_fixed_six(current, prev)
         revenue = results[0]
@@ -192,6 +220,7 @@ class TestComputeFixedSix:
 # ==============================================================
 # extract_top_changes テスト
 # ==============================================================
+
 
 class TestExtractTopChanges:
     """変化大3件抽出のテスト"""
@@ -234,11 +263,11 @@ class TestExtractTopChanges:
         """4件以上の候補がある場合でも最大3件"""
         current = self._make_facts(
             total_assets=1000000,
-            ordinary_profit=200000,   # 大きな変化
-            investing_cf=-300000,      # 大きな変化
-            financing_cf=-200000,      # 大きな変化
-            cash_end=500000,           # 大きな変化
-            net_assets=600000,         # 大きな変化
+            ordinary_profit=200000,  # 大きな変化
+            investing_cf=-300000,  # 大きな変化
+            financing_cf=-200000,  # 大きな変化
+            cash_end=500000,  # 大きな変化
+            net_assets=600000,  # 大きな変化
         )
         prev = self._make_facts(
             total_assets=1000000,
@@ -271,14 +300,23 @@ class TestExtractTopChanges:
 # _compute_equity_ratio テスト
 # ==============================================================
 
+
 class TestComputeEquityRatio:
     """自己資本比率算出のテスト"""
 
     def test_正常算出(self):
         """equity / total_assets が正しく計算される"""
         facts = {
-            "equity": {"value": Decimal("300000"), "consolidation_scope": "consolidated", "source_locator": "eq"},
-            "total_assets": {"value": Decimal("1000000"), "consolidation_scope": "consolidated", "source_locator": "ta"},
+            "equity": {
+                "value": Decimal("300000"),
+                "consolidation_scope": "consolidated",
+                "source_locator": "eq",
+            },
+            "total_assets": {
+                "value": Decimal("1000000"),
+                "consolidation_scope": "consolidated",
+                "source_locator": "ta",
+            },
         }
         notes = []
         _compute_equity_ratio(facts, notes, "今回")
@@ -289,7 +327,11 @@ class TestComputeEquityRatio:
     def test_equity欠損(self):
         """equity が無い場合は notes に固定文"""
         facts = {
-            "total_assets": {"value": Decimal("1000000"), "consolidation_scope": "consolidated", "source_locator": "ta"},
+            "total_assets": {
+                "value": Decimal("1000000"),
+                "consolidation_scope": "consolidated",
+                "source_locator": "ta",
+            },
         }
         notes = []
         _compute_equity_ratio(facts, notes, "今回")
@@ -299,8 +341,16 @@ class TestComputeEquityRatio:
     def test_total_assets_0(self):
         """total_assets が 0 の場合"""
         facts = {
-            "equity": {"value": Decimal("300000"), "consolidation_scope": "consolidated", "source_locator": "eq"},
-            "total_assets": {"value": Decimal("0"), "consolidation_scope": "consolidated", "source_locator": "ta"},
+            "equity": {
+                "value": Decimal("300000"),
+                "consolidation_scope": "consolidated",
+                "source_locator": "eq",
+            },
+            "total_assets": {
+                "value": Decimal("0"),
+                "consolidation_scope": "consolidated",
+                "source_locator": "ta",
+            },
         }
         notes = []
         _compute_equity_ratio(facts, notes, "今回")

@@ -10,8 +10,9 @@ import pandas as pd
 import yfinance as yf
 
 
-def fetch_stock_data(symbol: str, period: str = "1mo",
-                     interval: str = "1d") -> Optional[pd.DataFrame]:
+def fetch_stock_data(
+    symbol: str, period: str = "1mo", interval: str = "1d"
+) -> Optional[pd.DataFrame]:
     """
     yfinanceを使用して株価データを取得する
     """
@@ -144,8 +145,7 @@ def fetch_realtime_data(symbol: str) -> Optional[Dict[str, Any]]:
 
 
 def fetch_stock_history_periods(
-    symbol: str,
-    periods: Optional[Dict[str, tuple[str, str]]] = None
+    symbol: str, periods: Optional[Dict[str, tuple[str, str]]] = None
 ) -> Dict[str, Optional[pd.DataFrame]]:
     """
     指定した複数期間の株価履歴をまとめて取得する
@@ -175,11 +175,11 @@ def fetch_news(symbol: str, limit: int = 5) -> List[Dict[str, Any]]:
             # データ構造の正規化
             # 最近のyfinanceは 'content' キー内に詳細を持つ場合がある
             content = item.get("content", item)
-            
+
             # published日時情報の取得（場所が変動するため複数箇所チェック）
             valid_date = content.get("pubDate") or item.get("providerPublishTime")
             published_at = None
-            
+
             if valid_date:
                 try:
                     if isinstance(valid_date, (int, float)):
@@ -192,17 +192,28 @@ def fetch_news(symbol: str, limit: int = 5) -> List[Dict[str, Any]]:
                         except ValueError:
                             # その他の日時フォーマットをフォールバック
                             from dateutil import parser as dateutil_parser
+
                             published_at = dateutil_parser.parse(valid_date)
                 except Exception:
                     published_at = None
 
-            news_list.append({
-                "title": content.get("title", "No Title"),
-                "publisher": content.get("provider", {}).get("displayName") if isinstance(content.get("provider"), dict) else "Unknown",
-                "link": content.get("canonicalUrl", {}).get("url") if isinstance(content.get("canonicalUrl"), dict) else content.get("link"),
-                "published_at": published_at,
-                "summary": content.get("summary", ""),
-            })
+            news_list.append(
+                {
+                    "title": content.get("title", "No Title"),
+                    "publisher": (
+                        content.get("provider", {}).get("displayName")
+                        if isinstance(content.get("provider"), dict)
+                        else "Unknown"
+                    ),
+                    "link": (
+                        content.get("canonicalUrl", {}).get("url")
+                        if isinstance(content.get("canonicalUrl"), dict)
+                        else content.get("link")
+                    ),
+                    "published_at": published_at,
+                    "summary": content.get("summary", ""),
+                }
+            )
         return news_list
     except Exception as e:
         print(f"ニュース取得エラー: {e}")
@@ -223,10 +234,12 @@ def fetch_dividends(symbol: str, limit: int = 5) -> List[Dict[str, Any]]:
         records: List[Dict[str, Any]] = []
         for idx, value in dividends.items():
             date_val = idx.to_pydatetime() if hasattr(idx, "to_pydatetime") else idx
-            records.append({
-                "date": date_val,
-                "amount": float(value),
-            })
+            records.append(
+                {
+                    "date": date_val,
+                    "amount": float(value),
+                }
+            )
         return records
     except Exception as e:
         print(f"配当取得エラー: {e}")
@@ -266,7 +279,9 @@ def fetch_dividend_details(symbol: str) -> Dict[str, Any]:
     try:
         ticker = yf.Ticker(format_symbol_for_yfinance(symbol))
         info = ticker.info or {}
-        result["current_price"] = info.get("currentPrice") or info.get("regularMarketPrice")
+        result["current_price"] = info.get("currentPrice") or info.get(
+            "regularMarketPrice"
+        )
         result["trailing_eps"] = info.get("trailingEps")
     except Exception as e:
         print(f"yfinance info 取得エラー（配当詳細用）: {e}")
@@ -300,7 +315,9 @@ def fetch_dividend_details(symbol: str) -> Dict[str, Any]:
                 if val is None or val == "" or val == "-":
                     return None
                 try:
-                    return datetime.strptime(str(val).replace("-", "").strip()[:8], "%Y%m%d")
+                    return datetime.strptime(
+                        str(val).replace("-", "").strip()[:8], "%Y%m%d"
+                    )
                 except Exception:
                     return None
 
@@ -310,10 +327,21 @@ def fetch_dividend_details(symbol: str) -> Dict[str, Any]:
             announce_date = _parse_date(item.get("AnnouncementDate"))
 
             # 配当種別の判定
-            div_type_raw = str(item.get("DivType", "") or item.get("DividendType", "")).strip()
-            if "特別" in div_type_raw or "special" in div_type_raw.lower() or "記念" in div_type_raw:
+            div_type_raw = str(
+                item.get("DivType", "") or item.get("DividendType", "")
+            ).strip()
+            if (
+                "特別" in div_type_raw
+                or "special" in div_type_raw.lower()
+                or "記念" in div_type_raw
+            ):
                 div_type = "特別"
-            elif div_type_raw == "" or "中間" in div_type_raw or "期末" in div_type_raw or "通常" in div_type_raw:
+            elif (
+                div_type_raw == ""
+                or "中間" in div_type_raw
+                or "期末" in div_type_raw
+                or "通常" in div_type_raw
+            ):
                 div_type = "通常"
             else:
                 div_type = "通常"
@@ -323,14 +351,16 @@ def fetch_dividend_details(symbol: str) -> Dict[str, Any]:
             if event_date is None:
                 continue
 
-            records.append({
-                "date": event_date,
-                "amount": amount,
-                "type": div_type,
-                "record_date": rec_date.strftime("%Y/%m/%d") if rec_date else None,
-                "ex_date": ex_date.strftime("%Y/%m/%d") if ex_date else None,
-                "pay_date": pay_date.strftime("%Y/%m/%d") if pay_date else None,
-            })
+            records.append(
+                {
+                    "date": event_date,
+                    "amount": amount,
+                    "type": div_type,
+                    "record_date": rec_date.strftime("%Y/%m/%d") if rec_date else None,
+                    "ex_date": ex_date.strftime("%Y/%m/%d") if ex_date else None,
+                    "pay_date": pay_date.strftime("%Y/%m/%d") if pay_date else None,
+                }
+            )
 
         # 日付昇順でソート
         records.sort(key=lambda r: r["date"])
@@ -351,18 +381,22 @@ def fetch_dividend_details(symbol: str) -> Dict[str, Any]:
                 result["source"] = "yfinance"
                 records = []
                 for idx, value in dividends.items():
-                    date_val = idx.to_pydatetime() if hasattr(idx, "to_pydatetime") else idx
+                    date_val = (
+                        idx.to_pydatetime() if hasattr(idx, "to_pydatetime") else idx
+                    )
                     amt = float(value)
                     if amt <= 0:
                         continue
-                    records.append({
-                        "date": date_val,
-                        "amount": amt,
-                        "type": "不明",  # yfinance では種別不明
-                        "record_date": None,
-                        "ex_date": None,
-                        "pay_date": None,
-                    })
+                    records.append(
+                        {
+                            "date": date_val,
+                            "amount": amt,
+                            "type": "不明",  # yfinance では種別不明
+                            "record_date": None,
+                            "ex_date": None,
+                            "pay_date": None,
+                        }
+                    )
                 records.sort(key=lambda r: r["date"])
                 result["records"] = records
 
@@ -382,4 +416,3 @@ def fetch_dividend_details(symbol: str) -> Dict[str, Any]:
             print(f"yfinance 配当フォールバックエラー: {e}")
 
     return result
-

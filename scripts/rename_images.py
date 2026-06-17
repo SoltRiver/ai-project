@@ -15,7 +15,7 @@ mapping = {
     "moving_average_icon": "moving_average",
     "rsi_icon": "rsi",
     "macd_icon": "macd",
-    "trend_line_icon": "trend_line"
+    "trend_line_icon": "trend_line",
 }
 
 target_dir = "static/images/glossary"

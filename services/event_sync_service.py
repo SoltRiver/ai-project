@@ -95,7 +95,11 @@ class EventSyncService:
             for record in earnings_data:
                 # 銘柄コードのマッチング
                 raw_code = str(record.get("Code", ""))
-                code_4 = raw_code[:4] if len(raw_code) == 5 and raw_code.endswith("0") else raw_code
+                code_4 = (
+                    raw_code[:4]
+                    if len(raw_code) == 5 and raw_code.endswith("0")
+                    else raw_code
+                )
 
                 if code_4 not in target_codes and raw_code not in target_codes_5:
                     continue
@@ -162,11 +166,15 @@ class EventSyncService:
         try:
             for record in dividend_data:
                 # 基準日（RecordDate）
-                record_date_str = record.get("RecordDate", "") or record.get("record_date", "")
+                record_date_str = record.get("RecordDate", "") or record.get(
+                    "record_date", ""
+                )
                 record_date = _try_parse_date(record_date_str)
 
                 # 支払日（PaymentDate）
-                pay_date_str = record.get("PaymentDate", "") or record.get("payment_date", "")
+                pay_date_str = record.get("PaymentDate", "") or record.get(
+                    "payment_date", ""
+                )
                 pay_date = _try_parse_date(pay_date_str)
 
                 # 権利落ち日（ExDate）: APIから直接取得できる場合
@@ -184,63 +192,89 @@ class EventSyncService:
                     calculated_last_cum = record_date - timedelta(days=2)
 
                 # 配当金額の取得（タイトル用）
-                dividend_amount = record.get("DividendPerShare", "") or record.get("dividend_per_share", "")
+                dividend_amount = record.get("DividendPerShare", "") or record.get(
+                    "dividend_per_share", ""
+                )
 
                 # 各サブタイプのイベントを作成（取得できたもののみ）
                 events_to_create = []
 
                 if record_date and from_date <= record_date <= to_date:
-                    events_to_create.append({
-                        "subtype": "RECORD_DATE",
-                        "event_date": record_date,
-                        "title": _build_dividend_title("配当基準日", dividend_amount),
-                        "source": "jquants",
-                    })
+                    events_to_create.append(
+                        {
+                            "subtype": "RECORD_DATE",
+                            "event_date": record_date,
+                            "title": _build_dividend_title(
+                                "配当基準日", dividend_amount
+                            ),
+                            "source": "jquants",
+                        }
+                    )
 
                 if pay_date and from_date <= pay_date <= to_date:
-                    events_to_create.append({
-                        "subtype": "PAY_DATE",
-                        "event_date": pay_date,
-                        "title": _build_dividend_title("配当支払開始", dividend_amount),
-                        "source": "jquants",
-                    })
+                    events_to_create.append(
+                        {
+                            "subtype": "PAY_DATE",
+                            "event_date": pay_date,
+                            "title": _build_dividend_title(
+                                "配当支払開始", dividend_amount
+                            ),
+                            "source": "jquants",
+                        }
+                    )
 
                 if ex_date and from_date <= ex_date <= to_date:
-                    events_to_create.append({
-                        "subtype": "EX_DATE",
-                        "event_date": ex_date,
-                        "title": _build_dividend_title("権利落ち日", dividend_amount),
-                        "source": "jquants",
-                    })
+                    events_to_create.append(
+                        {
+                            "subtype": "EX_DATE",
+                            "event_date": ex_date,
+                            "title": _build_dividend_title(
+                                "権利落ち日", dividend_amount
+                            ),
+                            "source": "jquants",
+                        }
+                    )
                 elif calculated_ex_date and from_date <= calculated_ex_date <= to_date:
-                    events_to_create.append({
-                        "subtype": "EX_DATE",
-                        "event_date": calculated_ex_date,
-                        "title": _build_dividend_title("権利落ち日", dividend_amount),
-                        "source": "calculated",
-                        "notes": "基準日から簡易逆算（営業日未考慮）",
-                    })
+                    events_to_create.append(
+                        {
+                            "subtype": "EX_DATE",
+                            "event_date": calculated_ex_date,
+                            "title": _build_dividend_title(
+                                "権利落ち日", dividend_amount
+                            ),
+                            "source": "calculated",
+                            "notes": "基準日から簡易逆算（営業日未考慮）",
+                        }
+                    )
 
                 if calculated_last_cum and from_date <= calculated_last_cum <= to_date:
-                    events_to_create.append({
-                        "subtype": "LAST_CUM",
-                        "event_date": calculated_last_cum,
-                        "title": _build_dividend_title("権利付き最終日", dividend_amount),
-                        "source": "calculated",
-                        "notes": "基準日から簡易逆算（営業日未考慮）",
-                    })
+                    events_to_create.append(
+                        {
+                            "subtype": "LAST_CUM",
+                            "event_date": calculated_last_cum,
+                            "title": _build_dividend_title(
+                                "権利付き最終日", dividend_amount
+                            ),
+                            "source": "calculated",
+                            "notes": "基準日から簡易逆算（営業日未考慮）",
+                        }
+                    )
 
                 # 既に取得済みの権利落ち日がある場合のLAST_CUM
                 if ex_date and not calculated_last_cum:
                     last_cum = ex_date - timedelta(days=1)
                     if from_date <= last_cum <= to_date:
-                        events_to_create.append({
-                            "subtype": "LAST_CUM",
-                            "event_date": last_cum,
-                            "title": _build_dividend_title("権利付き最終日", dividend_amount),
-                            "source": "calculated",
-                            "notes": "権利落ち日から逆算",
-                        })
+                        events_to_create.append(
+                            {
+                                "subtype": "LAST_CUM",
+                                "event_date": last_cum,
+                                "title": _build_dividend_title(
+                                    "権利付き最終日", dividend_amount
+                                ),
+                                "source": "calculated",
+                                "notes": "権利落ち日から逆算",
+                            }
+                        )
 
                 # upsert
                 for evt in events_to_create:
@@ -321,6 +355,7 @@ class EventSyncService:
 
 # ─── ヘルパー関数 ──────────────────────────
 
+
 def _parse_date(date_str: str) -> date:
     """日付文字列をパース（YYYY-MM-DD / YYYYMMDD 対応）"""
     date_str = str(date_str).strip()
@@ -346,9 +381,12 @@ def _build_earnings_title(fiscal_year: str, fiscal_quarter: str) -> str:
     if fiscal_year:
         parts.append(f"{fiscal_year}")
     if fiscal_quarter:
-        q_label = {"1": "第1四半期", "2": "第2四半期", "3": "第3四半期", "4": "通期"}.get(
-            str(fiscal_quarter), f"Q{fiscal_quarter}"
-        )
+        q_label = {
+            "1": "第1四半期",
+            "2": "第2四半期",
+            "3": "第3四半期",
+            "4": "通期",
+        }.get(str(fiscal_quarter), f"Q{fiscal_quarter}")
         parts.append(q_label)
     parts.append("決算発表")
     return " ".join(parts)

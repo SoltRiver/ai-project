@@ -127,7 +127,19 @@
                 canvas.style.width = `${width}px`; canvas.style.height = `${height}px`;
             }
             updateDimensions();
-            if (width <= 100) setTimeout(() => { updateDimensions(); draw(); }, 150);
+            // canvasの幅が0の場合は複数回リトライしてチャートを初期化する
+            if (width <= 100) {
+                let retryCount = 0;
+                const maxRetries = 5;
+                const retryInterval = setInterval(() => {
+                    retryCount++;
+                    updateDimensions();
+                    if (width > 100 || retryCount >= maxRetries) {
+                        clearInterval(retryInterval);
+                        draw();
+                    }
+                }, 150);
+            }
             let ctx = canvas.getContext('2d');
 
             function draw() {
@@ -656,7 +668,7 @@
         updateVisibility();
     }
 
-    // --- Init & HTMX Support ---
+    // --- 初期化 & HTMX連携 ---
     renderCandleCharts();
     initPatternModal();
     initCrossModal();
@@ -669,8 +681,19 @@
 
     window.renderCandleCharts = renderCandleCharts;
 
+    // HTMXのスワップ完了後にチャートを初期化する
+    // afterSwap: DOMへの挿入直後（レイアウトが確定する前の場合もある）
     document.body.addEventListener('htmx:afterSwap', () => {
         window.initCharts();
+    });
+
+    // afterSettle: すべての遷移が完了した後（こちらのほうが確実）
+    document.body.addEventListener('htmx:afterSettle', () => {
+        // チャートが初期化済みでない場合のみ再実行する
+        const uninitializedWrappers = document.querySelectorAll('.chart-wrapper:not([data-chart-initialized="true"])');
+        if (uninitializedWrappers.length > 0) {
+            renderCandleCharts();
+        }
     });
 
 })();

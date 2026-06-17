@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+
 # Trigger reload for new dependencies
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -6,7 +7,20 @@ from fastapi.staticfiles import StaticFiles
 # (Removed TemplateResponse Compatibility Patch)
 
 
-from routers import stocks, fundamental, indices, news, ranking, edinet, edinet_docs, fundamentals, calendar, edinet_diff, analysis_internal, stock_ai
+from routers import (
+    stocks,
+    fundamental,
+    indices,
+    news,
+    ranking,
+    edinet,
+    edinet_docs,
+    fundamentals,
+    calendar,
+    edinet_diff,
+    analysis_internal,
+    stock_ai,
+)
 
 """
 メインのFastAPIアプリケーション定義ファイル。
@@ -22,6 +36,7 @@ app = FastAPI(
 from database import engine, SessionLocal
 from models import stock
 
+
 @app.on_event("startup")
 def startup_event():
     # 1. Create Tables
@@ -29,10 +44,13 @@ def startup_event():
     from models import stock, master, edinet_file, company_info, stock_impact
     from models import event_source_policy, event
     from models import edinet_facts_snapshot, edinet_diff_summary
+
     # AI分析SWRシステム用モデル
     from models import analysis_snapshot, analysis_job, analysis_config
+
     # ニュースAI要約システム用モデル
     from models import news_article, news_ai_summary, news_related_ticker
+
     stock.Base.metadata.create_all(bind=engine)
     master.Base.metadata.create_all(bind=engine)
     edinet_file.Base.metadata.create_all(bind=engine)
@@ -70,6 +88,7 @@ def startup_event():
 
     # 4. analysis_config の初期データ投入（未登録のキーのみ）
     from models.analysis_config import AnalysisConfig, DEFAULT_CONFIG
+
     db2 = SessionLocal()
     try:
         for cfg_key, cfg_val in DEFAULT_CONFIG.items():
@@ -82,11 +101,11 @@ def startup_event():
         db2.rollback()
     finally:
         db2.close()
-    
+
     # 3. Initialize Stock Master (Async Background)
     from services.stock_master_service import stock_master_service
     import threading
-    
+
     def run_sync():
         stock_master_service.initialize_and_sync()
 
@@ -95,7 +114,9 @@ def startup_event():
 
     # 4. ニュースバッチ処理スケジューラ起動
     from services.news_batch_service import start_news_scheduler
+
     start_news_scheduler()
+
 
 # Mount Static Files
 app.mount("/static", StaticFiles(directory="static"), name="static")

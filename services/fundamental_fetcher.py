@@ -72,8 +72,12 @@ def fetch_fundamental_data(symbol: str) -> Optional[Dict[str, Any]]:
             "industry": info.get("industry", ""),
             "exchange": info.get("exchange", ""),
             "currency": info.get("currency", "JPY"),
-            "earnings_date": _parse_date_value(info.get("earningsDate") or info.get("earningsTimestamp")),
-            "ex_dividend_date": _parse_date_value(info.get("exDividendDate") or info.get("nextDividendDate")),
+            "earnings_date": _parse_date_value(
+                info.get("earningsDate") or info.get("earningsTimestamp")
+            ),
+            "ex_dividend_date": _parse_date_value(
+                info.get("exDividendDate") or info.get("nextDividendDate")
+            ),
         }
 
         # 自己資本比率を計算
@@ -82,7 +86,7 @@ def fetch_fundamental_data(symbol: str) -> Optional[Dict[str, Any]]:
             pass  # 既に値が入っている場合はそのまま
         # 2. totalAssetsとtotalStockholderEquityがinfoにある場合
         elif result.get("total_assets") and result.get("total_equity"):
-             result["equity_ratio"] = (result["total_equity"] / result["total_assets"])
+            result["equity_ratio"] = result["total_equity"] / result["total_assets"]
         # 3. balance_sheetから取得する場合（日本株など）
         else:
             try:
@@ -92,7 +96,7 @@ def fetch_fundamental_data(symbol: str) -> Optional[Dict[str, Any]]:
                     latest_date = bs.columns[0]
                     # pandasのSeriesとして取得
                     latest_data = bs[latest_date]
-                    
+
                     total_assets = None
                     stockholders_equity = None
 
@@ -101,7 +105,7 @@ def fetch_fundamental_data(symbol: str) -> Optional[Dict[str, Any]]:
                         total_assets = latest_data["Total Assets"]
                     elif "TotalAssets" in latest_data.index:
                         total_assets = latest_data["TotalAssets"]
-                    
+
                     # Stockholders Equityの検索
                     if "Stockholders Equity" in latest_data.index:
                         stockholders_equity = latest_data["Stockholders Equity"]
@@ -111,23 +115,29 @@ def fetch_fundamental_data(symbol: str) -> Optional[Dict[str, Any]]:
                         stockholders_equity = latest_data["TotalEquity"]
 
                     if total_assets and stockholders_equity and total_assets > 0:
-                        result["equity_ratio"] = (stockholders_equity / total_assets)
+                        result["equity_ratio"] = stockholders_equity / total_assets
             except Exception as e:
                 print(f"バランスシートからの自己資本比率計算エラー: {e}")
 
         # フォールバック: 簡易計算 (Legacy logic)
-        if result.get("equity_ratio") is None and result["total_debt"] and result["market_cap"]:
-            total_equity = result["market_cap"] / result["pbr"] if result["pbr"] else None
+        if (
+            result.get("equity_ratio") is None
+            and result["total_debt"]
+            and result["market_cap"]
+        ):
+            total_equity = (
+                result["market_cap"] / result["pbr"] if result["pbr"] else None
+            )
             if total_equity:
                 total_capital = result["total_debt"] + total_equity
                 if total_capital > 0:
-                    result["equity_ratio"] = (total_equity / total_capital)
+                    result["equity_ratio"] = total_equity / total_capital
 
         # 配当利回りの正規化（パーセント値と比率の混在を処理）
         if result.get("dividend_yield") is not None and result["dividend_yield"] > 0.5:
-             # 0.5 (50%) を超える場合は、パーセント値（例: 2.62% が 2.62 と入っている）とみなす
-             # 通常の利回りは 0.1 (10%) 未満
-             result["dividend_yield"] = result["dividend_yield"] / 100
+            # 0.5 (50%) を超える場合は、パーセント値（例: 2.62% が 2.62 と入っている）とみなす
+            # 通常の利回りは 0.1 (10%) 未満
+            result["dividend_yield"] = result["dividend_yield"] / 100
 
         return result
 
@@ -197,10 +207,9 @@ def format_fundamental_value(value: Any, format_type: str = "float") -> str:
     return str(value)
 
 
-def _status_for_lower_better(value: Optional[float],
-                             good: float,
-                             neutral: float,
-                             unit: str = "") -> Dict[str, str]:
+def _status_for_lower_better(
+    value: Optional[float], good: float, neutral: float, unit: str = ""
+) -> Dict[str, str]:
     """値が低いほど良い指標のステータス"""
     criteria = f"割安目安: {good}{unit}以下 / 標準: {neutral}{unit}以下"
     if value is None:
@@ -212,12 +221,14 @@ def _status_for_lower_better(value: Optional[float],
     return {"label": "割高", "color": "red", "criteria": criteria}
 
 
-def _status_for_higher_better(value: Optional[float],
-                              great: float,
-                              ok: float,
-                              positive_label: str = "優良",
-                              unit: str = "",
-                              is_percent: bool = False) -> Dict[str, str]:
+def _status_for_higher_better(
+    value: Optional[float],
+    great: float,
+    ok: float,
+    positive_label: str = "優良",
+    unit: str = "",
+    is_percent: bool = False,
+) -> Dict[str, str]:
     """値が高いほど良い指標のステータス"""
     g_val = f"{great*100:.0f}%" if is_percent else f"{great}{unit}"
     o_val = f"{ok*100:.0f}%" if is_percent else f"{ok}{unit}"
@@ -232,7 +243,9 @@ def _status_for_higher_better(value: Optional[float],
     return {"label": "弱め", "color": "red", "criteria": criteria}
 
 
-def get_fundamental_statuses(fundamental_data: Dict[str, Any]) -> Dict[str, Dict[str, str]]:
+def get_fundamental_statuses(
+    fundamental_data: Dict[str, Any],
+) -> Dict[str, Dict[str, str]]:
     """
     PERやPBRなどに評価ステータスを付与する
     """
@@ -249,10 +262,18 @@ def get_fundamental_statuses(fundamental_data: Dict[str, Any]) -> Dict[str, Dict
     return {
         "PER": _status_for_lower_better(per, good=10, neutral=25, unit="倍"),
         "PBR": _status_for_lower_better(pbr, good=1, neutral=2, unit="倍"),
-        "配当利回り": _status_for_higher_better(dividend_yield, great=0.04, ok=0.02, positive_label="優良", is_percent=True),
-        "ROE": _status_for_higher_better(roe, great=0.1, ok=0.06, positive_label="優良", is_percent=True),
-        "利益率": _status_for_higher_better(profit_margin, great=0.1, ok=0.05, positive_label="優良", is_percent=True),
-        "自己資本比率": _status_for_higher_better(equity_ratio, great=0.4, ok=0.2, positive_label="安定", is_percent=True),
+        "配当利回り": _status_for_higher_better(
+            dividend_yield, great=0.04, ok=0.02, positive_label="優良", is_percent=True
+        ),
+        "ROE": _status_for_higher_better(
+            roe, great=0.1, ok=0.06, positive_label="優良", is_percent=True
+        ),
+        "利益率": _status_for_higher_better(
+            profit_margin, great=0.1, ok=0.05, positive_label="優良", is_percent=True
+        ),
+        "自己資本比率": _status_for_higher_better(
+            equity_ratio, great=0.4, ok=0.2, positive_label="安定", is_percent=True
+        ),
     }
 
 
@@ -266,7 +287,9 @@ def format_date(value: Optional[datetime]) -> str:
         return str(value)
 
 
-def get_event_info(symbol: str, fundamental_data: Optional[Dict[str, Any]] = None) -> Optional[Dict[str, Any]]:
+def get_event_info(
+    symbol: str, fundamental_data: Optional[Dict[str, Any]] = None
+) -> Optional[Dict[str, Any]]:
     """
     決算日・配当などの直近イベント情報を返す
     """
@@ -305,18 +328,18 @@ def _generate_score_reason(category: str, stars: int, metrics: Dict[str, Any]) -
         level = "要注意"
 
     if category == "安定性":
-        equity = metrics.get('equity_ratio')
-        beta = metrics.get('beta')
+        equity = metrics.get("equity_ratio")
+        beta = metrics.get("beta")
         reasons = []
         if equity:
             reasons.append(f"自己資本比率{equity:.1f}%")
         if beta:
             reasons.append(f"ベータ値{beta:.2f}")
         return f"財務基盤は{level}です。{'、'.join(reasons)}などから判断されます。"
-    
+
     elif category == "成長性":
-        rev = metrics.get('revenue_growth')
-        earn = metrics.get('earnings_growth')
+        rev = metrics.get("revenue_growth")
+        earn = metrics.get("earnings_growth")
         reasons = []
         if rev:
             reasons.append(f"売上高成長率{rev*100:.1f}%")
@@ -327,8 +350,8 @@ def _generate_score_reason(category: str, stars: int, metrics: Dict[str, Any]) -
         return f"成長力は{level}です。{'、'.join(reasons)}などの推移です。"
 
     elif category == "割安度":
-        per = metrics.get('PER')
-        pbr = metrics.get('PBR')
+        per = metrics.get("PER")
+        pbr = metrics.get("PBR")
         reasons = []
         if per:
             reasons.append(f"PER {per:.1f}倍")
@@ -337,7 +360,7 @@ def _generate_score_reason(category: str, stars: int, metrics: Dict[str, Any]) -
         return f"株価水準は{level}です。{'、'.join(reasons)}となっています。"
 
     elif category == "配当魅力度":
-        div = metrics.get('配当利回り')
+        div = metrics.get("配当利回り")
         if div:
             return f"配当水準は{level}です。利回りは{div*100:.2f}%となっています。"
         return "配当データがありません（無配の可能性があります）。"
@@ -360,30 +383,62 @@ def build_company_scores(fundamental_data: Dict[str, Any]) -> Dict[str, Dict[str
     revenue_growth = fundamental_data.get("revenue_growth")
     earnings_growth = fundamental_data.get("earnings_growth")
 
-    stability = _average_stars([
-        calculate_star_rating(beta, [1.5, 1.2, 1.0, 0.8], reverse=True),
-        calculate_star_rating(equity_ratio, [20, 30, 40, 50], reverse=False),
-    ])
-    stability_reason = _generate_score_reason("安定性", stability, {"equity_ratio": equity_ratio, "beta": beta})
+    stability = _average_stars(
+        [
+            calculate_star_rating(beta, [1.5, 1.2, 1.0, 0.8], reverse=True),
+            calculate_star_rating(equity_ratio, [20, 30, 40, 50], reverse=False),
+        ]
+    )
+    stability_reason = _generate_score_reason(
+        "安定性", stability, {"equity_ratio": equity_ratio, "beta": beta}
+    )
 
-    growth = _average_stars([
-        calculate_star_rating(revenue_growth, [0.0, 0.05, 0.1, 0.15]),
-        calculate_star_rating(earnings_growth, [0.0, 0.05, 0.1, 0.15]),
-    ])
-    growth_reason = _generate_score_reason("成長性", growth, {"revenue_growth": revenue_growth, "earnings_growth": earnings_growth})
+    growth = _average_stars(
+        [
+            calculate_star_rating(revenue_growth, [0.0, 0.05, 0.1, 0.15]),
+            calculate_star_rating(earnings_growth, [0.0, 0.05, 0.1, 0.15]),
+        ]
+    )
+    growth_reason = _generate_score_reason(
+        "成長性",
+        growth,
+        {"revenue_growth": revenue_growth, "earnings_growth": earnings_growth},
+    )
 
-    valuation = _average_stars([
-        calculate_star_rating(per, [25, 20, 15, 10], reverse=True),
-        calculate_star_rating(pbr, [2.5, 2.0, 1.5, 1.0], reverse=True),
-    ])
-    valuation_reason = _generate_score_reason("割安度", valuation, {"PER": per, "PBR": pbr})
+    valuation = _average_stars(
+        [
+            calculate_star_rating(per, [25, 20, 15, 10], reverse=True),
+            calculate_star_rating(pbr, [2.5, 2.0, 1.5, 1.0], reverse=True),
+        ]
+    )
+    valuation_reason = _generate_score_reason(
+        "割安度", valuation, {"PER": per, "PBR": pbr}
+    )
 
     dividend = calculate_star_rating(dividend_yield, [0.01, 0.02, 0.04, 0.06])
-    dividend_reason = _generate_score_reason("配当魅力度", dividend, {"配当利回り": dividend_yield})
+    dividend_reason = _generate_score_reason(
+        "配当魅力度", dividend, {"配当利回り": dividend_yield}
+    )
 
     return {
-        "安定性": {"stars": stability, "display": format_stars(stability), "reason": stability_reason},
-        "成長性": {"stars": growth, "display": format_stars(growth), "reason": growth_reason},
-        "割安度": {"stars": valuation, "display": format_stars(valuation), "reason": valuation_reason},
-        "配当魅力度": {"stars": dividend, "display": format_stars(dividend), "reason": dividend_reason},
+        "安定性": {
+            "stars": stability,
+            "display": format_stars(stability),
+            "reason": stability_reason,
+        },
+        "成長性": {
+            "stars": growth,
+            "display": format_stars(growth),
+            "reason": growth_reason,
+        },
+        "割安度": {
+            "stars": valuation,
+            "display": format_stars(valuation),
+            "reason": valuation_reason,
+        },
+        "配当魅力度": {
+            "stars": dividend,
+            "display": format_stars(dividend),
+            "reason": dividend_reason,
+        },
     }

@@ -24,7 +24,11 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from database import SessionLocal, engine
 from models import stock_impact
-from models.event_source_policy import EventSourcePolicy, EventIngestState, Base as PolicyBase
+from models.event_source_policy import (
+    EventSourcePolicy,
+    EventIngestState,
+    Base as PolicyBase,
+)
 from services.event_crawler import EdinetEventCrawler
 from services.event_source_checker import EventSourceChecker
 
@@ -49,9 +53,11 @@ def seed_edinet_policy(db):
     EDINET_APIの初期ポリシーを投入する。
     既に存在する場合はスキップ。
     """
-    existing = db.query(EventSourcePolicy).filter(
-        EventSourcePolicy.source_name == "EDINET_API"
-    ).first()
+    existing = (
+        db.query(EventSourcePolicy)
+        .filter(EventSourcePolicy.source_name == "EDINET_API")
+        .first()
+    )
 
     if existing:
         logger.info(f"EDINET_APIポリシー既存: expires_at={existing.expires_at}")
@@ -119,9 +125,15 @@ async def run_crawl(days: int, dry_run: bool, start_date: date = None):
 
 def main():
     parser = argparse.ArgumentParser(description="EDINET イベント自動抽出")
-    parser.add_argument("--days", type=int, default=7, help="巡回日数 (default: 7, max: 30)")
-    parser.add_argument("--dry-run", action="store_true", help="ファイル保存のみ、DB書き込みなし")
-    parser.add_argument("--start-date", type=str, default=None, help="開始日 (YYYY-MM-DD)")
+    parser.add_argument(
+        "--days", type=int, default=7, help="巡回日数 (default: 7, max: 30)"
+    )
+    parser.add_argument(
+        "--dry-run", action="store_true", help="ファイル保存のみ、DB書き込みなし"
+    )
+    parser.add_argument(
+        "--start-date", type=str, default=None, help="開始日 (YYYY-MM-DD)"
+    )
     args = parser.parse_args()
 
     # 開始日パース

@@ -9,7 +9,9 @@ import sys
 
 
 def main() -> None:
-    print("FastAPI + htmx アプリを起動するには `uvicorn fastapi_app:app --reload --port 8000` を実行してください。")
+    print(
+        "FastAPI + htmx アプリを起動するには `uvicorn fastapi_app:app --reload --port 8000` を実行してください。"
+    )
 
 
 if __name__ == "__main__":

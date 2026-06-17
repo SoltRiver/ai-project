@@ -62,10 +62,8 @@
         <!-- 初期表示：チャートをサーバーサイドレンダリングで直接埋め込む -->
         <!-- hx-trigger="load" を廃止し、Alpine.jsとHTMXの競合（htmx:targetError）を解消 -->
         <div id="tab-content" class="transition-all duration-300">
-            {% if initial_chart_data %}
-                {% with stock=stock, **initial_chart_data %}
-                    {% include "stocks/partials/_tab_chart.html" %}
-                {% endwith %}
+            {% if initial_chart_data and initial_chart_data.chart_summary %}
+                {% include "stocks/partials/_tab_chart.html" %}
             {% else %}
             <div class="animate-pulse space-y-4">
                 <div class="h-64 bg-slate-100 dark:bg-slate-800 rounded-2xl"></div>

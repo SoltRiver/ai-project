@@ -2,34 +2,36 @@ import sys
 import os
 
 # プロジェクトルートをパスに追加
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from utils.analyzer import analyze_candlestick
+
 
 def test_pattern(name, o, h, l, c, expected_name):
     result = analyze_candlestick(o, h, l, c)
     print(f"Test {name}: Expected '{expected_name}', Got '{result['name']}'")
-    if result['name'] == expected_name:
+    if result["name"] == expected_name:
         print("  [PASS]")
     else:
         print("  [FAIL]")
 
+
 if __name__ == "__main__":
     print("--- Verifying Candle Names ---")
-    
+
     # --- 十字線系テスト ---
     # 十字線 (実体 < 10%, 上下ヒゲ均等)
     # Range 10, Body 0
     test_pattern("Doji", 100, 105, 95, 100, "十字線")
-    
+
     # トンボ (実体 < 10%, 下影が長い)
     # Range 10, Body 0, Upper=1, Lower=9
     test_pattern("Tonbo (Lower shadow)", 100, 101, 91, 100, "トンボ")
-    
+
     # トンボ (実体 < 10%, 上影が長い)
     # Range 10, Body 0, Upper=9, Lower=1
     test_pattern("Tonbo (Upper shadow)", 100, 109, 99, 100, "トンボ")
-    
+
     # --- 丸坊主系テスト ---
     # 丸坊主 陽線（ヒゲなし）
     test_pattern("Marubozu Bull", 100, 110, 100, 110, "丸坊主")

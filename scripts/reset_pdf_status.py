@@ -1,10 +1,11 @@
-
 import sys
+
 # Add project root
 sys.path.insert(0, ".")
 
 from database import SessionLocal
 from models.edinet_pdf import EdinetPdfExtractStatus
+
 
 def reset_pdf_status():
     db = SessionLocal()
@@ -19,6 +20,7 @@ def reset_pdf_status():
         print(f"Error: {e}")
     finally:
         db.close()
+
 
 if __name__ == "__main__":
     reset_pdf_status()

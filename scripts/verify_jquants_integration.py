@@ -1,14 +1,14 @@
-
 import requests
 import json
 import time
 
 BASE_URL = "http://localhost:8000"
-DOC_ID = "S100TK3X" # Godo Steel (Likely available from previous tests)
+DOC_ID = "S100TK3X"  # Godo Steel (Likely available from previous tests)
+
 
 def verify_jquants():
     print(f"--- Verifying J-Quants Integration for {DOC_ID} ---")
-    
+
     # 1. Ensure Document is Downloaded
     print(f"[1] Ensuring document {DOC_ID} is available...")
     try:
@@ -16,7 +16,9 @@ def verify_jquants():
         print(f"Calling: {url}")
         resp = requests.get(url, timeout=30)
         if resp.status_code != 200:
-            print(f"Failed to download/prepare document: {resp.status_code} {resp.text}")
+            print(
+                f"Failed to download/prepare document: {resp.status_code} {resp.text}"
+            )
             return
         print("Document ready.")
     except Exception as e:
@@ -30,20 +32,20 @@ def verify_jquants():
     start = time.time()
     resp = requests.get(url, timeout=30)
     elapsed = time.time() - start
-    
+
     if resp.status_code != 200:
         print(f"Check failed: Status {resp.status_code} {resp.text}")
         return
-        
+
     data = resp.json()
     print(f"Response Received in {elapsed:.2f}s")
-    
+
     # 3. Validation
     # Check Financials
     fin = data.get("financials", {})
     sec_code = fin.get("sec_code")
     print(f"Financials Extracted. SecCode: {sec_code}")
-    
+
     # Check Market
     market = data.get("market")
     if market:
@@ -68,6 +70,7 @@ def verify_jquants():
         print(" WARN: Ratios is None.")
 
     print("--- Verification Complete ---")
+
 
 if __name__ == "__main__":
     verify_jquants()

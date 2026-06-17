@@ -16,6 +16,7 @@ class Event(Base):
 
     event_key = "{event_type}:{subtype}:{event_date}" で一意性を保証。
     """
+
     __tablename__ = "events"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -56,8 +57,15 @@ class Event(Base):
     last_verified_at = Column(DateTime(timezone=True), nullable=True)
 
     # タイムスタンプ
-    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+    created_at = Column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
 
     # 一意制約: 同一銘柄・同一イベントキーの重複を防止
     __table_args__ = (

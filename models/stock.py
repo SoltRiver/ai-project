@@ -2,6 +2,7 @@ from sqlalchemy import Column, Integer, String, DateTime
 from sqlalchemy.sql import func
 from database import Base
 
+
 class Stock(Base):
     __tablename__ = "stocks"
 

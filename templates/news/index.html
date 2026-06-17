@@ -110,16 +110,14 @@
                         銘柄への影響</h3>
                     <div class="flex flex-wrap gap-2">
                         {% for stock in item.impacted_stocks %}
-                        <div x-data="{ tooltip: false }" class="relative">
+                        <div class="relative group">
                             {% set color = 'green' if stock.impact_type == 'positive' else 'red' %}
-                            <span @mouseenter="tooltip = true" @mouseleave="tooltip = false"
-                                class="cursor-help transition-transform hover:scale-105 active:scale-95">
+                            <span class="cursor-help transition-transform hover:scale-105 active:scale-95">
                                 {{ badge(text=stock.name, color=color, class="px-3 shadow-sm border-2") }}
                             </span>
 
-                            <!-- ツールチップ -->
-                            <div x-show="tooltip" x-transition.opacity
-                                class="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-52 p-3 bg-slate-900 text-white text-[10px] rounded-lg shadow-2xl z-20 text-center leading-relaxed pointer-events-none">
+                            <!-- ツールチップ（CSS group-hover で表示、Alpine.js不要） -->
+                            <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-52 p-3 bg-slate-900 text-white text-[10px] rounded-lg shadow-2xl z-20 text-center leading-relaxed pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150">
                                 <div class="font-bold mb-1">{{ stock.ticker_code }} {{ stock.name }}</div>
                                 <div>{{ stock.reason }}</div>
                                 {% if stock.extraction_type %}

@@ -1,4 +1,3 @@
-
 import sys
 from sqlalchemy import text
 from sqlalchemy.orm import Session
@@ -9,10 +8,11 @@ sys.path.insert(0, ".")
 
 from database import SessionLocal
 
+
 def verify(target_date):
     db = SessionLocal()
     print(f"--- Verification Report for {target_date} ---")
-    
+
     try:
         # Total Counts
         t_docs = db.execute(text("SELECT COUNT(*) FROM edinet_documents")).scalar()
@@ -28,7 +28,7 @@ def verify(target_date):
         """)
         file_count = db.execute(q1, {"date": target_date}).scalar()
         print(f"EdinetFiles (Downloaded): {file_count}")
-        
+
         # 2. Facts
         q2 = text("""
             SELECT COUNT(*) FROM edinet_xbrl_fact x
@@ -46,7 +46,7 @@ def verify(target_date):
         """)
         hl_count = db.execute(q3, {"date": target_date}).scalar()
         print(f"Financial Highlights (Mapped): {hl_count}")
-        
+
         # 4. Sample
         if hl_count > 0:
             print("\n--- Sample Highlights ---")
@@ -66,6 +66,7 @@ def verify(target_date):
         print(f"Verification Error: {e}")
     finally:
         db.close()
+
 
 if __name__ == "__main__":
     verify("2024-06-26")

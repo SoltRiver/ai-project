@@ -126,6 +126,7 @@ class EventQueryService:
         """
         # 月の範囲を計算
         from calendar import monthrange
+
         _, last_day = monthrange(year, month)
         start_date = date(year, month, 1)
         end_date = date(year, month, last_day)
@@ -250,6 +251,7 @@ class EventQueryService:
 
 # ─── ヘルパー関数 ──────────────────────────
 
+
 def _format_event(evt: Event) -> Dict[str, Any]:
     """Event モデルをUI表示用の辞書に変換"""
     return {
@@ -258,7 +260,9 @@ def _format_event(evt: Event) -> Dict[str, Any]:
         "event_type": evt.event_type,
         "subtype": evt.subtype,
         "event_date": evt.event_date.isoformat() if evt.event_date else "-",
-        "event_date_display": evt.event_date.strftime("%Y-%m-%d") if evt.event_date else "-",
+        "event_date_display": (
+            evt.event_date.strftime("%Y-%m-%d") if evt.event_date else "-"
+        ),
         "title": evt.title,
         "status": evt.status,
         "status_label": STATUS_LABELS.get(evt.status, evt.status),

@@ -16,14 +16,14 @@ logger = logging.getLogger(__name__)
 
 # ─── 定数（閾値） ────────────────────────────────────
 # 需給サイズ分類の閾値（total / ADV20 の日数）
-SIZE_THRESHOLD_LOW = 1    # days < 1 → 低
-SIZE_THRESHOLD_HIGH = 5   # days >= 5 → 高
+SIZE_THRESHOLD_LOW = 1  # days < 1 → 低
+SIZE_THRESHOLD_HIGH = 5  # days >= 5 → 高
 
 # 偏り分類の閾値（buy / sell の比率）
-BIAS_STRONG_BUY = 3.0     # ratio >= 3.0 → 買い偏り（強）
-BIAS_WEAK_BUY = 1.5       # 1.5 <= ratio < 3.0 → 買い偏り（弱）
-BIAS_NEUTRAL_LOW = 0.8    # 0.8 <= ratio < 1.5 → 偏りなし
-BIAS_WEAK_SELL = 0.5      # 0.5 <= ratio < 0.8 → 売り偏り（弱）
+BIAS_STRONG_BUY = 3.0  # ratio >= 3.0 → 買い偏り（強）
+BIAS_WEAK_BUY = 1.5  # 1.5 <= ratio < 3.0 → 買い偏り（弱）
+BIAS_NEUTRAL_LOW = 0.8  # 0.8 <= ratio < 1.5 → 偏りなし
+BIAS_WEAK_SELL = 0.5  # 0.5 <= ratio < 0.8 → 売り偏り（弱）
 # ratio < 0.5 → 売り偏り（強）
 
 # 売り残が極端に小さいと判断する閾値（株数）
@@ -61,25 +61,27 @@ def get_margin_tab(code: str) -> Dict[str, Any]:
         previous = margin_data[1] if len(margin_data) >= 2 else None
 
         # 2. 買い残・売り残を取得
-        buy = _safe_int(latest.get("SellMarginTradeVolume"))  # 注意: J-Quants のキー名確認
+        buy = _safe_int(
+            latest.get("SellMarginTradeVolume")
+        )  # 注意: J-Quants のキー名確認
         sell = _safe_int(latest.get("BuyMarginTradeVolume"))
 
         # J-Quants v2 のレスポンスキー名に合わせる
         # margin-interest のキー: MarginBuyingBalance, MarginSellingBalance 等
         # 正確なキー名を使用
         buy = _safe_int(
-            latest.get("MarginBuyingBalance") or
-            latest.get("MarginBuyNewVolume") or
-            latest.get("margin_buy_balance") or
-            latest.get("SellMarginTradeVolume") or
-            0
+            latest.get("MarginBuyingBalance")
+            or latest.get("MarginBuyNewVolume")
+            or latest.get("margin_buy_balance")
+            or latest.get("SellMarginTradeVolume")
+            or 0
         )
         sell = _safe_int(
-            latest.get("MarginSellingBalance") or
-            latest.get("MarginSellNewVolume") or
-            latest.get("margin_sell_balance") or
-            latest.get("BuyMarginTradeVolume") or
-            0
+            latest.get("MarginSellingBalance")
+            or latest.get("MarginSellNewVolume")
+            or latest.get("margin_sell_balance")
+            or latest.get("BuyMarginTradeVolume")
+            or 0
         )
 
         # もしどちらも0なら、別のキー名を試す
@@ -98,18 +100,18 @@ def get_margin_tab(code: str) -> Dict[str, Any]:
         prev_sell = 0
         if previous:
             prev_buy = _safe_int(
-                previous.get("MarginBuyingBalance") or
-                previous.get("MarginBuyNewVolume") or
-                previous.get("margin_buy_balance") or
-                previous.get("SellMarginTradeVolume") or
-                0
+                previous.get("MarginBuyingBalance")
+                or previous.get("MarginBuyNewVolume")
+                or previous.get("margin_buy_balance")
+                or previous.get("SellMarginTradeVolume")
+                or 0
             )
             prev_sell = _safe_int(
-                previous.get("MarginSellingBalance") or
-                previous.get("MarginSellNewVolume") or
-                previous.get("margin_sell_balance") or
-                previous.get("BuyMarginTradeVolume") or
-                0
+                previous.get("MarginSellingBalance")
+                or previous.get("MarginSellNewVolume")
+                or previous.get("margin_sell_balance")
+                or previous.get("BuyMarginTradeVolume")
+                or 0
             )
 
         delta_buy = buy - prev_buy
@@ -137,9 +139,7 @@ def get_margin_tab(code: str) -> Dict[str, Any]:
         bias_info = _calc_bias(buy, sell, delta_buy, delta_sell)
 
         # 9. 信頼度
-        reliability = _calc_reliability(
-            buy, sell, adv20, data_days, bias_info["label"]
-        )
+        reliability = _calc_reliability(buy, sell, adv20, data_days, bias_info["label"])
 
         result["margin_available"] = True
         result["margin"] = {
@@ -276,9 +276,7 @@ def _classify_size(days: float) -> str:
         return "高"
 
 
-def _calc_bias(
-    buy: int, sell: int, delta_buy: int, delta_sell: int
-) -> Dict[str, Any]:
+def _calc_bias(buy: int, sell: int, delta_buy: int, delta_sell: int) -> Dict[str, Any]:
     """
     偏り分類（5段階）を算出する。
 
@@ -330,9 +328,7 @@ def _calc_bias(
 
 
 def _calc_reliability(
-    buy: int, sell: int,
-    adv20: Optional[float], data_days: int,
-    bias_label: str
+    buy: int, sell: int, adv20: Optional[float], data_days: int, bias_label: str
 ) -> Dict[str, Any]:
     """
     信頼度評価を算出する。

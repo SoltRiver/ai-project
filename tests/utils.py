@@ -1,10 +1,11 @@
 import time
 import socket
 
+
 def wait_for_server(port: int, timeout: int = 30) -> bool:
     """
     指定されたポートでサーバーが起動するのを待機します。
-    
+
     Args:
         port (int): 接続を確認するローカルホストのポート番号。
         timeout (int): タイムアウトまでの秒数 (デフォルト: 30秒)。

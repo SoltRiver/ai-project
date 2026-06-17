@@ -92,8 +92,16 @@ IMPACT_STRENGTH_MAP: Dict[str, str] = {
 
 # 否定語リスト（ステップ2で使用）
 NEGATION_KEYWORDS = [
-    "中止", "撤回", "延期", "見送り", "取り消し", "取消",
-    "断念", "白紙", "凍結", "解消",
+    "中止",
+    "撤回",
+    "延期",
+    "見送り",
+    "取り消し",
+    "取消",
+    "断念",
+    "白紙",
+    "凍結",
+    "解消",
 ]
 
 
@@ -150,19 +158,24 @@ class EventExtractor:
             # announced_at をパース
             announced_at = self._parse_datetime(submit_datetime)
 
-            results.append({
-                "doc_id": doc_id,
-                "sec_code": sec_code,
-                "event_type": event_type,
-                "title": normalize_text(doc_description) or normalize_text(filer_name),
-                "source_name": "EDINET_API",
-                "extraction_method": extraction_method,
-                "announced_at": announced_at,
-                "impact_type": impact_type,
-                "impact_strength": impact_strength,
-                "matched_keyword": matched_keyword,
-                "summary_2lines": self._build_summary(filer_name, doc_description, event_type),
-            })
+            results.append(
+                {
+                    "doc_id": doc_id,
+                    "sec_code": sec_code,
+                    "event_type": event_type,
+                    "title": normalize_text(doc_description)
+                    or normalize_text(filer_name),
+                    "source_name": "EDINET_API",
+                    "extraction_method": extraction_method,
+                    "announced_at": announced_at,
+                    "impact_type": impact_type,
+                    "impact_strength": impact_strength,
+                    "matched_keyword": matched_keyword,
+                    "summary_2lines": self._build_summary(
+                        filer_name, doc_description, event_type
+                    ),
+                }
+            )
 
         return results
 
@@ -188,9 +201,7 @@ class EventExtractor:
 
         return matches
 
-    def _step2_context_check(
-        self, text: str, event_type: str
-    ) -> Tuple[str, str, str]:
+    def _step2_context_check(self, text: str, event_type: str) -> Tuple[str, str, str]:
         """
         ステップ2: 文脈確認。否定語チェックで確度調整。
 
@@ -238,7 +249,9 @@ class EventExtractor:
         logger.warning(f"日時パース失敗: {dt_str}")
         return None
 
-    def _build_summary(self, filer_name: str, doc_description: str, event_type: str) -> str:
+    def _build_summary(
+        self, filer_name: str, doc_description: str, event_type: str
+    ) -> str:
         """2行サマリーを構築"""
         # イベントタイプの日本語ラベル
         type_labels = {

@@ -51,6 +51,7 @@ BATCH_INTERVAL_SEC = 15 * 60  # 15分
 # Step 1: ニュース取得 → DB保存
 # ================================================================
 
+
 def fetch_news_to_db(db: Session) -> List[NewsArticle]:
     """
     yfinanceからニュースを取得し、DBに保存する。
@@ -93,9 +94,7 @@ def fetch_news_to_db(db: Session) -> List[NewsArticle]:
             continue
 
         # URL重複チェック
-        existing = db.query(NewsArticle).filter(
-            NewsArticle.url == url
-        ).first()
+        existing = db.query(NewsArticle).filter(NewsArticle.url == url).first()
 
         if existing:
             # 既存記事: 本文ハッシュが変わった場合は更新
@@ -139,13 +138,12 @@ def fetch_news_to_db(db: Session) -> List[NewsArticle]:
 # Step 2: AI対象フィルタ適用
 # ================================================================
 
+
 def apply_ai_filter(db: Session) -> None:
     """
     fetched状態の記事に対してAI対象フィルタを適用する。
     """
-    articles = db.query(NewsArticle).filter(
-        NewsArticle.ai_status == "fetched"
-    ).all()
+    articles = db.query(NewsArticle).filter(NewsArticle.ai_status == "fetched").all()
 
     if not articles:
         logger.info("フィルタ対象の新規記事なし")
@@ -158,6 +156,7 @@ def apply_ai_filter(db: Session) -> None:
 # ================================================================
 # Step 3: 1記事ずつAI要約実行
 # ================================================================
+
 
 def _build_single_article_prompt(preprocessed_text: str) -> str:
     """
@@ -192,18 +191,21 @@ def analyze_single_article(article: NewsArticle, db: Session) -> bool:
 
     # 本文前処理（トークン節約）
     preprocessed = preprocess_news_text(
-        title=article.title or "",
-        raw_text=article.raw_text or ""
+        title=article.title or "", raw_text=article.raw_text or ""
     )
     input_hash = compute_text_hash(preprocessed)
 
     # 既存の要約で同一input_hash + 同一prompt_versionがあればスキップ
-    existing_summary = db.query(NewsAiSummary).filter(
-        NewsAiSummary.news_article_id == article.id,
-        NewsAiSummary.input_hash == input_hash,
-        NewsAiSummary.prompt_version == PROMPT_VERSION,
-        NewsAiSummary.analysis_status == "success"
-    ).first()
+    existing_summary = (
+        db.query(NewsAiSummary)
+        .filter(
+            NewsAiSummary.news_article_id == article.id,
+            NewsAiSummary.input_hash == input_hash,
+            NewsAiSummary.prompt_version == PROMPT_VERSION,
+            NewsAiSummary.analysis_status == "success",
+        )
+        .first()
+    )
 
     if existing_summary:
         logger.info(f"既存の要約あり、スキップ: 記事ID={article.id}")
@@ -226,9 +228,8 @@ def analyze_single_article(article: NewsArticle, db: Session) -> bool:
         response = model.generate_content(
             prompt,
             generation_config=genai.GenerationConfig(
-                response_mime_type="application/json",
-                temperature=0.2
-            )
+                response_mime_type="application/json", temperature=0.2
+            ),
         )
         content = response.text
 
@@ -264,11 +265,15 @@ def analyze_single_article(article: NewsArticle, db: Session) -> bool:
         related_companies = data.get("related_companies", [])
         for i, ticker_code in enumerate(related_tickers[:3]):
             company_name = related_companies[i] if i < len(related_companies) else "-"
-            existing_ticker = db.query(NewsRelatedTicker).filter(
-                NewsRelatedTicker.news_article_id == article.id,
-                NewsRelatedTicker.ticker_code == str(ticker_code),
-                NewsRelatedTicker.extraction_type == "ai"
-            ).first()
+            existing_ticker = (
+                db.query(NewsRelatedTicker)
+                .filter(
+                    NewsRelatedTicker.news_article_id == article.id,
+                    NewsRelatedTicker.ticker_code == str(ticker_code),
+                    NewsRelatedTicker.extraction_type == "ai",
+                )
+                .first()
+            )
             if not existing_ticker:
                 # センチメントに基づくimpact_type判定
                 sentiment_val = data.get("sentiment", "neutral")
@@ -278,15 +283,17 @@ def analyze_single_article(article: NewsArticle, db: Session) -> bool:
                     impact = "negative"
                 else:
                     impact = "positive"  # neutral の場合はデフォルトpositive
-                db.add(NewsRelatedTicker(
-                    news_article_id=article.id,
-                    ticker_code=str(ticker_code),
-                    company_name=str(company_name),
-                    impact_type=impact,
-                    confidence=0.8,
-                    extraction_type="ai",
-                    reason=data.get("reason", "")[:200],
-                ))
+                db.add(
+                    NewsRelatedTicker(
+                        news_article_id=article.id,
+                        ticker_code=str(ticker_code),
+                        company_name=str(company_name),
+                        impact_type=impact,
+                        confidence=0.8,
+                        extraction_type="ai",
+                        reason=data.get("reason", "")[:200],
+                    )
+                )
 
         # ステータス更新: 要約成功
         article.ai_status = "summarized"
@@ -314,13 +321,18 @@ def run_ai_summaries(db: Session) -> dict:
         {"success": int, "failed": int, "skipped": int}
     """
     # 対象記事を取得: queued状態 + 再試行可能なfailed状態
-    articles = db.query(NewsArticle).filter(
-        (NewsArticle.ai_status == "queued") |
-        (
-            (NewsArticle.ai_status == "failed") &
-            (NewsArticle.retry_count < MAX_RETRY_COUNT)
+    articles = (
+        db.query(NewsArticle)
+        .filter(
+            (NewsArticle.ai_status == "queued")
+            | (
+                (NewsArticle.ai_status == "failed")
+                & (NewsArticle.retry_count < MAX_RETRY_COUNT)
+            )
         )
-    ).order_by(NewsArticle.published_at.desc()).all()
+        .order_by(NewsArticle.published_at.desc())
+        .all()
+    )
 
     if not articles:
         logger.info("AI要約対象の記事なし")
@@ -352,25 +364,32 @@ def run_ai_summaries(db: Session) -> dict:
 # Step 4: ルールベース銘柄抽出
 # ================================================================
 
+
 def run_ticker_extraction(db: Session) -> int:
     """
     要約済み以外の新規記事に対してルールベース銘柄抽出を実行する。
-    
+
     Returns:
         抽出処理した記事数
     """
     # ルールベース抽出がまだの記事（created_atが新しい順）
-    articles = db.query(NewsArticle).filter(
-        NewsArticle.ai_status.in_(["fetched", "queued", "summarized"])
-    ).all()
+    articles = (
+        db.query(NewsArticle)
+        .filter(NewsArticle.ai_status.in_(["fetched", "queued", "summarized"]))
+        .all()
+    )
 
     count = 0
     for article in articles:
         # 既にルールベース抽出済みかチェック
-        existing_rule = db.query(NewsRelatedTicker).filter(
-            NewsRelatedTicker.news_article_id == article.id,
-            NewsRelatedTicker.extraction_type == "rule"
-        ).first()
+        existing_rule = (
+            db.query(NewsRelatedTicker)
+            .filter(
+                NewsRelatedTicker.news_article_id == article.id,
+                NewsRelatedTicker.extraction_type == "rule",
+            )
+            .first()
+        )
         if existing_rule:
             continue
 
@@ -378,7 +397,7 @@ def run_ticker_extraction(db: Session) -> int:
             db=db,
             article_id=article.id,
             title=article.title or "",
-            raw_text=article.raw_text or ""
+            raw_text=article.raw_text or "",
         )
         count += 1
 
@@ -390,6 +409,7 @@ def run_ticker_extraction(db: Session) -> int:
 # ================================================================
 # オーケストレータ: 全処理を順次実行
 # ================================================================
+
 
 def run_full_batch() -> dict:
     """
@@ -475,7 +495,9 @@ def start_news_scheduler():
             except Exception as e:
                 logger.error(f"定期バッチ実行エラー: {e}")
 
-    thread = threading.Thread(target=_scheduler_loop, daemon=True, name="news-scheduler")
+    thread = threading.Thread(
+        target=_scheduler_loop, daemon=True, name="news-scheduler"
+    )
     thread.start()
     logger.info("ニューススケジューラ スレッド起動完了")
 

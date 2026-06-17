@@ -8,7 +8,6 @@ import re
 import hashlib
 from typing import Optional
 
-
 # ================================================================
 # 除去対象パターン（正規表現）
 # ================================================================
@@ -58,8 +57,12 @@ _DISCLAIMER_PATTERNS = [
 # 全パターンをコンパイル
 _ALL_REMOVE_PATTERNS = []
 for pattern_list in [
-    _NAV_PATTERNS, _RELATED_PATTERNS, _AD_PATTERNS,
-    _FOOTER_PATTERNS, _AUTHOR_PATTERNS, _COMPANY_BOILERPLATE,
+    _NAV_PATTERNS,
+    _RELATED_PATTERNS,
+    _AD_PATTERNS,
+    _FOOTER_PATTERNS,
+    _AUTHOR_PATTERNS,
+    _COMPANY_BOILERPLATE,
     _DISCLAIMER_PATTERNS,
 ]:
     for p in pattern_list:
@@ -69,19 +72,66 @@ for pattern_list in [
 # 重要キーワード（優先保持対象）
 # ================================================================
 _IMPORTANT_KEYWORDS = [
-    "決算", "業績", "売上", "営業利益", "純利益", "経常利益",
-    "上方修正", "下方修正", "増収", "減収", "増益", "減益",
-    "株価", "時価総額", "PER", "PBR", "ROE", "ROA",
-    "提携", "買収", "合併", "M&A", "TOB", "MBO",
-    "自社株買い", "増配", "減配", "配当",
-    "受注", "新製品", "新サービス", "特許",
-    "行政処分", "不正", "訴訟", "リコール",
-    "上場", "IPO", "上場廃止",
-    "円安", "円高", "為替", "金利", "利上げ", "利下げ",
-    "GDP", "景気", "インフレ", "デフレ",
+    "決算",
+    "業績",
+    "売上",
+    "営業利益",
+    "純利益",
+    "経常利益",
+    "上方修正",
+    "下方修正",
+    "増収",
+    "減収",
+    "増益",
+    "減益",
+    "株価",
+    "時価総額",
+    "PER",
+    "PBR",
+    "ROE",
+    "ROA",
+    "提携",
+    "買収",
+    "合併",
+    "M&A",
+    "TOB",
+    "MBO",
+    "自社株買い",
+    "増配",
+    "減配",
+    "配当",
+    "受注",
+    "新製品",
+    "新サービス",
+    "特許",
+    "行政処分",
+    "不正",
+    "訴訟",
+    "リコール",
+    "上場",
+    "IPO",
+    "上場廃止",
+    "円安",
+    "円高",
+    "為替",
+    "金利",
+    "利上げ",
+    "利下げ",
+    "GDP",
+    "景気",
+    "インフレ",
+    "デフレ",
     # 英語キーワード
-    "earnings", "revenue", "profit", "acquisition", "merger",
-    "dividend", "buyback", "IPO", "guidance", "forecast",
+    "earnings",
+    "revenue",
+    "profit",
+    "acquisition",
+    "merger",
+    "dividend",
+    "buyback",
+    "IPO",
+    "guidance",
+    "forecast",
 ]
 
 
@@ -170,11 +220,7 @@ def extract_important_paragraphs(text: str, max_chars: int = 2000) -> str:
     return "\n\n".join(para for _, para in selected)
 
 
-def preprocess_news_text(
-    title: str,
-    raw_text: str,
-    max_chars: int = 2000
-) -> str:
+def preprocess_news_text(title: str, raw_text: str, max_chars: int = 2000) -> str:
     """
     ニュース本文をAI入力用に前処理する。
     1. 不要テキスト除去

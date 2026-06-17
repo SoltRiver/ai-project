@@ -11,11 +11,11 @@ from typing import Tuple, Optional, Dict, Any
 def calculate_sma(prices: pd.Series, period: int) -> pd.Series:
     """
     単純移動平均（SMA）を計算
-    
+
     Args:
         prices: 価格データ（Series）
         period: 期間
-    
+
     Returns:
         移動平均のSeries
     """
@@ -25,42 +25,43 @@ def calculate_sma(prices: pd.Series, period: int) -> pd.Series:
 def calculate_trendline(prices: pd.Series, period: int = 60) -> Tuple[float, float]:
     """
     線形回帰によるトレンドラインを計算
-    
+
     Args:
         prices: 価格データ（Series、直近N本）
         period: 使用する期間（デフォルト: 60）
-    
+
     Returns:
         (傾きa, 切片b) のタプル（y = ax + b）
     """
     if len(prices) < period:
         period = len(prices)
-    
+
     # 直近N本を取得
     recent_prices = prices.tail(period).values
-    
+
     # x軸（インデックス）
     x = np.arange(len(recent_prices))
-    
+
     # 線形回帰で y = ax + b を計算
     coeffs = np.polyfit(x, recent_prices, 1)
     slope = coeffs[0]  # 傾き a
     intercept = coeffs[1]  # 切片 b
-    
+
     return slope, intercept
 
 
-def calculate_trendline_values(slope: float, intercept: float, 
-                               start_idx: int, end_idx: int) -> np.ndarray:
+def calculate_trendline_values(
+    slope: float, intercept: float, start_idx: int, end_idx: int
+) -> np.ndarray:
     """
     トレンドラインの値を計算
-    
+
     Args:
         slope: 傾き
         intercept: 切片
         start_idx: 開始インデックス
         end_idx: 終了インデックス
-    
+
     Returns:
         トレンドラインの値の配列
     """
@@ -71,159 +72,167 @@ def calculate_trendline_values(slope: float, intercept: float,
 def calculate_rsi(prices: pd.Series, period: int = 14) -> pd.Series:
     """
     RSI（相対力指数）を計算
-    
+
     Args:
         prices: 価格データ（Series）
         period: 期間（デフォルト: 14）
-    
+
     Returns:
         RSIのSeries
     """
     delta = prices.diff()
     gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
     loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
-    
+
     rs = gain / loss
     rsi = 100 - (100 / (1 + rs))
-    
+
     return rsi
 
 
-def add_technical_indicators(df: pd.DataFrame, 
-                            close_col: str = 'close',
-                            sma_periods: list = [25, 75]) -> pd.DataFrame:
+def add_technical_indicators(
+    df: pd.DataFrame, close_col: str = "close", sma_periods: list = [25, 75]
+) -> pd.DataFrame:
     """
     データフレームにテクニカル指標を追加
-    
+
     Args:
         df: OHLCデータを含むDataFrame
         close_col: 終値のカラム名
         sma_periods: SMAの期間のリスト（デフォルト: [25, 75]）
-    
+
     Returns:
         テクニカル指標が追加されたDataFrame
     """
     result_df = df.copy()
-    
+
     # 移動平均線を追加
     for period in sma_periods:
-        result_df[f'SMA{period}'] = calculate_sma(result_df[close_col], period)
-    
+        result_df[f"SMA{period}"] = calculate_sma(result_df[close_col], period)
+
     # RSIを追加（オプション）
-    result_df['RSI'] = calculate_rsi(result_df[close_col])
-    
+    result_df["RSI"] = calculate_rsi(result_df[close_col])
+
     return result_df
 
 
-def get_trendline_data(df: pd.DataFrame, 
-                      close_col: str = 'close',
-                      period: int = 60) -> Tuple[np.ndarray, np.ndarray]:
+def get_trendline_data(
+    df: pd.DataFrame, close_col: str = "close", period: int = 60
+) -> Tuple[np.ndarray, np.ndarray]:
     """
     トレンドラインのデータを取得
-    
+
     Args:
         df: OHLCデータを含むDataFrame
         close_col: 終値のカラム名
         period: 使用する期間（デフォルト: 60）
-    
+
     Returns:
         (x軸の値, y軸の値) のタプル
     """
     prices = df[close_col]
     slope, intercept = calculate_trendline(prices, period)
-    
+
     # チャート全体の範囲でトレンドラインを計算
     start_idx = max(0, len(prices) - period)
     end_idx = len(prices)
-    
+
     x_values = np.arange(start_idx, end_idx)
     y_values = calculate_trendline_values(slope, intercept, start_idx, end_idx)
-    
+
     return x_values, y_values
 
 
 def detect_golden_cross(sma_short: pd.Series, sma_long: pd.Series) -> bool:
     """
     ゴールデンクロス（買いシグナル）を検出
-    
+
     Args:
         sma_short: 短期移動平均線
         sma_long: 長期移動平均線
-    
+
     Returns:
         ゴールデンクロスが発生している場合True
     """
     if len(sma_short) < 2 or len(sma_long) < 2:
         return False
-    
+
     # 前回は短期 < 長期、今回は短期 > 長期
     prev_short = sma_short.iloc[-2]
     prev_long = sma_long.iloc[-2]
     curr_short = sma_short.iloc[-1]
     curr_long = sma_long.iloc[-1]
-    
+
     return prev_short <= prev_long and curr_short > curr_long
 
 
 def detect_dead_cross(sma_short: pd.Series, sma_long: pd.Series) -> bool:
     """
     デッドクロス（売りシグナル）を検出
-    
+
     Args:
         sma_short: 短期移動平均線
         sma_long: 長期移動平均線
-    
+
     Returns:
         デッドクロスが発生している場合True
     """
     if len(sma_short) < 2 or len(sma_long) < 2:
         return False
-    
+
     # 前回は短期 > 長期、今回は短期 < 長期
     prev_short = sma_short.iloc[-2]
     prev_long = sma_long.iloc[-2]
     curr_short = sma_short.iloc[-1]
     curr_long = sma_long.iloc[-1]
-    
+
     return prev_short >= prev_long and curr_short < curr_long
 
 
-def analyze_candlestick(open_price: float, high: float, low: float, close: float) -> Dict[str, str]:
+def analyze_candlestick(
+    open_price: float, high: float, low: float, close: float
+) -> Dict[str, str]:
     """
     ローソク足の形状を分析して名称と種類を返す
-    
+
     Args:
         open_price: 始値
         high: 高値
         low: 安値
         close: 終値
-    
+
     Returns:
         {'name': str, 'type': str}
     """
     if open_price is None or close is None or high is None or low is None:
-        return {'name': '-', 'type': '-'}
-    
+        return {"name": "-", "type": "-"}
+
     # NaN check
     import math
-    if math.isnan(open_price) or math.isnan(close) or math.isnan(high) or math.isnan(low):
-         return {'name': '-', 'type': '-'}
-    
+
+    if (
+        math.isnan(open_price)
+        or math.isnan(close)
+        or math.isnan(high)
+        or math.isnan(low)
+    ):
+        return {"name": "-", "type": "-"}
+
     is_up = close >= open_price
     candle_type = "陽線" if is_up else "陰線"
-    
+
     body = abs(close - open_price)
     range_len = high - low
-    
+
     if range_len == 0:
-        return {'name': '寄引同時線', 'type': candle_type}
-    
+        return {"name": "寄引同時線", "type": candle_type}
+
     body_ratio = body / range_len
     upper_shadow = (high - close) if is_up else (high - open_price)
     lower_shadow = (open_price - low) if is_up else (close - low)
-    
-    name = "小" + candle_type # Default
-    
+
+    name = "小" + candle_type  # Default
+
     # 判定ロジック
     if body_ratio < 0.1:
         # 十字線系の詳細判定
@@ -235,10 +244,10 @@ def analyze_candlestick(open_price: float, high: float, low: float, close: float
             name = "十字線"
     elif body_ratio > 0.8:
         # 大陽線・大陰線の詳細判定（丸坊主系）
-        shadow_tol = range_len * 0.01 # 許容誤差
+        shadow_tol = range_len * 0.01  # 許容誤差
         no_upper = upper_shadow <= shadow_tol
         no_lower = lower_shadow <= shadow_tol
-        
+
         if no_upper and no_lower:
             name = "丸坊主"
         elif is_up and no_upper:
@@ -271,8 +280,8 @@ def analyze_candlestick(open_price: float, high: float, low: float, close: float
     elif lower_shadow > body * 1.5 and upper_shadow < body * 0.5:
         # 下ヒゲが目立つ
         name = "下ヒゲ" + candle_type
-    
-    return {'name': name, 'type': candle_type}
+
+    return {"name": name, "type": candle_type}
 
 
 def get_rsi_status(rsi: Optional[float]) -> Dict[str, Any]:
@@ -323,9 +332,11 @@ def evaluate_volatility(df: pd.DataFrame, window: int = 30) -> Dict[str, Any]:
     return {"volatility": volatility, "level": level, "warning": warning}
 
 
-def evaluate_liquidity(volume: Optional[float],
-                       average_volume: Optional[float] = None,
-                       threshold_low: int = 50000) -> Dict[str, Any]:
+def evaluate_liquidity(
+    volume: Optional[float],
+    average_volume: Optional[float] = None,
+    threshold_low: int = 50000,
+) -> Dict[str, Any]:
     """
     出来高をもとに流動性を評価する
 
@@ -346,10 +357,12 @@ def evaluate_liquidity(volume: Optional[float],
     return {"level": "通常", "warning": False}
 
 
-def calculate_star_rating(value: Optional[float],
-                          thresholds: list[float],
-                          reverse: bool = False,
-                          max_stars: int = 5) -> int:
+def calculate_star_rating(
+    value: Optional[float],
+    thresholds: list[float],
+    reverse: bool = False,
+    max_stars: int = 5,
+) -> int:
     """
     値と閾値から簡易スター評価を計算する
 
@@ -387,10 +400,12 @@ def format_stars(stars: int, max_stars: int = 5) -> str:
     return "★" * stars + "☆" * (max_stars - stars)
 
 
-def get_direction_label(prices: pd.Series,
-                        positive_label: str = "右肩上がり",
-                        negative_label: str = "下降傾向",
-                        neutral_label: str = "横ばい") -> str:
+def get_direction_label(
+    prices: pd.Series,
+    positive_label: str = "右肩上がり",
+    negative_label: str = "下降傾向",
+    neutral_label: str = "横ばい",
+) -> str:
     """
     トレンド方向の簡易ラベルを返す
 
@@ -412,4 +427,3 @@ def get_direction_label(prices: pd.Series,
     if slope < -threshold:
         return negative_label
     return neutral_label
-

@@ -11,7 +11,9 @@ from sqlalchemy import or_
 
 from database import SessionLocal
 from models.master import StockMaster, AppSyncStatus
-from data.stock_name_mapper import STOCK_NAME_MAP # Keep as fallback if needed, but main source is DB
+from data.stock_name_mapper import (
+    STOCK_NAME_MAP,
+)  # Keep as fallback if needed, but main source is DB
 
 # J-Quants Client (will be updated to support get_listed_issues)
 from services.jquants_client import client as jquants_client
@@ -19,6 +21,7 @@ from services.jquants_client import client as jquants_client
 logger = logging.getLogger(__name__)
 
 SEED_FILE_PATH = os.path.join("data", "seed_stock_master.json")
+
 
 class StockMasterService:
     def __init__(self):
@@ -45,23 +48,29 @@ class StockMasterService:
             # "Toyota" -> match name
             # Using ILIKE for case-insensitive if supported, but SQLite matches case-insensitive for ASCII usually.
             # For Japanese characters, consistency depends on collation.
-            
+
             # Simple LIKE query
-            wildcard = f"{query}%" # Prefix match preferred
+            wildcard = f"{query}%"  # Prefix match preferred
             wildcard_contain = f"%{query}%"
-            
+
             # Prioritize code prefix match first?
             # Or just simple OR condition.
-            
-            results = db.query(StockMaster).filter(
-                or_(
-                    StockMaster.code.like(wildcard),
-                    StockMaster.name.like(wildcard_contain)
+
+            results = (
+                db.query(StockMaster)
+                .filter(
+                    or_(
+                        StockMaster.code.like(wildcard),
+                        StockMaster.name.like(wildcard_contain),
+                    )
                 )
-            ).order_by(StockMaster.code).limit(limit).all()
-            
+                .order_by(StockMaster.code)
+                .limit(limit)
+                .all()
+            )
+
             return [{"code": r.code, "name": r.name} for r in results]
-            
+
         finally:
             db.close()
 
@@ -79,16 +88,16 @@ class StockMasterService:
             # Simple approach: Merge one by one. Or delete all and re-insert?
             # Re-inserting is risky if we have foreign keys (currently none).
             # Merge is safest.
-            
+
             # Optimization: Fetch existing codes to decide insert vs update?
             # Only 4000 stocks, merge is acceptable speed.
-            
+
             count = 0
             for item in items:
                 code = str(item["code"])
                 name = item["name"]
                 market = item.get("market", "")
-                
+
                 # Check exist
                 stock = db.query(StockMaster).get(code)
                 if stock:
@@ -98,11 +107,11 @@ class StockMasterService:
                 else:
                     stock = StockMaster(code=code, name=name, market=market)
                     db.add(stock)
-                
+
                 count += 1
                 if count % 100 == 0:
                     db.commit()
-            
+
             db.commit()
             logger.info(f"Upserted {count} stocks from {source}")
 
@@ -116,14 +125,16 @@ class StockMasterService:
         finally:
             db.close()
 
-    def _update_sync_status(self, db: Session, status: str, error: Optional[str], source: str):
+    def _update_sync_status(
+        self, db: Session, status: str, error: Optional[str], source: str
+    ):
         try:
             # Single row table
             sync_status = db.query(AppSyncStatus).get(1)
             if not sync_status:
                 sync_status = AppSyncStatus(id=1)
                 db.add(sync_status)
-            
+
             sync_status.last_synced_at = datetime.now()
             sync_status.last_sync_status = status
             sync_status.last_sync_error = error
@@ -141,7 +152,7 @@ class StockMasterService:
         2. Sync from J-Quants if stale.
         """
         logger.info("Initializing Stock Master...")
-        
+
         try:
             self._ensure_seed_if_empty()
             self._sync_from_jquants_if_needed()
@@ -181,16 +192,16 @@ class StockMasterService:
         try:
             sync_status = db.query(AppSyncStatus).get(1)
             should_sync = True
-            
+
             if sync_status and sync_status.last_synced_at:
                 last_date = sync_status.last_synced_at.date()
                 today = date.today()
                 if last_date == today and sync_status.last_sync_status == "SUCCESS":
                     should_sync = False
-            
+
             if should_sync:
                 logger.info("Starting J-Quants Sync...")
-                db.close() # Release for upsert
+                db.close()  # Release for upsert
                 self._sync_from_jquants()
             else:
                 logger.info("Stock Master is up-to-date. Skipping J-Quants sync.")
@@ -203,8 +214,10 @@ class StockMasterService:
         try:
             # 1. Fetch from API
             # This method needs to be implemented in JQuantsClient
-            raw_issues = jquants_client.get_listed_issues() # Returns list of issue dicts
-            
+            raw_issues = (
+                jquants_client.get_listed_issues()
+            )  # Returns list of issue dicts
+
             if not raw_issues:
                 logger.warning("J-Quants returned empty list. Skipping update.")
                 return
@@ -231,13 +244,14 @@ class StockMasterService:
             # 3. Upsert
             if items:
                 self.upsert_stocks(items, "jquants_v2")
-            
+
         except Exception as e:
             logger.error(f"J-Quants Sync Failed: {e}")
             # Log failure to DB
             db = self.get_db()
             self._update_sync_status(db, "FAILED", str(e), "jquants")
             db.close()
+
 
 # Singleton
 stock_master_service = StockMasterService()

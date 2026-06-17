@@ -26,10 +26,11 @@ def _load_company_map(db: Session) -> Dict[str, str]:
         dict: {企業名: 証券コード}
     """
     try:
-        masters = db.query(StockMaster.code, StockMaster.name).filter(
-            StockMaster.name.isnot(None),
-            StockMaster.name != ""
-        ).all()
+        masters = (
+            db.query(StockMaster.code, StockMaster.name)
+            .filter(StockMaster.name.isnot(None), StockMaster.name != "")
+            .all()
+        )
         return {m.name: m.code for m in masters if m.name and m.code}
     except Exception as e:
         logger.warning(f"企業名マップ取得エラー: {e}")
@@ -53,7 +54,7 @@ def extract_tickers_from_text(
     raw_text: str,
     company_map: Dict[str, str],
     valid_tickers: Set[str],
-    max_tickers: int = 3
+    max_tickers: int = 3,
 ) -> List[Dict[str, Any]]:
     """
     タイトルと本文から関連銘柄を抽出する。
@@ -70,7 +71,7 @@ def extract_tickers_from_text(
         max_tickers: 最大抽出件数
 
     Returns:
-        list: [{"ticker_code": "7203", "company_name": "トヨタ自動車", 
+        list: [{"ticker_code": "7203", "company_name": "トヨタ自動車",
                 "confidence": 0.8, "extraction_type": "rule"}, ...]
     """
     results = []
@@ -84,13 +85,15 @@ def extract_tickers_from_text(
         if company_name in combined and code not in seen_codes:
             # タイトルに含まれる場合は信頼度を高くする
             confidence = 0.9 if company_name in title else 0.7
-            results.append({
-                "ticker_code": code,
-                "company_name": company_name,
-                "confidence": confidence,
-                "extraction_type": "rule",
-                "reason": f"記事中に企業名「{company_name}」を検出",
-            })
+            results.append(
+                {
+                    "ticker_code": code,
+                    "company_name": company_name,
+                    "confidence": confidence,
+                    "extraction_type": "rule",
+                    "reason": f"記事中に企業名「{company_name}」を検出",
+                }
+            )
             seen_codes.add(code)
 
     # 2. 証券コードパターン照合（タイトルのみ — 本文だと年号等と誤検知しやすい）
@@ -103,13 +106,15 @@ def extract_tickers_from_text(
                 if c == code:
                     company_name = name
                     break
-            results.append({
-                "ticker_code": code,
-                "company_name": company_name,
-                "confidence": 0.6,
-                "extraction_type": "rule",
-                "reason": f"タイトルに証券コード「{code}」を検出",
-            })
+            results.append(
+                {
+                    "ticker_code": code,
+                    "company_name": company_name,
+                    "confidence": 0.6,
+                    "extraction_type": "rule",
+                    "reason": f"タイトルに証券コード「{code}」を検出",
+                }
+            )
             seen_codes.add(code)
 
     # 信頼度降順でソートし、上位N件を返す
@@ -118,10 +123,7 @@ def extract_tickers_from_text(
 
 
 def extract_and_save_tickers(
-    db: Session,
-    article_id: int,
-    title: str,
-    raw_text: str
+    db: Session, article_id: int, title: str, raw_text: str
 ) -> List[NewsRelatedTicker]:
     """
     記事から銘柄を抽出し、DBに保存する。
@@ -147,7 +149,7 @@ def extract_and_save_tickers(
     # 既存の抽出結果を削除（再抽出のため）
     db.query(NewsRelatedTicker).filter(
         NewsRelatedTicker.news_article_id == article_id,
-        NewsRelatedTicker.extraction_type == "rule"
+        NewsRelatedTicker.extraction_type == "rule",
     ).delete()
 
     # 銘柄抽出
@@ -155,7 +157,7 @@ def extract_and_save_tickers(
         title=title,
         raw_text=raw_text,
         company_map=company_map,
-        valid_tickers=valid_tickers
+        valid_tickers=valid_tickers,
     )
 
     # DB保存

@@ -5,7 +5,13 @@ AI要約結果を記事本体と分離して保存するテーブル定義。
 """
 
 from sqlalchemy import (
-    Column, Integer, String, Text, DateTime, ForeignKey, Index,
+    Column,
+    Integer,
+    String,
+    Text,
+    DateTime,
+    ForeignKey,
+    Index,
 )
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
@@ -18,6 +24,7 @@ class NewsAiSummary(Base):
     1つの記事に対して、モデル×プロンプトバージョンの組み合わせで
     複数の要約を保持可能。最新のものを画面に表示する。
     """
+
     __tablename__ = "news_ai_summaries"
 
     # 主キー
@@ -25,8 +32,10 @@ class NewsAiSummary(Base):
 
     # 対象記事への外部キー
     news_article_id = Column(
-        Integer, ForeignKey("news_articles.id", ondelete="CASCADE"),
-        nullable=False, index=True
+        Integer,
+        ForeignKey("news_articles.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
 
     # 使用したAIモデル名（例: "gemini-1.5-flash", "gpt-4o-mini"）
@@ -61,8 +70,10 @@ class NewsAiSummary(Base):
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
     updated_at = Column(
-        DateTime(timezone=True), nullable=False,
-        server_default=func.now(), onupdate=func.now()
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now(),
     )
 
     # リレーション
@@ -71,7 +82,12 @@ class NewsAiSummary(Base):
     # テーブル制約・インデックス
     __table_args__ = (
         # 記事×モデル×プロンプトバージョンで検索用
-        Index("ix_summary_article_model", "news_article_id", "model_name", "prompt_version"),
+        Index(
+            "ix_summary_article_model",
+            "news_article_id",
+            "model_name",
+            "prompt_version",
+        ),
     )
 
     def __repr__(self):

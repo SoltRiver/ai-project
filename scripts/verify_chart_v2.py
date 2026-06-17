@@ -1,4 +1,3 @@
-
 import sys
 import os
 import logging
@@ -13,9 +12,10 @@ logger = logging.getLogger(__name__)
 
 from services.jquants_client import client
 
+
 def verify_chart():
     print("--- Verifying Chart Data (Daily Quotes) V2 ---")
-    
+
     # Try fetching data for Toyota (7203) for a known valid date
     # Using 2024-01-04 as single date
     print("Fetching single date (2024-01-04)...")
@@ -42,7 +42,9 @@ def verify_chart():
 
     print("\nFetching range (2024-01-04 to 2024-01-10)...")
     try:
-        data = client.get_daily_quotes(code="7203", from_date="2024-01-04", to_date="2024-01-10")
+        data = client.get_daily_quotes(
+            code="7203", from_date="2024-01-04", to_date="2024-01-10"
+        )
         if data and "daily_quotes" in data:
             quotes = data["daily_quotes"]
             print(f"Success! Count: {len(quotes)}")
@@ -52,6 +54,7 @@ def verify_chart():
 
     except Exception as e:
         print(f"[ERROR] {e}")
+
 
 if __name__ == "__main__":
     verify_chart()

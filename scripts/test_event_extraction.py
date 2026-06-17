@@ -1,5 +1,7 @@
 """イベント抽出ロジック検証スクリプト"""
+
 import sys
+
 sys.path.insert(0, ".")
 
 from services.event_extractor import EventExtractor
@@ -46,7 +48,9 @@ test_docs = [
 ]
 
 print("=" * 90)
-print(f"{'sec_code':^8} | {'event_type':^22} | {'impact':^10} | {'strength':^8} | {'method':^7} | title")
+print(
+    f"{'sec_code':^8} | {'event_type':^22} | {'impact':^10} | {'strength':^8} | {'method':^7} | title"
+)
 print("-" * 90)
 
 total_events = 0
@@ -54,10 +58,14 @@ for doc in test_docs:
     events = e.extract_events(doc)
     if events:
         for r in events:
-            print(f"  {r['sec_code']:^6} | {r['event_type']:^22} | {r['impact_type']:^10} | {r['impact_strength']:^8} | {r['extraction_method']:^7} | {r['title'][:40]}")
+            print(
+                f"  {r['sec_code']:^6} | {r['event_type']:^22} | {r['impact_type']:^10} | {r['impact_strength']:^8} | {r['extraction_method']:^7} | {r['title'][:40]}"
+            )
             total_events += 1
     else:
-        print(f"  {doc['secCode'].strip():^6} | {'(抽出なし)':^22} | {'-':^10} | {'-':^8} | {'-':^7} | {doc['docDescription'][:40]}")
+        print(
+            f"  {doc['secCode'].strip():^6} | {'(抽出なし)':^22} | {'-':^10} | {'-':^8} | {'-':^7} | {doc['docDescription'][:40]}"
+        )
 
 print("-" * 90)
 print(f"合計: {len(test_docs)} 文書 → {total_events} イベント抽出")
@@ -65,14 +73,20 @@ print()
 
 # 否定語テスト確認
 print("■ 否定語テスト:")
-print(f"  TEST003 (公開買付けの中止): impact_type should be NEGATIVE (TOB + 中止 → 反転)")
+print(
+    f"  TEST003 (公開買付けの中止): impact_type should be NEGATIVE (TOB + 中止 → 反転)"
+)
 for doc in test_docs:
     if doc["docID"] == "TEST003":
         r = e.extract_events(doc)
         if r:
-            print(f"  → 結果: impact_type={r[0]['impact_type']}, method={r[0]['extraction_method']}")
+            print(
+                f"  → 結果: impact_type={r[0]['impact_type']}, method={r[0]['extraction_method']}"
+            )
             assert r[0]["impact_type"] == "NEGATIVE", "TOB中止はNEGATIVEであるべき"
-            assert r[0]["extraction_method"] == "CONTEXT", "否定語検出ではCONTEXTメソッド"
+            assert (
+                r[0]["extraction_method"] == "CONTEXT"
+            ), "否定語検出ではCONTEXTメソッド"
             print("  ✅ 正しい!")
 
 print()

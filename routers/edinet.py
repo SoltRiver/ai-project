@@ -1,4 +1,3 @@
-
 from fastapi import APIRouter, HTTPException, Query
 from typing import Dict, Any, List
 from schemas.response_models import EdinetDocumentsResponse, EdinetHealthResponse
@@ -11,10 +10,11 @@ from services.edinet_client import EdinetAPIError
 router = APIRouter(prefix="/edinet", tags=["edinet"])
 logger = logging.getLogger(__name__)
 
+
 @router.get("/documents", response_model=EdinetDocumentsResponse)
 async def get_documents(
     date: str = Query(..., regex="^\d{4}-\d{2}-\d{2}$", description="YYYY-MM-DD"),
-    type: int = Query(2, ge=1, le=2, description="1 or 2")
+    type: int = Query(2, ge=1, le=2, description="1 or 2"),
 ) -> Dict[str, Any]:
     # Validate date format and future check
     try:
@@ -22,7 +22,9 @@ async def get_documents(
         if req_date > datetime.now():
             raise HTTPException(status_code=400, detail="Future date not allowed.")
     except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD.")
+        raise HTTPException(
+            status_code=400, detail="Invalid date format. Use YYYY-MM-DD."
+        )
 
     try:
         documents = await fetch_and_normalize_documents(date, type)
@@ -33,8 +35,10 @@ async def get_documents(
     except Exception as e:
         logger.error(f"Unexpected error in /edinet/documents: {e}")
         import traceback
+
         traceback.print_exc()
         raise HTTPException(status_code=500, detail="Internal Server Error")
+
 
 @router.get("/health", response_model=EdinetHealthResponse)
 async def health_check():

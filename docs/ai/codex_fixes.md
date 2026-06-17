@@ -473,3 +473,55 @@
     - 3ファイルとも正常な構文であることを確認。
     - ハードコードされたキー文字列がプロジェクト内に残っていないことを grep で確認済み。
     - git履歴を改竄してGitHubのリモートへforce push完了。
+
+## Date: 2026-05-08
+
+### Review Scope
+- static/css/theme.css (CSS @import error causing layout break)
+- services/news_service.py (500 Error caused by timezone-naive comparison)
+
+### Findings
+1.  **CSS Loading Error**: The legacy 	heme.css contained @import "tailwindcss"; which was meant for the compilation input. This resulted in a 404 error and prevented the CSS from fully loading in the browser, collapsing the chart container to a width/height of 0, rendering the canvas invisible.
+    - Status: **Fixed**. Removed the invalid @import rule.
+2.  **500 Internal Server Error**: /stocks/{code}/tendency returned a 500 error because 
+ews_service.py compared an offset-aware datetime (published_at) with an offset-naive datetime (datetime.now()).
+    - Status: **Fixed**. Refactored datetime.now() to datetime.now(timezone.utc) and explicitly ensured published_at uses 	imezone.utc.
+
+### Actions Taken
+- Verified that the candle-canvas and chart components properly render without 0-height collapse.
+- Verified /stocks/{code}/tendency successfully returns the component HTML without raising a 500 server error.
+
+## Date: 2026-06-13
+
+### Review Session 39 (ニュースページ パフォーマンスボトルネック修正)
+- **Status**: **Success** (Executed 2026-06-13).
+- **Scope**: `services/news_service.py`, `database.py`, `templates/news/index.html`, `docs/ai/best_practices.md`.
+- **背景**: ユーザーから「AIニュース要約の表示に時間がかかる」との報告。
+- **Findings (計測結果)**:
+    1. **不要なyfinanceインポート (Critical)**: `news_service.py` のトップレベルで `from services.data_fetcher import fetch_news` を行っていたが、この関数は `get_news_for_display()` では一切使用されず `get_news_tendency()` でのみ使用。yfinanceのインポートに約1.7秒かかり、news_serviceモジュール自体のロード時間が2.7秒に膨張。
+    2. **Alpine.js過剰初期化 (Medium)**: 影響銘柄の各バッジに `x-data="{ tooltip: false }"` が個別設定されており、テンプレートレンダリングが0.46秒かかっていた。
+    3. **SQLite PRAGMA未設定 (Low)**: デフォルト設定（journal_mode=delete, cache_size=2MB）で動作しており、並行アクセスとキャッシュ効率が最適化されていなかった。
+- **Action**:
+    1. **遅延インポート**: `data_fetcher` のインポートを `get_news_tendency()` 関数内に移動。`get_news_for_display()` 実行時にyfinanceがロードされなくなった。
+    2. **CSS group-hover**: Alpine.js `x-data`/`x-show` を Tailwind CSS の `group`/`group-hover:opacity-100` に置換。JS依存なしで同等のツールチップ表示を実現。
+    3. **SQLite PRAGMA**: `database.py` に `journal_mode=WAL`, `synchronous=NORMAL`, `cache_size=64MB`, `mmap_size=256MB`, `temp_store=MEMORY` を設定。
+- **Verification (計測結果)**:
+    - news_service インポート時間: 2.70秒 → **0.99秒** (63%改善)
+    - テンプレートレンダリング: 0.46秒 → **0.05秒** (89%改善)
+    - yfinanceが /news ページ表示時にロードされないことを確認 (`sys.modules` チェック)
+    - `get_news_tendency` で遅延インポートが正しく動作することを確認
+    - SQLite PRAGMA が正しく適用されていることを確認 (journal_mode=wal, cache_size=-65536)
+
+### Review Session 40 (AI要約 RateLimitError フォールバック実装)
+- **Status**: **Success** (Executed 2026-06-16).
+- **Scope**: `ai/chains/news_summarizer.py`, `services/langgraph/stock_news_nodes.py`.
+- **背景**: APIのRate Limit (429エラー) によって銘柄詳細ページで500エラーが発生し、UIが破損する問題を解決。
+- **Findings**:
+    1. **エラーハンドリング不足**: 非同期要約バッチ実行時 (`abatch`) に例外が発生した場合、「要約の生成に失敗しました。」という汎用メッセージが返されるものの、APIのクォータ上限到達時のUIの振る舞いについてユーザーに適切なアナウンスが欠如していた。
+- **Action**:
+    1. **フォールバック強化**: 例外名が `RateLimitError` もしくはエラー文字列に `429` を含む場合、「現在、AI要約サービスの利用が集中しており、一時的に要約を生成できません。」という専用のフォールバックメッセージを返すように `news_summarizer.py` を修正。
+    2. **判定ロジック追随**: `stock_news_nodes.py` の全件エラー判定ロジック (`all_failed`) に新しいフォールバックメッセージも追加し、ノードの適切な状態遷移を維持。
+    3. **品質管理の自動化**: `flake8` と `black` を実行し、長すぎる行 (E501) を自動フォーマットで修正して静的解析エラーをゼロにした。
+- **Verification**:
+    - **Lint / Format**: 対象ファイルの `flake8` エラーゼロを確認。
+    - **Logic**: RateLimitError 時のフォールバック文字列が正しく挿入されることをコード上で確認。

@@ -18,26 +18,87 @@ logger = logging.getLogger(__name__)
 # 金融・企業関連キーワード
 # ================================================================
 _FINANCIAL_KEYWORDS_JA = [
-    "決算", "業績", "売上", "営業利益", "純利益", "経常利益",
-    "上方修正", "下方修正", "増収", "減収", "増益", "減益",
-    "提携", "買収", "合併", "統合",
-    "自社株買い", "増配", "減配", "配当", "株式分割",
-    "受注", "新製品", "特許", "新薬",
-    "行政処分", "不正", "訴訟", "リコール",
-    "上場", "IPO", "上場廃止", "MBO", "TOB",
-    "株価", "時価総額", "ストップ高", "ストップ安",
-    "円安", "円高", "為替", "金利", "利上げ", "利下げ",
-    "景気", "GDP", "CPI", "インフレ", "デフレ",
-    "日経平均", "ダウ", "S&P", "TOPIX",
+    "決算",
+    "業績",
+    "売上",
+    "営業利益",
+    "純利益",
+    "経常利益",
+    "上方修正",
+    "下方修正",
+    "増収",
+    "減収",
+    "増益",
+    "減益",
+    "提携",
+    "買収",
+    "合併",
+    "統合",
+    "自社株買い",
+    "増配",
+    "減配",
+    "配当",
+    "株式分割",
+    "受注",
+    "新製品",
+    "特許",
+    "新薬",
+    "行政処分",
+    "不正",
+    "訴訟",
+    "リコール",
+    "上場",
+    "IPO",
+    "上場廃止",
+    "MBO",
+    "TOB",
+    "株価",
+    "時価総額",
+    "ストップ高",
+    "ストップ安",
+    "円安",
+    "円高",
+    "為替",
+    "金利",
+    "利上げ",
+    "利下げ",
+    "景気",
+    "GDP",
+    "CPI",
+    "インフレ",
+    "デフレ",
+    "日経平均",
+    "ダウ",
+    "S&P",
+    "TOPIX",
 ]
 
 _FINANCIAL_KEYWORDS_EN = [
-    "earnings", "revenue", "profit", "loss", "guidance", "forecast",
-    "acquisition", "merger", "buyback", "dividend",
-    "IPO", "delisting", "recall", "lawsuit",
-    "stock price", "market cap", "stock split",
-    "Fed", "BOJ", "interest rate", "inflation",
-    "GDP", "CPI", "Nikkei", "Dow",
+    "earnings",
+    "revenue",
+    "profit",
+    "loss",
+    "guidance",
+    "forecast",
+    "acquisition",
+    "merger",
+    "buyback",
+    "dividend",
+    "IPO",
+    "delisting",
+    "recall",
+    "lawsuit",
+    "stock price",
+    "market cap",
+    "stock split",
+    "Fed",
+    "BOJ",
+    "interest rate",
+    "inflation",
+    "GDP",
+    "CPI",
+    "Nikkei",
+    "Dow",
 ]
 
 # 証券コードのパターン（4桁数字）
@@ -50,10 +111,11 @@ def _load_company_names(db: Session) -> Set[str]:
     キャッシュは呼び出し元で管理する。
     """
     try:
-        masters = db.query(StockMaster.name).filter(
-            StockMaster.name.isnot(None),
-            StockMaster.name != ""
-        ).all()
+        masters = (
+            db.query(StockMaster.name)
+            .filter(StockMaster.name.isnot(None), StockMaster.name != "")
+            .all()
+        )
         return {m.name for m in masters if m.name}
     except Exception as e:
         logger.warning(f"企業名一覧取得エラー: {e}")
@@ -61,10 +123,7 @@ def _load_company_names(db: Session) -> Set[str]:
 
 
 def is_ai_target(
-    title: str,
-    raw_text: str,
-    company_names: Set[str],
-    min_keyword_matches: int = 1
+    title: str, raw_text: str, company_names: Set[str], min_keyword_matches: int = 1
 ) -> bool:
     """
     記事がAI要約の対象かどうかを判定する。
@@ -110,10 +169,7 @@ def is_ai_target(
     return False
 
 
-def filter_articles_for_ai(
-    db: Session,
-    articles: list
-) -> list:
+def filter_articles_for_ai(db: Session, articles: list) -> list:
     """
     記事リストに対してAI対象フィルタを適用し、
     各記事の is_ai_target フラグと ai_status を設定する。
@@ -140,7 +196,7 @@ def filter_articles_for_ai(
         target = is_ai_target(
             title=article.title or "",
             raw_text=article.raw_text or "",
-            company_names=company_names
+            company_names=company_names,
         )
 
         article.is_ai_target = target
@@ -151,5 +207,7 @@ def filter_articles_for_ai(
             article.ai_status = "skipped"
             skipped_count += 1
 
-    logger.info(f"AI対象フィルタ結果: 対象={ai_target_count}件, スキップ={skipped_count}件")
+    logger.info(
+        f"AI対象フィルタ結果: 対象={ai_target_count}件, スキップ={skipped_count}件"
+    )
     return articles

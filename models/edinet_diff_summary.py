@@ -1,4 +1,3 @@
-
 from sqlalchemy import Column, Integer, String, DateTime, Text, JSON, UniqueConstraint
 from sqlalchemy.sql import func
 from sqlalchemy import ForeignKey
@@ -11,6 +10,7 @@ class EdinetDiffSummary(Base):
     生成済みの差分データをキャッシュし、再利用する。
     json_payload に固定6項目と変化大3件の詳細を格納する。
     """
+
     __tablename__ = "edinet_diff_summary"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -20,7 +20,7 @@ class EdinetDiffSummary(Base):
         String(8),
         ForeignKey("edinet_documents.doc_id", ondelete="CASCADE"),
         nullable=False,
-        index=True
+        index=True,
     )
     # 前回書類ID（初回取得の場合は NULL）
     prev_doc_id = Column(String(8), nullable=True)
@@ -38,7 +38,7 @@ class EdinetDiffSummary(Base):
 
     # 同一書類に対する差分は1レコードのみ
     __table_args__ = (
-        UniqueConstraint('current_doc_id', name='uq_diff_summary_current_doc'),
+        UniqueConstraint("current_doc_id", name="uq_diff_summary_current_doc"),
     )
 
     def __repr__(self):
