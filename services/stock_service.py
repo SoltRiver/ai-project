@@ -1,46 +1,35 @@
 from __future__ import annotations
 
+import logging
 import math
 from datetime import datetime
 from typing import Any, Dict, List, Optional
+
 from sqlalchemy.orm import Session
+
 from models import stock as stock_model
-import logging
 
 logger = logging.getLogger(__name__)
 
 import pandas as pd
 
-from utils.analyzer import (
-    add_technical_indicators,
-    analyze_candlestick,
-    calculate_trendline,
-    detect_dead_cross,
-    detect_golden_cross,
-    get_direction_label,
-)
-from utils.candle_classify import get_candle_info
-from services.data_fetcher import (
-    fetch_dividend_details,
-    fetch_dividends,
-    fetch_realtime_data,
-    fetch_stock_data,
-    fetch_stock_info,
-    format_symbol_for_yfinance,
-)
-from services.fundamental_fetcher import (
-    build_company_scores,
-    format_date,
-    format_fundamental_value,
-    get_event_info,
-    get_fundamental_statuses,
-    get_key_fundamentals,
-)
 from data.stock_name_mapper import STOCK_NAME_MAP
 from data.terms_data import TERMS_DATA
-
+from services.data_fetcher import (fetch_dividend_details, fetch_dividends,
+                                   fetch_realtime_data, fetch_stock_data,
+                                   fetch_stock_info,
+                                   format_symbol_for_yfinance)
 from services.financial_analyzer import FinancialAnalyzer
+from services.fundamental_fetcher import (build_company_scores, format_date,
+                                          format_fundamental_value,
+                                          get_event_info,
+                                          get_fundamental_statuses,
+                                          get_key_fundamentals)
 from services.jquants_client import client as jquants_client
+from utils.analyzer import (add_technical_indicators, analyze_candlestick,
+                            calculate_trendline, detect_dead_cross,
+                            detect_golden_cross, get_direction_label)
+from utils.candle_classify import get_candle_info
 
 # アナライザーの初期化
 analyzer = FinancialAnalyzer()
@@ -596,7 +585,7 @@ CANDLE_PATTERN_CARDS = [
         "group": "advanced",
         "category": "陽線",
         "tone": "bullish",
-        "svg": "images/candle_patterns/bull_bear_harami.svg",
+        "svg": "images/candle_patterns/inyo_harami.svg",
         "action": "買い（放れを確認してエントリー）",
         "tips": [
             "底打ちを示唆するパターンです。売りの枯渇と買いの慎重な発生を意味し、翌日に前日の高値を抜ければ反転が確定しやすくなります。",
@@ -1593,7 +1582,8 @@ def get_ai_assist(code: str, interval: str = "1d") -> Dict[str, Any]:
     AI予測セクション（信頼度・確率・期待値・矛盾）のデータを取得する。
     htmxによる部分更新用。
     """
-    from services.data_fetcher import fetch_stock_data, format_symbol_for_yfinance
+    from services.data_fetcher import (fetch_stock_data,
+                                       format_symbol_for_yfinance)
 
     symbol = format_symbol_for_yfinance(code)
     df = fetch_stock_data(symbol, period="2y", interval=interval)

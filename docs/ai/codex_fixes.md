@@ -577,3 +577,18 @@ ews_service.py compared an offset-aware datetime (published_at) with an offset-n
   - **Lighthouse CI**: `npm run lhci` (TEST_MODE=true LIGHTHOUSE_CI=true) を実行し、アサーション警告（Performance, LCP）を含みつつ、すべてのページ（`/stocks`, `/indices`, `/glossary`, `/candle-patterns`）の計測が正常に終了することを確認。
   - **Regression**: `scripts/regression_test.py` が正常に PASS し、既存の主要ページおよび詳細タブのデグレードがないことを確認。
   - **Performance**: `scripts/perf_check.py` により各エンドポイントの応答速度が正常範囲内（大半が 300ms 以下）であることを確認。
+
+### Review Session 43 (ローソク足パターンの画像不足とパス定義不整合の修正)
+- **Status**: **Success** (Executed 2026-06-18)
+- **Scope**: `scripts/generate_candle_svgs.py`, `services/stock_service.py`
+- **Findings**:
+    1. **形状定義不足**: `generate_candle_svgs.py` に `closing_marubozu_bull` や `karakasa_bull` など11パターンの形状定義が不足しており、画像を自動再生成できない状態だった。
+    2. **パス定義不整合**: `stock_service.py` の `inyo_harami`（陰陽はらみ）が、固有の `inyo_harami.svg` ではなく `bull_bear_harami.svg` を指していた。
+- **Action**:
+    - **定義追加**: `generate_candle_svgs.py` に不足している 9 つのパターン（単一ローソクおよび陰陽はらみ）を追加し、1本足描画のセンタリング設定（`SINGLE_CANDLE_KEYS`）にもキーを追加。
+    - **パス修正**: `stock_service.py` 内の `inyo_harami` の `svg` パスを `images/candle_patterns/inyo_harami.svg` に修正。
+    - **自動生成**: `generate_candle_svgs.py` を実行して 62 個の SVG 画像を自動生成・更新。
+    - **フォーマットと静的解析**: `black` と `isort` でコードを自動整形し、`flake8` による警告を解消（エラーゼロ）。
+- **Verification**:
+    - **Regression**: `scripts/regression_test.py` が正常に PASS。
+    - **Browser**: 基本編、応用編の両タブにおいてすべての画像（大引け陽線や陰陽はらみ等の新規画像を含む）が正常に描画され、詳細モーダルでも正しい画像が表示されることをブラウザサブエージェントにて確認。

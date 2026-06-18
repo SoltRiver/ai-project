@@ -34,7 +34,7 @@ class Candle:
         return abs(self.close - self.open) < 0.5  # Float tolerance
 
 
-# Single candle patterns that need narrower width
+# 1本足で描画されるパターンのキー一覧（中央に細めに描画するため）
 SINGLE_CANDLE_KEYS = {
     "big_bull",
     "small_bull",
@@ -55,6 +55,14 @@ SINGLE_CANDLE_KEYS = {
     "koma",
     "long_legged_doji",
     "kubitsuri",
+    "closing_marubozu_bull",
+    "opening_marubozu_bull",
+    "karakasa_bull",
+    "tonkachi_bull",
+    "closing_marubozu_bear",
+    "opening_marubozu_bear",
+    "karakasa_bear",
+    "tonkachi_bear",
 }
 
 
@@ -90,13 +98,7 @@ def generate_svg(pattern_id, candles):
 
     # Center them
     # For single candles, we want them centered but narrower.
-    # The original logic centered based on total_content_width.
-    # If we reduce candle_width, total_content_width reduces, so it stays centered.
-    total_content_width = count * candle_width * 1.5  # Spacing
-    # Recalculate start_x based on new total width
-    # 1.5 factor in total_content_width implies gap.
-    # For single candle: count=1. total = w * 1.5. start = (W - 1.5w)/2 + 0.75w ??
-    # Let's clean up X centering logic.
+    # If we reduce candle_width, total_block_width reduces, so it stays centered.
 
     # Gap between candles = candle_width * 0.5
     gap = candle_width * 0.5
@@ -105,7 +107,10 @@ def generate_svg(pattern_id, candles):
     start_x = (WIDTH - total_block_width) / 2
     step_x = candle_width + gap
 
-    svg_content = f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {WIDTH} {HEIGHT}" width="{WIDTH}" height="{HEIGHT}">'
+    svg_content = (
+        f'<svg xmlns="http://www.w3.org/2000/svg" '
+        f'viewBox="0 0 {WIDTH} {HEIGHT}" width="{WIDTH}" height="{HEIGHT}">'
+    )
     svg_content += f'<rect width="100%" height="100%" fill="{BG_COLOR}"/>'
 
     for i, c in enumerate(candles):
@@ -130,11 +135,17 @@ def generate_svg(pattern_id, candles):
             body_bot = y_open + 1
 
         # Wick
-        svg_content += f'<line x1="{cx}" y1="{y_high}" x2="{cx}" y2="{y_low}" stroke="{color}" stroke-width="2" />'
+        svg_content += (
+            f'<line x1="{cx}" y1="{y_high}" x2="{cx}" y2="{y_low}" '
+            f'stroke="{color}" stroke-width="2" />'
+        )
 
         # Body
         h = max(2, body_bot - body_top)  # Ensure at least 2px height
-        svg_content += f'<rect x="{cx - candle_width/2}" y="{body_top}" width="{candle_width}" height="{h}" fill="{color}" stroke="none" />'
+        svg_content += (
+            f'<rect x="{cx - candle_width/2}" y="{body_top}" '
+            f'width="{candle_width}" height="{h}" fill="{color}" stroke="none" />'
+        )
 
     svg_content += "</svg>"
     return svg_content
@@ -315,6 +326,27 @@ PATTERNS = {
         Candle(2, 30, 70, 75, 25),
         Candle(3, 80, 60, 85, 55),
         Candle(4, 50, 50, 55, 45),
+    ],
+    # 以下は、新規追加されたローソク足パターン
+    "closing_marubozu_bull": [Candle(0, 30, 85, 85, 15)],  # 大引け陽線（上ヒゲなし）
+    "opening_marubozu_bull": [Candle(0, 30, 75, 90, 30)],  # 寄付き陽線（下ヒゲなし）
+    "karakasa_bull": [
+        Candle(0, 70, 80, 80, 15)
+    ],  # カラカサ・陽（長い下ヒゲ、上ヒゲなし）
+    "tonkachi_bull": [
+        Candle(0, 20, 30, 85, 20)
+    ],  # トンカチ・陽（長い上ヒゲ、下ヒゲなし）
+    "closing_marubozu_bear": [Candle(0, 75, 20, 90, 20)],  # 大引け陰線（下ヒゲなし）
+    "opening_marubozu_bear": [Candle(0, 80, 25, 80, 10)],  # 寄付き陰線（上ヒゲなし）
+    "karakasa_bear": [
+        Candle(0, 80, 70, 80, 15)
+    ],  # カラカサ・陰（長い下ヒゲ、上ヒゲなし）
+    "tonkachi_bear": [
+        Candle(0, 30, 20, 85, 20)
+    ],  # トンカチ・陰（長い上ヒゲ、下ヒゲなし）
+    "inyo_harami": [  # 陰陽はらみ（大陰線の実体内に小陽線）
+        Candle(0, 80, 20, 85, 15),
+        Candle(1, 40, 60, 65, 35),
     ],
 }
 
