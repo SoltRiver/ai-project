@@ -10,7 +10,8 @@
   "scripts": {
     "build:css": "@tailwindcss/cli -i ./static/css/input.css -o ./static/css/output.css",
     "watch:css": "@tailwindcss/cli -i ./static/css/input.css -o ./static/css/output.css --watch",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "lhci": "lhci autorun"
   },
   "repository": {
     "type": "git",
@@ -25,6 +26,7 @@
   },
   "homepage": "https://github.com/SoltRiver/ai-project#readme",
   "devDependencies": {
+    "@lhci/cli": "^0.15.0",
     "@tailwindcss/cli": "^4.2.1",
     "tailwindcss": "^4.2.1"
   }

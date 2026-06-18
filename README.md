@@ -89,6 +89,61 @@ python scripts/process_pdf.py --limit 100
 - **Verify Real Data**: `python scripts/verify_real_data.py`
 - **Verify PDF Search**: `python scripts/verify_pdf_search.py`
 
+### Lighthouse CI（技術的品質チェック）
+
+`/ui_test` コマンド（エージェントワークフロー）の Phase 5 として、Lighthouse CI による自動品質チェックが含まれています。
+
+#### チェック項目
+| カテゴリ | 閾値 | レベル |
+|---|---|---|
+| Performance | ≥ 0.6 | warn |
+| Accessibility | ≥ 0.85 | warn |
+| Best Practices | ≥ 0.8 | warn |
+| SEO | ≥ 0.7 | warn |
+| First Contentful Paint | ≤ 3000ms | warn |
+| Largest Contentful Paint | ≤ 4000ms | warn |
+| Cumulative Layout Shift | ≤ 0.1 | warn |
+
+#### ローカルでの実行
+
+```bash
+# Lighthouse CI のみ実行（FastAPIサーバーは自動起動されます）
+npm run lhci
+
+# 環境変数を指定して実行（推奨）
+# PowerShell:
+$env:TEST_MODE="true"; $env:LIGHTHOUSE_CI="true"; npm run lhci
+
+# Linux / macOS:
+TEST_MODE=true LIGHTHOUSE_CI=true npm run lhci
+```
+
+#### CI での実行
+
+GitHub Actions（`.github/workflows/ui-test.yml`）により、`main` ブランチへの push / PR 時に自動実行されます。
+
+#### `warn` と `error` の使い分け
+
+- **`warn`（警告）**: 閾値を下回ってもCIは通過する。初期段階で使用し、ベースラインを把握する。
+- **`error`（エラー）**: 閾値を下回るとCIが失敗する。スコアが安定してきたら昇格する。
+
+現在は全ての閾値が `warn` レベルに設定されています。
+
+#### 外部API・AI処理の無効化
+
+`LIGHTHOUSE_CI=true` 環境変数が設定されている場合、以下の処理がスキップされます：
+- ニュースバッチ処理スケジューラの起動
+- Stock Master の非同期初期化
+- LangSmith トレースの初期化
+
+これにより、バックグラウンド処理が計測に影響を与えず、安定した結果が得られます。
+
+#### 将来的に厳格化する項目
+- Performance: 0.6 → **0.8**（画像最適化・キャッシュ導入後）
+- Accessibility: 0.85 → **0.9**（WCAG AAA準拠を目指す）
+- SEO: 0.7 → **0.85**（メタタグ・構造化データ整備後）
+- レベル: `warn` → **`error`**（スコアが安定したら）
+
 ## Directory Structure
 - `app.py`: Main entry point
 - `services/`: Business logic (EDINET, Stock, Search, etc.)

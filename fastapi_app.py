@@ -26,10 +26,20 @@ app = FastAPI(
 
 @app.on_event("startup")
 def startup_event():
-    # 0. LangSmithトレース設定の初期化（起動ログに状態を記録）
-    from services.langsmith_config import configure_langsmith
+    import os
 
-    configure_langsmith()
+    # Lighthouse CI モード判定
+    # LIGHTHOUSE_CI=true の場合、外部API・AI処理・バックグラウンドタスクをスキップし
+    # 安定した品質計測を実現する
+    is_lighthouse_ci = os.environ.get("LIGHTHOUSE_CI", "").lower() == "true"
+
+    # 0. LangSmithトレース設定の初期化（起動ログに状態を記録）
+    if not is_lighthouse_ci:
+        from services.langsmith_config import configure_langsmith
+
+        configure_langsmith()
+    else:
+        print("[LIGHTHOUSE_CI] LangSmithトレース初期化をスキップ")
 
     # 1. Create Tables
     from database import engine
@@ -93,20 +103,28 @@ def startup_event():
         db2.close()
 
     # 3. Initialize Stock Master (Async Background)
-    import threading
+    # Lighthouse CI モード時はスキップ（外部APIへのアクセスを抑制）
+    if not is_lighthouse_ci:
+        import threading
 
-    from services.stock_master_service import stock_master_service
+        from services.stock_master_service import stock_master_service
 
-    def run_sync():
-        stock_master_service.initialize_and_sync()
+        def run_sync():
+            stock_master_service.initialize_and_sync()
 
-    thread = threading.Thread(target=run_sync, daemon=True)
-    thread.start()
+        thread = threading.Thread(target=run_sync, daemon=True)
+        thread.start()
+    else:
+        print("[LIGHTHOUSE_CI] Stock Master初期化をスキップ")
 
     # 4. ニュースバッチ処理スケジューラ起動
-    from services.news_batch_service import start_news_scheduler
+    # Lighthouse CI モード時はスキップ（バックグラウンド処理を抑制）
+    if not is_lighthouse_ci:
+        from services.news_batch_service import start_news_scheduler
 
-    start_news_scheduler()
+        start_news_scheduler()
+    else:
+        print("[LIGHTHOUSE_CI] ニュースバッチスケジューラをスキップ")
 
 
 # Mount Static Files

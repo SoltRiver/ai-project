@@ -20,6 +20,8 @@ AIアシスタントは、新しいタスクに着手する前に本ファイル
 - `gemini-1.5-flash` は2026年5月時点で廃止済み。Gemini利用時は `gemini-2.0-flash` を使用すること。
 - `gemini-2.0-flash` 等の Gemini API では、手動で設定するタイムアウト（デッドライン）が最小10秒と定められている。そのため、`ChatGoogleGenerativeAI` などのインスタンス生成時に `timeout` パラメータを設定する場合は、必ず10.0秒以上に設定すること（下回ると `INVALID_ARGUMENT (Manually set deadline is too short)` エラーが発生する）。
 - OpenAI/Gemini共にクォータ制限に注意。バッチ処理では1記事ずつエラーハンドリングし、失敗した記事をスキップして処理を継続する設計とする。
+- **テスト・品質計測時のバックグラウンド処理抑制（Lighthouse CI対応）**: パフォーマンス計測や Lighthouse CI の実行時、外部 API（yfinanceなど）へのアクセスや重い非同期バックグラウンドタスク（Stock Master同期、ニュースバッチスケジューラ等）が測定結果を不安定にさせるため、環境変数 `LIGHTHOUSE_CI=true`（または `TEST_MODE=true`）に基づくガードロジックを FastAPI 起動時（`startup_event`）に導入する。これにより、計測時の外部依存とリソース競合を徹底的に排除し、安定した技術品質の計測を実現する。
+
 
 ## 4. 要件定義・UI/UX
 *(ここに画面設計やユーザー体験に関する共通の取り決めを追記していきます)*

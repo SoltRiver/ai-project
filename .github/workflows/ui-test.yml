@@ -1,0 +1,64 @@
+# UIテスト & Lighthouse CI ワークフロー
+#
+# /ui_test コマンドの自動化部分（Lighthouse CI）を GitHub Actions で実行する。
+# browser_subagent による目視チェックは含まれないが、
+# 技術的品質（Performance, Accessibility, Best Practices, SEO）を自動検証する。
+
+name: UI Test & Lighthouse CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lighthouse-ci:
+    runs-on: ubuntu-latest
+
+    env:
+      # 外部API・AI処理を抑制する環境変数
+      TEST_MODE: "true"
+      LIGHTHOUSE_CI: "true"
+
+    steps:
+      # 1. リポジトリチェックアウト
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2. Python環境セットアップ
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      # 3. Python依存関係インストール
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
+
+      # 4. Node.js環境セットアップ
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      # 5. Node.js依存関係インストール
+      - name: Install Node.js dependencies
+        run: npm ci
+
+      # 6. Lighthouse CI実行
+      # startServerCommand で FastAPI を自動起動するため、
+      # 事前のサーバー起動は不要
+      - name: Run Lighthouse CI
+        run: npm run lhci
+
+      # 7. Lighthouse CI レポートのアップロード（失敗時も保存）
+      - name: Upload Lighthouse CI results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lighthouse-results
+          path: .lighthouseci/
+          retention-days: 30

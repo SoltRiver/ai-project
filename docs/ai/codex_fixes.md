@@ -556,3 +556,24 @@ ews_service.py compared an offset-aware datetime (published_at) with an offset-n
   - **Eval Script**: `run_langsmith_eval.py --dry-run` を実行し、事実性、関連性、明確さ、安全性などの評価関数群が正しく動作することを確認。
   - **Server Startup**: アプリサーバーを起動し、起動完了ログ `INFO: Application startup complete` が出力されることを確認。
 
+## Date: 2026-06-18
+
+### Review Session 42 (Lighthouse CI 統合および /ui_test ワークフロー拡張)
+- **Status**: **Success** (Executed 2026-06-18).
+- **Scope**:
+  - `fastapi_app.py`
+  - `lighthouserc.js`
+  - `package.json`
+  - `package-lock.json`
+  - `README.md`
+  - `.gitignore`
+  - `.github/workflows/ui-test.yml`
+- **Findings**:
+  1. **フォーマットの不整合**: `fastapi_app.py` の修正に際し、Black フォーマットの不一致が検出された。
+- **Action**:
+  - `fastapi_app.py` に対して `.venv\Scripts\black` および `.venv\Scripts\isort` を実行してコードを自動フォーマットした。
+- **Verification**:
+  - **Lint**: `flake8` による静的解析をパス（警告・エラーゼロ）。
+  - **Lighthouse CI**: `npm run lhci` (TEST_MODE=true LIGHTHOUSE_CI=true) を実行し、アサーション警告（Performance, LCP）を含みつつ、すべてのページ（`/stocks`, `/indices`, `/glossary`, `/candle-patterns`）の計測が正常に終了することを確認。
+  - **Regression**: `scripts/regression_test.py` が正常に PASS し、既存の主要ページおよび詳細タブのデグレードがないことを確認。
+  - **Performance**: `scripts/perf_check.py` により各エンドポイントの応答速度が正常範囲内（大半が 300ms 以下）であることを確認。
