@@ -61,7 +61,7 @@
                 </div>
 
                 <div class="space-y-3">
-                    {% for item in impact_bias.items.positive %}
+                    {% for item in impact_bias['items']['positive'] %}
                     <div
                         class="p-4 bg-slate-50 dark:bg-slate-900/30 rounded-xl border border-slate-100 dark:border-slate-800 transition-all hover:bg-white dark:hover:bg-slate-800 hover:shadow-md">
                         <div class="flex justify-between items-start gap-4 mb-2">
@@ -101,7 +101,7 @@
                 </div>
 
                 <div class="space-y-3">
-                    {% for item in impact_bias.items.negative %}
+                    {% for item in impact_bias['items']['negative'] %}
                     <div
                         class="p-4 bg-slate-50 dark:bg-slate-900/30 rounded-xl border border-slate-100 dark:border-slate-800 transition-all hover:bg-white dark:hover:bg-slate-800 hover:shadow-md">
                         <div class="flex justify-between items-start gap-4 mb-2">
