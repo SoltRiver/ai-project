@@ -592,3 +592,23 @@ ews_service.py compared an offset-aware datetime (published_at) with an offset-n
 - **Verification**:
     - **Regression**: `scripts/regression_test.py` が正常に PASS。
     - **Browser**: 基本編、応用編の両タブにおいてすべての画像（大引け陽線や陰陽はらみ等の新規画像を含む）が正常に描画され、詳細モーダルでも正しい画像が表示されることをブラウザサブエージェントにて確認。
+
+## Date: 2026-06-19
+
+### Review Session 44 (銘柄詳細レイアウト調整とチャートインタラクション改善)
+- **Status**: **Success** (Executed 2026-06-19)
+- **Scope**: `templates/stocks/detail.html`, `templates/stocks/partials/_tab_event.html`, `routers/stocks.py`, `static/js/app.js`, `scripts/regression_test.py`
+- **Findings**:
+    1. **レイアウト改善**: 不要な「銘柄詳細」ヘッダーの削除と、イベントカレンダーを独立した「イベント」タブへ移行。
+    2. **チャート操作性復元**: マウスホバーでDC/GCのツールチップが表示されなくなっていた問題を修正。
+    3. **表示バグ**: 出来高の数値桁数が多い場合、左Y軸マージン不足で見切れる問題。
+    4. **出来高インタラクション**: 出来高グラフホバー時の色強調および数値のツールチップ表示を追加。
+- **Action**:
+    - **`detail.html`**: "銘柄詳細" ヘッダーおよびインラインのイベント表示領域を削除。
+    - **`stocks.py`**: tabs リストに event を追加し、`_tab_event.html` を返すように変更。
+    - **`_tab_event.html`**: 読み込み時に `/partials/events/stock/{code}` を HTMX で非同期取得するよう新規作成。
+    - **`app.js`**: `chartLeft` を `75` に拡張し、`mousemove` で DC/GC と出来高のホバー判定を追加。ホバー時の出来高透明度上昇とツールチップ表示を実装。
+- **Verification**:
+    - **Syntax**: `node -c static/js/app.js` をパス。
+    - **Lint / Format**: `flake8 routers/stocks.py` をパス（不要なインポートを整理し警告ゼロ）。
+    - **Regression**: `scripts/regression_test.py` に `tab/event` の確認を追加して実行し、全ルート HTTP 200 で PASS。

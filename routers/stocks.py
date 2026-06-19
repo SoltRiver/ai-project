@@ -7,11 +7,6 @@ from sqlalchemy.orm import Session
 from database import get_db
 from schemas.response_models import StockSearchResponse
 from services import stock_service
-from services.impact_bias_service import ImpactBiasService
-from services.margin_service import get_margin_tab
-from data.stock_name_mapper import STOCK_NAME_MAP
-from fastapi.responses import RedirectResponse
-import logging
 
 
 def format_currency(value):
@@ -58,6 +53,7 @@ async def stock_detail(code: str, request: Request):
         {"name": "dividend", "label": "配当", "icon": "💰"},
         {"name": "margin", "label": "需給", "icon": "⚖️"},
         {"name": "shareholder", "label": "株主優待", "icon": "🎁"},
+        {"name": "event", "label": "イベント", "icon": "📅"},
     ]
 
     # ページ初期ロード時にチャートデータを直接取得してテンプレートに渡す
@@ -126,6 +122,9 @@ async def stock_tab(
     elif tab_name == "shareholder":
         data = stock_service.get_shareholder_tab(code)
         template = "stocks/partials/_tab_shareholder.html"
+    elif tab_name == "event":
+        data = {}
+        template = "stocks/partials/_tab_event.html"
     else:
         raise HTTPException(status_code=404, detail="タブが見つかりません")
 

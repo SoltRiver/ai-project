@@ -117,7 +117,7 @@
             }
 
             let viewCount = Math.min(allPoints.length, 100), viewIndex = Math.max(0, allPoints.length - viewCount);
-            let isDragging = false, lastX = 0, dpr = window.devicePixelRatio || 1, width, height, yScale = null, selectedDataIdx = null, selectedCrossIdx = null;
+            let isDragging = false, lastX = 0, dpr = window.devicePixelRatio || 1, width, height, yScale = null, selectedDataIdx = null, selectedCrossIdx = null, isSticky = false;
 
             function updateDimensions() {
                 const rect = wrapper.getBoundingClientRect();
@@ -159,7 +159,7 @@
                 const topMargin = 40, bottomMargin = 20, availableHeight = height - topMargin - bottomMargin;
                 const priceAreaHeight = availableHeight * 0.60, priceTop = topMargin, priceBottom = priceTop + priceAreaHeight;
                 const volumeHeight = availableHeight * 0.25, volumeTop = height - bottomMargin - volumeHeight, volumeBottom = height - bottomMargin;
-                const chartLeft = 50, chartRight = width - 50, chartWidth = chartRight - chartLeft;
+                const chartLeft = 75, chartRight = width - 40, chartWidth = chartRight - chartLeft;
                 const step = chartWidth / Math.max(1, points.length), candleWidth = Math.max(1, step * 0.65);
 
                 const highs = points.map(p => p.high), lows = points.map(p => p.low);
@@ -213,9 +213,10 @@
                 vGrad.addColorStop(0, colors.gradientFrom); vGrad.addColorStop(1, colors.gradientTo);
                 points.forEach((p, i) => {
                     const h = (p.volume / maxVol) * volumeHeight, x = getX(i) - candleWidth / 2;
-                    ctx.fillStyle = '#FFD700'; ctx.globalAlpha = 0.3;
+                    const isHovered = (selectedDataIdx !== null && (viewIndex + i) === selectedDataIdx);
+                    ctx.fillStyle = '#FFD700'; ctx.globalAlpha = isHovered ? 0.8 : 0.3;
                     ctx.fillRect(x, volumeBottom - h, candleWidth, Math.max(1, h));
-                    ctx.fillStyle = vGrad; ctx.globalAlpha = 0.4;
+                    ctx.fillStyle = vGrad; ctx.globalAlpha = isHovered ? 0.9 : 0.4;
                     ctx.fillRect(x, volumeBottom - h, candleWidth, Math.max(1, h));
                     ctx.globalAlpha = 1.0;
                 });
@@ -245,28 +246,122 @@
 
             canvas.addEventListener('click', (e) => {
                 const rect = canvas.getBoundingClientRect(), x = e.clientX - rect.left, y = e.clientY - rect.top;
-                const chartWidth = width - 100, step = chartWidth / viewCount;
+                const step = (chartRight - chartLeft) / viewCount;
+
+                // DC/GC の判定
                 let clickedCross = crosses.find(c => {
                     if (c.index < viewIndex || c.index >= viewIndex + viewCount) return false;
-                    const cx = 50 + (c.index - viewIndex) * step + step / 2;
-                    return Math.abs(x - cx) < 20 && Math.abs(y - 40) < 30;
+                    const cx = chartLeft + (c.index - viewIndex) * step + step / 2;
+                    const cyCircle = yScale(c.price);
+                    const cyLabel = priceTop - 10;
+                    return Math.abs(x - cx) < 15 && (Math.abs(y - cyCircle) < 15 || Math.abs(y - cyLabel) < 20);
                 });
-                if (clickedCross) { selectedCrossIdx = clickedCross.index; selectedDataIdx = null; draw(); return; }
-                const idx = Math.floor((x - 50) / step) + viewIndex;
-                if (idx >= 0 && idx < allPoints.length) { selectedDataIdx = idx; selectedCrossIdx = null; draw(); }
+
+                if (clickedCross) {
+                    if (isSticky && selectedCrossIdx === clickedCross.index) {
+                        isSticky = false;
+                        selectedCrossIdx = null;
+                    } else {
+                        isSticky = true;
+                        selectedCrossIdx = clickedCross.index;
+                        selectedDataIdx = null;
+                    }
+                    draw();
+                    return;
+                }
+
+                // ローソク足・出来高バーの判定
+                const idx = Math.floor((x - chartLeft) / step) + viewIndex;
+                if (idx >= viewIndex && idx < viewIndex + viewCount && idx < allPoints.length) {
+                    if (isSticky && selectedDataIdx === idx) {
+                        isSticky = false;
+                        selectedDataIdx = null;
+                    } else {
+                        isSticky = true;
+                        selectedDataIdx = idx;
+                        selectedCrossIdx = null;
+                    }
+                    draw();
+                } else {
+                    isSticky = false;
+                    selectedDataIdx = null;
+                    selectedCrossIdx = null;
+                    tooltip.style.display = 'none';
+                    draw();
+                }
             });
 
             canvas.addEventListener('mousedown', (e) => { isDragging = true; lastX = e.clientX; canvas.style.cursor = 'grabbing'; });
             window.addEventListener('mouseup', () => { isDragging = false; if (canvas) canvas.style.cursor = 'grab'; });
             canvas.addEventListener('mousemove', (e) => {
+                const rect = canvas.getBoundingClientRect(), x = e.clientX - rect.left, y = e.clientY - rect.top;
+                const step = (chartRight - chartLeft) / viewCount;
+
                 if (isDragging) {
                     const deltaX = e.clientX - lastX; lastX = e.clientX;
-                    viewIndex = Math.max(0, Math.min(viewIndex - deltaX / ((width - 100) / viewCount), allPoints.length - viewCount));
+                    viewIndex = Math.max(0, Math.min(viewIndex - deltaX / ((chartRight - chartLeft) / viewCount), allPoints.length - viewCount));
                     draw(); return;
                 }
-                const rect = canvas.getBoundingClientRect(), x = e.clientX - rect.left;
-                const idx = Math.floor((x - 50) / ((width - 100) / viewCount)) + viewIndex;
-                if (idx >= 0 && idx < allPoints.length) { updateLegend(allPoints[idx]); updateMainLegend(allPoints[idx]); }
+
+                // DC/GC のホバー判定
+                let hoveredCross = null;
+                if (crossPair) {
+                    hoveredCross = crosses.find(c => {
+                        if (c.index < viewIndex || c.index >= viewIndex + viewCount) return false;
+                        const cx = chartLeft + (c.index - viewIndex) * step + step / 2;
+                        const cyCircle = yScale(c.price);
+                        const cyLabel = priceTop - 10;
+                        return Math.abs(x - cx) < 15 && (Math.abs(y - cyCircle) < 15 || Math.abs(y - cyLabel) < 20);
+                    });
+                }
+
+                if (hoveredCross) {
+                    canvas.style.cursor = 'pointer';
+                    if (!isSticky) {
+                        selectedCrossIdx = hoveredCross.index;
+                        selectedDataIdx = null;
+                        draw();
+                    }
+                    return;
+                }
+
+                // ローソク足または出来高バーのホバー判定
+                const idx = Math.floor((x - chartLeft) / step) + viewIndex;
+                if (idx >= viewIndex && idx < viewIndex + viewCount && idx < allPoints.length && y >= priceTop && y <= volumeBottom) {
+                    canvas.style.cursor = 'pointer';
+                    if (!isSticky) {
+                        selectedDataIdx = idx;
+                        selectedCrossIdx = null;
+                        updateLegend(allPoints[idx]);
+                        updateMainLegend(allPoints[idx]);
+                        draw();
+                    } else {
+                        updateLegend(allPoints[idx]);
+                        updateMainLegend(allPoints[idx]);
+                    }
+                } else {
+                    canvas.style.cursor = 'grab';
+                    if (!isSticky) {
+                        selectedDataIdx = null;
+                        selectedCrossIdx = null;
+                        tooltip.style.display = 'none';
+                        draw();
+                    }
+                }
+            });
+
+            canvas.addEventListener('mouseleave', () => {
+                if (!isSticky) {
+                    selectedDataIdx = null;
+                    selectedCrossIdx = null;
+                    tooltip.style.display = 'none';
+                    if (allPoints.length > 0) {
+                        const last = allPoints[allPoints.length - 1];
+                        updateLegend(last);
+                        updateMainLegend(last);
+                    }
+                    draw();
+                }
             });
 
             canvas.addEventListener('wheel', (e) => {

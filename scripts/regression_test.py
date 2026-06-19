@@ -78,6 +78,7 @@ def regression_test():
                     "/tab/fundamental",
                     "/tab/dividend",
                     "/tab/shareholder",
+                    "/tab/event",
                 ]
                 for tab in tabs:
                     url = f"{BASE_URL}/stocks/{code}{tab}"
