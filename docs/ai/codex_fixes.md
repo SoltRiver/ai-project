@@ -612,3 +612,20 @@ ews_service.py compared an offset-aware datetime (published_at) with an offset-n
     - **Syntax**: `node -c static/js/app.js` をパス。
     - **Lint / Format**: `flake8 routers/stocks.py` をパス（不要なインポートを整理し警告ゼロ）。
     - **Regression**: `scripts/regression_test.py` に `tab/event` の確認を追加して実行し、全ルート HTTP 200 で PASS。
+
+## Date: 2026-06-21
+
+### Review Session 45 (ニュースAI要約データバリデーション実装)
+- **Status**: **Success** (Executed 2026-06-21)
+- **Scope**: `services/langgraph/stock_news_schemas.py` [NEW], `services/langgraph/stock_news_nodes.py`, `tests/test_stock_news_validation.py` [NEW]
+- **Findings**:
+    1. **データバリデーションの欠如**: LangGraph のニュース要約ワークフローにおける状態データにバリデーションチェックがなく、外部API（yfinance）やLLMから不正なデータや `None` 値が渡された場合に処理が停止するリスクがあった。
+    2. **欠損値補正ルール (edit-rules.md) の適用**: APIやLLMのデータ欠損時は `None` をそのままにせず、自動的にハイフン `"-"` または `"#"` などのデフォルト値に置換してバリデーションを通過させる仕組みが必要。
+- **Action**:
+    - **`stock_news_schemas.py`**: Pydantic v2 スキーマ（`StockNewsInput`, `NewsItem`, `AISummaryResult`, `NewsSummaryItem`, `FormattedNewsItem`, `StockNewsResponse`）を新規作成。`@field_validator` を利用し、`None` 値や空文字を自動的に `"-"` 等のデフォルト値に補正するロジックを実装。
+    - **`stock_news_nodes.py`**: 各ノードの開始・終了時に対応する Pydantic モデルを用いてバリデーションを強制。検証失敗時はログ出力を行って異常要素をスキップするか、または `state["error"]` に格納して安全にハンドリング。E501 (長い行) 警告を解消するためにメッセージ文字列を分割。
+    - **`test_stock_news_validation.py`**: 非同期テストプラグインに依存しないよう `asyncio.run` を利用した単体テストを新規作成し、欠損値補正、センチメントフォールバック、各ノードのデータ整合性を検証。
+- **Verification**:
+    - **Lint / Format**: `black`, `isort` で自動整形を行い、`flake8` の静的解析を警告・エラーゼロでパス。
+    - **Unit Tests**: `test_stock_news_validation.py` の 7 件すべてのテストが正常にパス。
+    - **Regression**: `scripts/regression_test.py` を実行し、全主要ルートおよび詳細タブで `OK` (Regression Test: PASS) を確認。
