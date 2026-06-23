@@ -629,3 +629,40 @@ ews_service.py compared an offset-aware datetime (published_at) with an offset-n
     - **Lint / Format**: `black`, `isort` で自動整形を行い、`flake8` の静的解析を警告・エラーゼロでパス。
     - **Unit Tests**: `test_stock_news_validation.py` の 7 件すべてのテストが正常にパス。
     - **Regression**: `scripts/regression_test.py` を実行し、全主要ルートおよび詳細タブで `OK` (Regression Test: PASS) を確認。
+
+## Date: 2026-06-22
+
+### Review Session 46 (ローソク足チャートツールチップのスコープおよびクリック解除挙動の修正)
+- **Status**: **Success** (Executed 2026-06-22)
+- **Scope**: `static/js/app.js`
+- **Findings**:
+    1. **変数スコープエラー (ReferenceError)**: `showTooltip` および `showCrossTooltip` が `renderCandleCharts` の外部で定義されており、内部変数 `allPoints` や `payload` などにアクセスした際に `ReferenceError` でJSの実行が中断され、ツールチップが表示されないバグが発生していた。
+    2. **固定解除の仕様最適化**: すでにツールチップが固定（`isSticky === true`）されている場合、クリックした位置に関わらず固定表示を解除し、ツールチップを消す挙動が求められていた。
+- **Action**:
+    - **スコープ移動**: `showTooltip` と `showCrossTooltip` を `renderCandleCharts` 内の `draw` 関数の直前に移動し、親のレキシカルスコープの変数にアクセスできるようにした。また、元のファイル末尾の古い関数定義を削除した。
+    - **クリックハンドラの修正**: キャンバスのクリックイベントの先頭で、すでに `isSticky` である場合に無条件で固定解除し、ツールチップを非表示にしてリターンする制御を追加した。
+- **Verification**:
+    - **Syntax**: `node -c static/js/app.js` にて構文的に問題ないことを確認。
+    - **Regression**: `scripts/regression_test.py` を実行し、チャートタブ（`/stocks/7203/tab/chart`）を含む全重要ルートで正常（PASS）を確認。
+    - **Performance**: `scripts/perf_check.py` にて全画面・API・htmxタブがHTTP 200 OKで遅延なく返ることを確認。
+
+## Date: 2026-06-23
+
+### Review Session 47 (DC/GCツールチップ 2回目修正 - 変数スコープの根本原因解消)
+- **Status**: **Success** (Executed 2026-06-23)
+- **Scope**: `static/js/app.js`
+- **Findings**:
+    1. **`calculateCrossConfidence` のスコープ外定義 (Critical)**: `calculateCrossConfidence` 関数が `renderCandleCharts` 関数の**外部**に定義されていたため、`allPoints`変数への参照時に `ReferenceError` が発生し、DC/GCのツールチップ表示が実行時エラーで中断されていた。
+    2. **`chartLeft`/`chartRight`/`priceTop`/`volumeBottom` の `const` スコープ問題 (Critical)**: これらの変数が `draw()` 内部の `const` として定義されていたが、クリックイベントハンドラーとマウスムーブイベントハンドラーから参照されていた。`draw()` が終了すると `const` はスコープ外となり、イベントハンドラー実行時に `ReferenceError` が発生してクリックや hover 検出が全く機能しない状態だった。
+    3. **DC/GCホバー判定の条件不備**: ホバー判定で `if (crossPair)` という条件があったため、SMA数が1つ以下の場合にDC/GC検出が行われていた場合でもホバーが動作しない問題があった。
+- **Action**:
+    1. **`calculateCrossConfidence` を `renderCandleCharts` 内部に移動**: `showCrossTooltip` の直前に定義し直すことで、`allPoints` に正しくアクセスできるようになった。
+    2. **レイアウト変数をスコープ上位に移動**: `chartLeft`, `chartRight`, `priceTop`, `volumeBottom` を `renderCandleCharts` スコープ内の `let` 変数として宣言し、`draw()` の実行時に代入する形に変更。これでイベントハンドラーから参照可能になった。
+    3. **ホバー判定を修正**: `if (crossPair)` → `if (crosses.length > 0)` に変更し、crosses配列にデータがあれば必ずホバー判定が行われるようになった。
+- **再発防止策**:
+    - イベントハンドラー（click/mousemove）から参照する変数は必ずイベントハンドラーのスコープ以上の位置（`renderCandleCharts` スコープ）で `let` 宣言する。
+    - `draw()` のような描画関数内で計算するレイアウト定数を、外部のイベントハンドラーから使う場合は、`const` ではなくスコープを上位にした `let` で管理する。
+- **Verification**:
+    - コードレビューにより変数スコープが正しく修正されていることを確認。
+    - サーバー起動確認（langgraph インストール後に `python -m uvicorn` が正常起動）。
+

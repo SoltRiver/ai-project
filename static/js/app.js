@@ -118,6 +118,8 @@
 
             let viewCount = Math.min(allPoints.length, 100), viewIndex = Math.max(0, allPoints.length - viewCount);
             let isDragging = false, lastX = 0, dpr = window.devicePixelRatio || 1, width, height, yScale = null, selectedDataIdx = null, selectedCrossIdx = null, isSticky = false;
+            // イベントハンドラーから参照できるよう、draw()内のレイアウト変数をスコープ外で宣言
+            let chartLeft = 75, chartRight = 0, priceTop = 40, volumeBottom = 0;
 
             function updateDimensions() {
                 const rect = wrapper.getBoundingClientRect();
@@ -142,6 +144,182 @@
             }
             let ctx = canvas.getContext('2d');
 
+            // ツールチップ表示関数（レキシカルスコープの変数にアクセス可能にするため内部に移動）
+            function showTooltip(point, x, clientY, rect) {
+                // コンテンツ構築
+                // 日付フォーマット: 2025/12/19 -> 2025-12-19
+                const formattedDate = (point.label || '').replace(/\//g, '-');
+                const volInWan = point.volume != null ? (point.volume / 10000).toLocaleString('ja-JP', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + '万株' : 'N/A';
+
+                let html = `<div class="tooltip-header">${formattedDate}</div>`;
+                html += `<div class="tooltip-row"><span class="t-label">出来高</span><span class="t-val">${volInWan}</span></div>`;
+                html += `<div class="tooltip-divider"></div>`;
+                html += `<div class="tooltip-row"><span class="t-label">始値</span><span class="t-val">${fmtPrice(point.open)}</span></div>`;
+                html += `<div class="tooltip-row"><span class="t-label">高値</span><span class="t-val">${fmtPrice(point.high)}</span></div>`;
+                html += `<div class="tooltip-row"><span class="t-label">安値</span><span class="t-val">${fmtPrice(point.low)}</span></div>`;
+                html += `<div class="tooltip-row"><span class="t-label">終値</span><span class="t-val">${fmtPrice(point.close)}</span></div>`;
+
+                if (point.candle_name && point.candle_type) {
+                    html += `<div class="tooltip-divider"></div>`;
+                    html += `<div class="tooltip-row"><span class="t-label">形</span><span class="t-val">${point.candle_type}</span></div>`;
+
+                    // パターン名リンク：名前とカテゴリ（陽線/陰線）の両方で一致させる
+                    let patternNameHtml = point.candle_name;
+                    if (payload.candle_patterns) {
+                        // まず名前＋カテゴリで完全一致を試行
+                        let pattern = payload.candle_patterns.find(p => p.name === point.candle_name && p.category === point.candle_type);
+                        // 見つからなければ名前のみで検索（十字線・コマ等のカテゴリ「迷い」用）
+                        if (!pattern) {
+                            pattern = payload.candle_patterns.find(p => p.name === point.candle_name);
+                        }
+                        if (pattern) {
+                            patternNameHtml = `<a href="javascript:void(0)" class="t-pattern-link" onclick="window.showPatternCardModal('${pattern.id}')">${point.candle_name}</a>`;
+                        }
+                    }
+                    html += `<div class="tooltip-row"><span class="t-label">種類</span><span class="t-val">${patternNameHtml}</span></div>`;
+                }
+
+                tooltip.innerHTML = html;
+                tooltip.style.display = 'block';
+                tooltip.style.pointerEvents = 'auto'; // ツールチップ内でのクリックを有効化
+
+                // 表示位置の設定
+                const tWidth = tooltip.offsetWidth || 180;
+                const tHeight = tooltip.offsetHeight || 120;
+                let left = x + 20;
+                let top = (clientY - rect.top) - 20;
+
+                // 境界判定ロジック
+                if (left + tWidth > width) left = x - tWidth - 20;
+                if (top + tHeight > height) top = height - tHeight - 10;
+                if (top < 0) top = 10;
+
+                tooltip.style.left = `${left}px`;
+                tooltip.style.top = `${top}px`;
+                tooltip.style.transform = 'none';
+            }
+
+            // GC/DCの信頼度スコアを計算する関数（allPointsにアクセスできるよう内部に定義）
+            function calculateCrossConfidence(cross, prevPoint, currPoint, shortKey, longKey) {
+                if (!prevPoint || !currPoint) return { level: '未確定', icon: '', reason: 'データ不足', colorClass: 'conf-unconfirmed' };
+
+                const slope = currPoint[longKey] - prevPoint[longKey];
+                const isGC = cross.type === 'golden';
+                const close = currPoint.close;
+                const longMa = currPoint[longKey];
+
+                // 最新足かどうかで確定/未確定を判断
+                const isConfirmed = cross.index < allPoints.length - 1;
+
+                if (!isConfirmed) {
+                    const trendMatches = isGC ? (slope > 0) : (slope < 0);
+                    const priceDominant = isGC ? (close > longMa) : (close < longMa);
+                    let tempReason = '';
+                    if (trendMatches && priceDominant) {
+                        tempReason = isGC ? '長期MAが上昇、終値が長期MAの上' : '長期MAが下降、終値が長期MAの下';
+                    } else if (!trendMatches && !priceDominant) {
+                        tempReason = isGC ? '長期MAが下降、終値が長期MAの下' : '長期MAが上昇、終値が長期MAの上';
+                    } else if (trendMatches && !priceDominant) {
+                        tempReason = isGC ? '長期MAは上昇しているが、終値が長期MAの下' : '長期MAは下降しているが、終値が長期MAの上';
+                    } else {
+                        tempReason = isGC ? '終値は長期MAの上にあるが、長期MAが下降中' : '終値は長期MAの下にあるが、長期MAが上昇中';
+                    }
+                    return { level: '未確定', icon: '', reason: `未確定足のため。（暫定状態：${tempReason}）`, colorClass: 'conf-unconfirmed' };
+                }
+
+                // トレンド方向の一致チェック
+                const trendMatches = isGC ? (slope > 0) : (slope < 0);
+                // 終値が有利なサイドにあるかチェック
+                const priceDominant = isGC ? (close > longMa) : (close < longMa);
+
+                let level, icon, reason, colorClass;
+
+                if (trendMatches && priceDominant) {
+                    level = '高'; icon = '◎'; colorClass = 'conf-high';
+                    reason = isGC ? '長期MAが上昇、終値が長期MAの上' : '長期MAが下降、終値が長期MAの下';
+                } else if (!trendMatches && !priceDominant) {
+                    level = '低'; icon = '△'; colorClass = 'conf-low';
+                    reason = isGC ? '長期MAが下降、終値が長期MAの下' : '長期MAが上昇、終値が長期MAの上';
+                } else {
+                    level = '中'; icon = '〇'; colorClass = 'conf-medium';
+                    if (trendMatches && !priceDominant) {
+                        reason = isGC ? '長期MAは上昇しているが、終値が長期MAの下' : '長期MAは下降しているが、終値が長期MAの上';
+                    } else {
+                        reason = isGC ? '終値は長期MAの上にあるが、長期MAが下降中' : '終値は長期MAの下にあるが、長期MAが上昇中';
+                    }
+                }
+
+                return { level, icon, reason, colorClass };
+            }
+
+            // DC/GC用のツールチップ表示関数
+            function showCrossTooltip(cross, x, my, rect) {
+                const point = allPoints[cross.index];
+                const prevPoint = cross.index > 0 ? allPoints[cross.index - 1] : null;
+
+                const isGolden = cross.type === 'golden';
+                const crossTitle = isGolden ? 'ゴールデンクロス' : 'デッドクロス';
+                const crossColor = isGolden ? '#eab308' : '#3b82f6';
+
+                const shortKey = sortedSmaKeys[0] || '短期MA';
+                const longKey = sortedSmaKeys[1] || '長期MA';
+                const shortNum = shortKey.match(/\d+/) ? shortKey.match(/\d+/)[0] : '';
+                const longNum = longKey.match(/\d+/) ? longKey.match(/\d+/)[0] : '';
+
+                const isConfirmed = cross.index < allPoints.length - 1;
+                const res = calculateCrossConfidence(cross, prevPoint, point, shortKey, longKey);
+
+                // 1. 日付
+                const formattedDate = (point.label || '').replace(/\//g, '-');
+                let html = `<div class="tooltip-header" style="border:none; padding-bottom:0;">${formattedDate}</div>`;
+
+                // 2. 状態（色とアイコンで強調）
+                const statusText = isConfirmed ? '確定' : '未確定';
+                const statusClass = isConfirmed ? 'status-confirmed' : 'status-unconfirmed';
+                const statusIcon = isConfirmed ? '✅' : '⏳';
+                html += `<div class="tooltip-row"><span class="t-label">状態</span><span class="t-val ${statusClass}"><span class="status-icon">${statusIcon}</span>${statusText}</span></div>`;
+
+                // 3. 線種
+                html += `<div class="tooltip-row"><span class="t-label">線種</span><span class="t-val" style="color:${crossColor}; font-weight:700;">${crossTitle}</span></div>`;
+
+                // 4. 条件
+                const op = isGolden ? '>' : '<';
+                html += `<div class="tooltip-row"><span class="t-label">条件</span><span class="t-val" style="font-size:0.75rem;">短期(${shortNum}) ${op} 長期(${longNum})</span></div>`;
+
+                // 5. 信頼度評価
+                const badgeContent = res.level + (res.icon ? ' ' + res.icon : '');
+                const resJson = JSON.stringify({ ...res, type: cross.type }).replace(/"/g, '&quot;');
+                html += `<div class="tooltip-row">
+                            <span class="t-label">信頼度評価 <span class="conf-help-icon" onclick="window.showCrossHelpModal(event, ${resJson})">?</span></span>
+                            <span class="conf-badge ${res.colorClass}">${badgeContent}</span>
+                        </div>`;
+
+                // 7. 短期移動平均
+                html += `<div class="tooltip-row"><span class="t-label">短期(${shortNum})</span><span class="t-val">${fmtPrice(point[shortKey])}</span></div>`;
+
+                // 8. 長期移動平均
+                html += `<div class="tooltip-row"><span class="t-label">長期(${longNum})</span><span class="t-val">${fmtPrice(point[longKey])}</span></div>`;
+
+                // 9. 終値
+                html += `<div class="tooltip-row"><span class="t-label">終値</span><span class="t-val">${fmtPrice(point.close)}</span></div>`;
+
+                tooltip.innerHTML = html;
+                tooltip.style.display = 'block';
+                tooltip.style.pointerEvents = 'auto';
+
+                const tWidth = tooltip.offsetWidth || 200;
+                const tHeight = tooltip.offsetHeight || 250;
+                let left = x + 20;
+                let top = my - (tHeight / 2);
+                if (left + tWidth > width) left = x - tWidth - 20;
+                if (top + tHeight > height) top = height - tHeight - 10;
+                if (top < 0) top = 10;
+
+                tooltip.style.left = `${left}px`;
+                tooltip.style.top = `${top}px`;
+                tooltip.style.transform = 'none';
+            }
+
             function draw() {
                 if (!ctx) {
                     return;
@@ -157,9 +335,11 @@
                 ctx.clearRect(0, 0, width, height);
 
                 const topMargin = 40, bottomMargin = 20, availableHeight = height - topMargin - bottomMargin;
-                const priceAreaHeight = availableHeight * 0.60, priceTop = topMargin, priceBottom = priceTop + priceAreaHeight;
-                const volumeHeight = availableHeight * 0.25, volumeTop = height - bottomMargin - volumeHeight, volumeBottom = height - bottomMargin;
-                const chartLeft = 75, chartRight = width - 40, chartWidth = chartRight - chartLeft;
+                const priceAreaHeight = availableHeight * 0.60, priceBottom = priceTop + priceAreaHeight;
+                const volumeHeight = availableHeight * 0.25, volumeTop = height - bottomMargin - volumeHeight;
+                // レイアウト変数を更新（イベントハンドラーから参照するため外部スコープ変数に代入）
+                chartLeft = 75; chartRight = width - 40; priceTop = topMargin; volumeBottom = height - bottomMargin;
+                const chartWidth = chartRight - chartLeft;
                 const step = chartWidth / Math.max(1, points.length), candleWidth = Math.max(1, step * 0.65);
 
                 const highs = points.map(p => p.high), lows = points.map(p => p.low);
@@ -248,7 +428,17 @@
                 const rect = canvas.getBoundingClientRect(), x = e.clientX - rect.left, y = e.clientY - rect.top;
                 const step = (chartRight - chartLeft) / viewCount;
 
-                // DC/GC の判定
+                // すでに固定状態（isSticky）である場合、どこをクリックしても固定を解除して消す
+                if (isSticky) {
+                    isSticky = false;
+                    selectedDataIdx = null;
+                    selectedCrossIdx = null;
+                    tooltip.style.display = 'none';
+                    draw();
+                    return;
+                }
+
+                // DC/GC の判定（固定されていない場合のみ新規で固定する）
                 let clickedCross = crosses.find(c => {
                     if (c.index < viewIndex || c.index >= viewIndex + viewCount) return false;
                     const cx = chartLeft + (c.index - viewIndex) * step + step / 2;
@@ -258,14 +448,9 @@
                 });
 
                 if (clickedCross) {
-                    if (isSticky && selectedCrossIdx === clickedCross.index) {
-                        isSticky = false;
-                        selectedCrossIdx = null;
-                    } else {
-                        isSticky = true;
-                        selectedCrossIdx = clickedCross.index;
-                        selectedDataIdx = null;
-                    }
+                    isSticky = true;
+                    selectedCrossIdx = clickedCross.index;
+                    selectedDataIdx = null;
                     draw();
                     return;
                 }
@@ -273,14 +458,9 @@
                 // ローソク足・出来高バーの判定
                 const idx = Math.floor((x - chartLeft) / step) + viewIndex;
                 if (idx >= viewIndex && idx < viewIndex + viewCount && idx < allPoints.length) {
-                    if (isSticky && selectedDataIdx === idx) {
-                        isSticky = false;
-                        selectedDataIdx = null;
-                    } else {
-                        isSticky = true;
-                        selectedDataIdx = idx;
-                        selectedCrossIdx = null;
-                    }
+                    isSticky = true;
+                    selectedDataIdx = idx;
+                    selectedCrossIdx = null;
                     draw();
                 } else {
                     isSticky = false;
@@ -303,9 +483,9 @@
                     draw(); return;
                 }
 
-                // DC/GC のホバー判定
+                // DC/GC のホバー判定（crossesが存在すれば判定する）
                 let hoveredCross = null;
-                if (crossPair) {
+                if (crosses.length > 0) {
                     hoveredCross = crosses.find(c => {
                         if (c.index < viewIndex || c.index >= viewIndex + viewCount) return false;
                         const cx = chartLeft + (c.index - viewIndex) * step + step / 2;
@@ -372,182 +552,6 @@
 
             draw();
         });
-    }
-
-    function showTooltip(point, x, clientY, rect) {
-        // Construct Content
-        // Format Date: 2025/12/19 -> 2025-12-19
-        const formattedDate = (point.label || '').replace(/\//g, '-');
-        const volInWan = point.volume != null ? (point.volume / 10000).toLocaleString('ja-JP', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + '万株' : 'N/A';
-
-        let html = `<div class="tooltip-header">${formattedDate}</div>`;
-        html += `<div class="tooltip-row"><span class="t-label">出来高</span><span class="t-val">${volInWan}</span></div>`;
-        html += `<div class="tooltip-divider"></div>`;
-        html += `<div class="tooltip-row"><span class="t-label">始値</span><span class="t-val">${fmtPrice(point.open)}</span></div>`;
-        html += `<div class="tooltip-row"><span class="t-label">高値</span><span class="t-val">${fmtPrice(point.high)}</span></div>`;
-        html += `<div class="tooltip-row"><span class="t-label">安値</span><span class="t-val">${fmtPrice(point.low)}</span></div>`;
-        html += `<div class="tooltip-row"><span class="t-label">終値</span><span class="t-val">${fmtPrice(point.close)}</span></div>`;
-
-        if (point.candle_name && point.candle_type) {
-            html += `<div class="tooltip-divider"></div>`;
-            html += `<div class="tooltip-row"><span class="t-label">形</span><span class="t-val">${point.candle_type}</span></div>`;
-
-            // パターン名リンク：名前とカテゴリ（陽線/陰線）の両方で一致させる
-            let patternNameHtml = point.candle_name;
-            if (payload.candle_patterns) {
-                // まず名前＋カテゴリで完全一致を試行
-                let pattern = payload.candle_patterns.find(p => p.name === point.candle_name && p.category === point.candle_type);
-                // 見つからなければ名前のみで検索（十字線・コマ等のカテゴリ「迷い」用）
-                if (!pattern) {
-                    pattern = payload.candle_patterns.find(p => p.name === point.candle_name);
-                }
-                if (pattern) {
-                    patternNameHtml = `<a href="javascript:void(0)" class="t-pattern-link" onclick="window.showPatternCardModal('${pattern.id}')">${point.candle_name}</a>`;
-                }
-            }
-            html += `<div class="tooltip-row"><span class="t-label">種類</span><span class="t-val">${patternNameHtml}</span></div>`;
-        }
-
-        tooltip.innerHTML = html;
-        tooltip.style.display = 'block';
-        tooltip.style.pointerEvents = 'auto'; // Enable clicks inside tooltip
-
-        // Position
-        const tWidth = tooltip.offsetWidth || 180;
-        const tHeight = tooltip.offsetHeight || 120;
-        let left = x + 20;
-        let top = (clientY - rect.top) - 20;
-
-        // Boundary Logic
-        if (left + tWidth > width) left = x - tWidth - 20;
-        if (top + tHeight > height) top = height - tHeight - 10;
-        if (top < 0) top = 10;
-
-        tooltip.style.left = `${left}px`;
-        tooltip.style.top = `${top}px`;
-        tooltip.style.transform = 'none';
-    }
-
-    function showCrossTooltip(cross, x, my, rect) {
-        const point = allPoints[cross.index];
-        const prevPoint = cross.index > 0 ? allPoints[cross.index - 1] : null;
-
-        const isGolden = cross.type === 'golden';
-        const crossTitle = isGolden ? 'ゴールデンクロス' : 'デッドクロス';
-        const crossColor = isGolden ? '#eab308' : '#3b82f6';
-
-        const shortKey = sortedSmaKeys[0] || '短期MA';
-        const longKey = sortedSmaKeys[1] || '長期MA';
-        const shortNum = shortKey.match(/\d+/) ? shortKey.match(/\d+/)[0] : '';
-        const longNum = longKey.match(/\d+/) ? longKey.match(/\d+/)[0] : '';
-
-        const isConfirmed = cross.index < allPoints.length - 1;
-        const res = calculateCrossConfidence(cross, prevPoint, point, shortKey, longKey);
-
-        // 1. Date
-        const formattedDate = (point.label || '').replace(/\//g, '-');
-        let html = `<div class="tooltip-header" style="border:none; padding-bottom:0;">${formattedDate}</div>`;
-
-        // 2. Status (Enhanced with color and icon)
-        const statusText = isConfirmed ? '確定' : '未確定';
-        const statusClass = isConfirmed ? 'status-confirmed' : 'status-unconfirmed';
-        const statusIcon = isConfirmed ? '✅' : '⏳';
-        html += `<div class="tooltip-row"><span class="t-label">状態</span><span class="t-val ${statusClass}"><span class="status-icon">${statusIcon}</span>${statusText}</span></div>`;
-
-        // 3. Line Type
-        html += `<div class="tooltip-row"><span class="t-label">線種</span><span class="t-val" style="color:${crossColor}; font-weight:700;">${crossTitle}</span></div>`;
-
-        // 4. Condition
-        const op = isGolden ? '>' : '<';
-        html += `<div class="tooltip-row"><span class="t-label">条件</span><span class="t-val" style="font-size:0.75rem;">短期(${shortNum}) ${op} 長期(${longNum})</span></div>`;
-
-        // 5. Confidence
-        const badgeContent = res.level + (res.icon ? ' ' + res.icon : '');
-        // Include cross type for the modal symbol
-        const resJson = JSON.stringify({ ...res, type: cross.type }).replace(/"/g, '&quot;');
-        html += `<div class="tooltip-row">
-                    <span class="t-label">信頼度評価 <span class="conf-help-icon" onclick="window.showCrossHelpModal(event, ${resJson})">?</span></span>
-                    <span class="conf-badge ${res.colorClass}">${badgeContent}</span>
-                </div>`;
-
-        // (Reason is now displayed only in the modal)
-
-        // 7. Short MA
-        html += `<div class="tooltip-row"><span class="t-label">短期(${shortNum})</span><span class="t-val">${fmtPrice(point[shortKey])}</span></div>`;
-
-        // 8. Long MA
-        html += `<div class="tooltip-row"><span class="t-label">長期(${longNum})</span><span class="t-val">${fmtPrice(point[longKey])}</span></div>`;
-
-        // 9. Close
-        html += `<div class="tooltip-row"><span class="t-label">終値</span><span class="t-val">${fmtPrice(point.close)}</span></div>`;
-
-        tooltip.innerHTML = html;
-        tooltip.style.display = 'block';
-        tooltip.style.pointerEvents = 'auto';
-
-        const tWidth = tooltip.offsetWidth || 200;
-        const tHeight = tooltip.offsetHeight || 250;
-        let left = x + 20;
-        let top = my - (tHeight / 2);
-        if (left + tWidth > width) left = x - tWidth - 20;
-        if (top + tHeight > height) top = height - tHeight - 10;
-        if (top < 0) top = 10;
-
-        tooltip.style.left = `${left}px`;
-        tooltip.style.top = `${top}px`;
-        tooltip.style.transform = 'none';
-    }
-
-    // Confidence Scoring for GC/DC
-    function calculateCrossConfidence(cross, prevPoint, currPoint, shortKey, longKey) {
-        if (!prevPoint || !currPoint) return { level: '未確定', icon: '', reason: 'データ不足', colorClass: 'conf-unconfirmed' };
-
-        const slope = currPoint[longKey] - prevPoint[longKey];
-        const isGC = cross.type === 'golden';
-        const close = currPoint.close;
-        const longMa = currPoint[longKey];
-
-        const isConfirmed = cross.index < allPoints.length - 1;
-
-        if (!isConfirmed) {
-            const trendMatches = isGC ? (slope > 0) : (slope < 0);
-            const priceDominant = isGC ? (close > longMa) : (close < longMa);
-            let tempReason = '';
-            if (trendMatches && priceDominant) {
-                tempReason = isGC ? '長期MAが上昇、終値が長期MAの上' : '長期MAが下降、終値が長期MAの下';
-            } else if (!trendMatches && !priceDominant) {
-                tempReason = isGC ? '長期MAが下降、終値が長期MAの下' : '長期MAが上昇、終値が長期MAの上';
-            } else if (trendMatches && !priceDominant) {
-                tempReason = isGC ? '長期MAは上昇しているが、終値が長期MAの下' : '長期MAは下降しているが、終値が長期MAの上';
-            } else {
-                tempReason = isGC ? '終値は長期MAの上にあるが、長期MAが下降中' : '終値は長期MAの下にあるが、長期MAが上昇中';
-            }
-            return { level: '未確定', icon: '', reason: `未確定足のため。（暫定状態：${tempReason}）`, colorClass: 'conf-unconfirmed' };
-        }
-
-        // Trend matching direction
-        const trendMatches = isGC ? (slope > 0) : (slope < 0);
-        // Price position in favorable side
-        const priceDominant = isGC ? (close > longMa) : (close < longMa);
-
-        let level, icon, reason, colorClass;
-
-        if (trendMatches && priceDominant) {
-            level = '高'; icon = '◎'; colorClass = 'conf-high';
-            reason = isGC ? '長期MAが上昇、終値が長期MAの上' : '長期MAが下降、終値が長期MAの下';
-        } else if (!trendMatches && !priceDominant) {
-            level = '低'; icon = '△'; colorClass = 'conf-low';
-            reason = isGC ? '長期MAが下降、終値が長期MAの下' : '長期MAが上昇、終値が長期MAの上';
-        } else {
-            level = '中'; icon = '〇'; colorClass = 'conf-medium';
-            if (trendMatches && !priceDominant) {
-                reason = isGC ? '長期MAは上昇しているが、終値が長期MAの下' : '長期MAは下降しているが、終値が長期MAの上';
-            } else {
-                reason = isGC ? '終値は長期MAの上にあるが、長期MAが下降中' : '終値は長期MAの下にあるが、長期MAが上昇中';
-            }
-        }
-
-        return { level, icon, reason, colorClass };
     }
 
 
