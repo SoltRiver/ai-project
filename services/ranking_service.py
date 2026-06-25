@@ -255,35 +255,68 @@ def fetch_ranking_data(period_type: str = "today") -> List[Dict[str, Any]]:
             threads=True,
         )
         if data.empty:
+            print("ランキング: yfinanceからのデータが空です")
             return []
     except Exception as e:
         print(f"ランキングデータ取得エラー: {e}")
         return []
 
+    # yfinanceのバージョンによってカラム構造が異なる場合がある
+    # MultiIndex (ticker, price) の場合と、通常の Index の場合を両方サポートする
+    is_multi_index = isinstance(data.columns, pd.MultiIndex)
+
+    # MultiIndexの場合、利用可能なティッカーの一覧を取得
+    if is_multi_index:
+        available_tickers = set(data.columns.get_level_values(0).unique())
+    else:
+        # 単一銘柄の場合や通常のカラム構造の場合
+        available_tickers = set()
+
     results = []
     for ticker in RANKING_UNIVERSE:
         try:
-            if ticker not in data.columns.levels[0]:
+            # MultiIndexの場合はティッカーの存在チェックを行い、データを抽出
+            if is_multi_index:
+                if ticker not in available_tickers:
+                    continue
+                df = data[ticker].dropna()
+            else:
+                # MultiIndexでない場合（単一銘柄ダウンロード等）はスキップ
                 continue
 
-            df = data[ticker].dropna()
             if len(df) < 2:
                 continue
 
+            # Close列の存在チェック（yfinanceのバージョンで列名が異なる場合の防御）
+            close_col = None
+            for col_candidate in ["Close", "close", "Adj Close"]:
+                if col_candidate in df.columns:
+                    close_col = col_candidate
+                    break
+            if close_col is None:
+                continue
+
             # 期間に応じた変化率計算
-            current_price = float(df["Close"].iloc[-1])
+            current_price = float(df[close_col].iloc[-1])
 
             # 指定された営業日前の価格を取得
             offset = target_days.get(period_type, 1)
             if len(df) > offset:
-                base_price = float(df["Close"].iloc[-(offset + 1)])
+                base_price = float(df[close_col].iloc[-(offset + 1)])
             else:
-                base_price = float(df["Close"].iloc[0])
+                base_price = float(df[close_col].iloc[0])
+
+            # ゼロ除算防止
+            if base_price == 0:
+                continue
 
             change = current_price - base_price
             change_percent = (change / base_price) * 100
 
-            # yfinanceのticker.infoは遅いので、社名はとりあえずコードから (後でマップ化検討)
+            # 異常値チェック（NaN, inf の除外）
+            if pd.isna(change_percent) or abs(change_percent) > 1000:
+                continue
+
             results.append(
                 {
                     "symbol": ticker.replace(".T", ""),
@@ -295,7 +328,9 @@ def fetch_ranking_data(period_type: str = "today") -> List[Dict[str, Any]]:
                     "sector": "不明",  # 仮
                 }
             )
-        except:
+        except Exception as e:
+            # 個別銘柄の処理エラーはログ出力してスキップ
+            print(f"ランキング銘柄処理エラー ({ticker}): {e}")
             continue
 
     return results

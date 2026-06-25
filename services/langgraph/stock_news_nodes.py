@@ -8,11 +8,14 @@ from pydantic import ValidationError
 
 from ai.chains.news_summarizer import summarize_news_batch_async
 from services.data_fetcher import fetch_news
-from services.langgraph.stock_news_schemas import (AISummaryResult,
-                                                   FormattedNewsItem, NewsItem,
-                                                   NewsSummaryItem,
-                                                   StockNewsInput,
-                                                   StockNewsResponse)
+from services.langgraph.stock_news_schemas import (
+    AISummaryResult,
+    FormattedNewsItem,
+    NewsItem,
+    NewsSummaryItem,
+    StockNewsInput,
+    StockNewsResponse,
+)
 from services.langgraph.stock_news_state import StockNewsState
 
 logger = logging.getLogger(__name__)
@@ -248,17 +251,47 @@ async def build_response_node(state: StockNewsState) -> StockNewsState:
             orig = summary_item.original
             ai = summary_item.ai_result
 
-            # 画面表示用の個別アイテムを作成しバリデーションを実行
-            formatted_item = FormattedNewsItem(
-                title=ai.translated_title or orig.title,
-                original_url=orig.link,
-                publisher=orig.publisher,
-                published_at=orig.published_at,
-                summary=ai.summarized_content,
-                sentiment=ai.sentiment,
-                sentiment_reason=ai.sentiment_reason,
-                impacted_stocks=ai.impacted_stocks,
+            # 失敗判定
+            is_failed = any(
+                msg in ai.summarized_content
+                for msg in [
+                    "Failed to generate summary.",
+                    "要約の生成に失敗しました。",
+                    "現在、AI要約サービスの利用が集中しており、一時的に要約を生成できません。",
+                    "AI summary is temporarily unavailable due to high traffic.",
+                ]
             )
+
+            if is_failed:
+                # フォールバックとして元記事の情報をそのまま表示
+                formatted_item = FormattedNewsItem(
+                    title=orig.title,
+                    original_url=orig.link,
+                    publisher=orig.publisher,
+                    published_at=orig.published_at,
+                    summary=(
+                        orig.summary
+                        if orig.summary and orig.summary != "-"
+                        else "要約の取得に失敗しました。リンクから元記事をご確認ください。"
+                    ),
+                    sentiment="neutral",
+                    sentiment_reason="API制限により分析をスキップしました",
+                    impacted_stocks=[],
+                    is_fallback=True,
+                )
+            else:
+                # 正常系
+                formatted_item = FormattedNewsItem(
+                    title=ai.translated_title or orig.title,
+                    original_url=orig.link,
+                    publisher=orig.publisher,
+                    published_at=orig.published_at,
+                    summary=ai.summarized_content,
+                    sentiment=ai.sentiment,
+                    sentiment_reason=ai.sentiment_reason,
+                    impacted_stocks=ai.impacted_stocks,
+                    is_fallback=False,
+                )
             formatted_items.append(formatted_item.model_dump())
         except ValidationError as e:
             logger.warning(f"FormattedNewsItem validation failed: {e}")

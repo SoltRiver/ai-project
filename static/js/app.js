@@ -369,11 +369,23 @@
                 // Candles
                 points.forEach((p, i) => {
                     const xCenter = getX(i), x = xCenter - candleWidth / 2, isUp = p.close >= p.open;
+                    const isHovered = (selectedDataIdx !== null && (viewIndex + i) === selectedDataIdx);
+
+                    // ホバー時のハイライト縦帯
+                    if (isHovered) {
+                        const step = (chartRight - chartLeft) / viewCount;
+                        ctx.fillStyle = colors.chartCrosshair;
+                        ctx.fillRect(xCenter - step / 2, priceTop, step, volumeBottom - priceTop);
+                    }
+
                     ctx.fillStyle = isUp ? colors.positive : colors.negative;
                     ctx.beginPath(); ctx.strokeStyle = ctx.fillStyle; ctx.lineWidth = Math.max(1, 1 * dpr);
                     ctx.moveTo(xCenter, yScale(p.high)); ctx.lineTo(xCenter, yScale(p.low)); ctx.stroke();
                     const yHigh = yScale(Math.max(p.open, p.close)), yLow = yScale(Math.min(p.open, p.close));
-                    ctx.fillRect(x, yHigh, candleWidth, Math.max(1, yLow - yHigh));
+                    // ホバー時はローソク足の幅を少し太くする
+                    const drawWidth = isHovered ? Math.min(candleWidth * 1.5, step) : candleWidth;
+                    const drawX = xCenter - drawWidth / 2;
+                    ctx.fillRect(drawX, yHigh, drawWidth, Math.max(1, yLow - yHigh));
                 });
 
                 // SMAs

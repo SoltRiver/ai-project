@@ -8,7 +8,7 @@ import logging
 from datetime import date, datetime, timedelta
 from typing import List, Optional
 
-from fastapi import APIRouter, Request, Depends, Query
+from fastapi import APIRouter, Request, Depends, Query, Form
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
@@ -327,10 +327,10 @@ async def partial_stock_events(
 @router.post("/actions/events/refresh", response_class=HTMLResponse)
 async def refresh_events(
     request: Request,
-    code: Optional[str] = None,
-    month: Optional[str] = None,
-    types: Optional[str] = None,
-    watch_only: Optional[str] = "on",
+    code: Optional[str] = Form(None),
+    month: Optional[str] = Form(None),
+    types: Optional[str] = Form(None),
+    watch_only: Optional[str] = Form(None),
     db: Session = Depends(get_db),
 ):
     """
@@ -339,6 +339,10 @@ async def refresh_events(
     期間: 当月〜3ヶ月先。
     同期後に月グリッド + 当日リストを含む HTML を返す。
     """
+    logger.info(
+        f"refresh_events: month={month}, code={code}, types={types}, watch_only={watch_only}"
+    )
+
     # 対象銘柄の決定
     if code:
         target_codes = [code]

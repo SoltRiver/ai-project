@@ -56,18 +56,34 @@ class EventSyncService:
 
         # 決算データの同期
         try:
+            prev_upserted = result["upserted"]
             self._sync_earnings(stock_codes, from_date, to_date, now, result)
+            if result["upserted"] == prev_upserted:
+                logger.info(
+                    "決算データが更新されなかったため、モックデータを生成します。"
+                )
+                self._generate_mock_earnings(
+                    stock_codes, from_date, to_date, now, result
+                )
         except Exception as e:
             logger.error(f"決算同期エラー: {e}", exc_info=True)
             result["errors"].append(f"決算同期: {e}")
+            self._generate_mock_earnings(stock_codes, from_date, to_date, now, result)
 
         # 配当データの同期
         for code in stock_codes:
             try:
+                prev_upserted = result["upserted"]
                 self._sync_dividends(code, from_date, to_date, now, result)
+                if result["upserted"] == prev_upserted:
+                    logger.info(
+                        f"配当データが更新されなかったため、モックデータを生成します ({code})。"
+                    )
+                    self._generate_mock_dividends(code, from_date, to_date, now, result)
             except Exception as e:
                 logger.error(f"配当同期エラー ({code}): {e}", exc_info=True)
                 result["errors"].append(f"配当同期({code}): {e}")
+                self._generate_mock_dividends(code, from_date, to_date, now, result)
 
         return result
 
@@ -83,7 +99,10 @@ class EventSyncService:
         # J-Quants の決算カレンダーを一括取得
         earnings_data = jquants_client.get_earnings_calendar()
         if not earnings_data:
-            logger.warning("決算カレンダーデータが取得できませんでした")
+            logger.warning(
+                "決算カレンダーデータが取得できませんでした。モックデータを生成します。"
+            )
+            self._generate_mock_earnings(stock_codes, from_date, to_date, now, result)
             return
 
         # 対象銘柄コードセット（5桁→4桁変換も考慮）
@@ -160,6 +179,10 @@ class EventSyncService:
         """配当関連日程の同期"""
         dividend_data = jquants_client.get_dividend(code)
         if not dividend_data:
+            logger.warning(
+                f"配当データが取得できませんでした ({code})。モックデータを生成します。"
+            )
+            self._generate_mock_dividends(code, from_date, to_date, now, result)
             return
 
         db = SessionLocal()
@@ -351,6 +374,116 @@ class EventSyncService:
             db.add(new_event)
 
         result["upserted"] += 1
+
+    def _generate_mock_earnings(
+        self,
+        stock_codes: List[str],
+        from_date: date,
+        to_date: date,
+        now: datetime,
+        result: Dict[str, Any],
+    ):
+        """無料プラン等で取得できない場合の決算モックデータ生成"""
+        db = SessionLocal()
+        import random
+
+        try:
+            for code in stock_codes:
+                # 銘柄ごとに固定のシード値にして毎回同じ日付が出ないようにしつつある程度決定的
+                random.seed(int(code) + now.month)
+                # 当月から3ヶ月間、各月の中旬頃に1日
+                for i in range(4):
+                    m = (now.month + i - 1) % 12 + 1
+                    y = now.year + (now.month + i - 1) // 12
+                    event_date = date(y, m, random.randint(10, 20))
+                    if event_date < from_date or event_date > to_date:
+                        continue
+
+                    title = f"{y}年第{m//3 + 1}四半期決算(モック)"
+                    status = "DONE" if event_date < date.today() else "SCHEDULED"
+                    event_key = f"EARNINGS:ANNOUNCE:{event_date.isoformat()}"
+                    self._upsert_event(
+                        db=db,
+                        stock_code=code,
+                        event_key=event_key,
+                        event_type="EARNINGS",
+                        subtype="ANNOUNCE",
+                        event_date=event_date,
+                        title=title,
+                        status=status,
+                        source="mock",
+                        now=now,
+                        result=result,
+                    )
+            db.commit()
+        except Exception as e:
+            db.rollback()
+            logger.error(f"決算モックデータ生成エラー: {e}")
+        finally:
+            db.close()
+
+    def _generate_mock_dividends(
+        self,
+        code: str,
+        from_date: date,
+        to_date: date,
+        now: datetime,
+        result: Dict[str, Any],
+    ):
+        """無料プラン等で取得できない場合の配当モックデータ生成"""
+        db = SessionLocal()
+        import random
+
+        try:
+            random.seed(int(code) + 100)
+            # 現在の月の月末などを基準日に設定
+            for i in range(2):  # 半期ごと
+                m = (now.month + i * 6 - 1) % 12 + 1
+                y = now.year + (now.month + i * 6 - 1) // 12
+                import calendar
+
+                _, last_day = calendar.monthrange(y, m)
+                record_date = date(y, m, last_day)
+                if record_date < from_date or record_date > to_date:
+                    continue
+
+                ex_date = record_date - timedelta(days=1)
+                last_cum = record_date - timedelta(days=2)
+                pay_date = record_date + timedelta(days=60)  # 2ヶ月後
+
+                amount = random.randint(10, 100)
+
+                events = [
+                    ("LAST_CUM", last_cum, f"権利付き最終日 {amount}円(モック)"),
+                    ("EX_DATE", ex_date, f"権利落ち日 {amount}円(モック)"),
+                    ("RECORD_DATE", record_date, f"配当基準日 {amount}円(モック)"),
+                    ("PAY_DATE", pay_date, f"配当支払開始 {amount}円(モック)"),
+                ]
+
+                for subtype, evt_date, title in events:
+                    if evt_date < from_date or evt_date > to_date:
+                        continue
+                    status = "DONE" if evt_date < date.today() else "SCHEDULED"
+                    event_key = f"DIVIDEND:{subtype}:{evt_date.isoformat()}"
+                    self._upsert_event(
+                        db=db,
+                        stock_code=code,
+                        event_key=event_key,
+                        event_type="DIVIDEND",
+                        subtype=subtype,
+                        event_date=evt_date,
+                        title=title,
+                        status=status,
+                        source="mock",
+                        now=now,
+                        result=result,
+                    )
+            db.commit()
+        except Exception as e:
+            db.rollback()
+            logger.error(f"配当モックデータ生成エラー: {e}")
+        finally:
+            db.close()
 
 
 # ─── ヘルパー関数 ──────────────────────────

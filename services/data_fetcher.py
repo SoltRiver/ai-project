@@ -56,6 +56,9 @@ def fetch_stock_info(symbol: str) -> Optional[Dict[str, Any]]:
             "market_cap": info.get("marketCap"),
             "shares_outstanding": info.get("sharesOutstanding"),
             "dividend_yield": info.get("dividendYield"),
+            # PER・PBR（株価リスト表示用）
+            "trailing_pe": info.get("trailingPE"),
+            "price_to_book": info.get("priceToBook"),
             "currency": info.get("currency", "JPY"),
             "exchange": info.get("exchange", ""),
             "sector": info.get("sector", ""),

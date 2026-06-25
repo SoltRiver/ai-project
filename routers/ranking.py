@@ -14,11 +14,22 @@ async def ranking_index(request: Request):
     ランキングメインページを表示
     """
     # 初期表示は「今日」の上昇率ランキング
-    rank_data = get_rankings(period_type="today", target_type="top")
-    top_rank = rank_data.get("top", [])
+    try:
+        rank_data = get_rankings(period_type="today", target_type="top")
+        top_rank = rank_data.get("top", [])
+    except Exception as e:
+        print(f"ランキング初期データ取得エラー: {e}")
+        top_rank = []
 
     # 初回の更新時に重い場合はバックグラウンド等検討だが、一旦同期で分析
-    ai_analysis = analyze_ranking_with_ai(top_rank, is_top=True)
+    try:
+        if top_rank:
+            ai_analysis = analyze_ranking_with_ai(top_rank, is_top=True)
+        else:
+            ai_analysis = "分析対象のデータがありません。"
+    except Exception as e:
+        print(f"ランキングAI分析エラー: {e}")
+        ai_analysis = "AI分析の取得に失敗しました。"
 
     return templates.TemplateResponse(
         "ranking/index.html",
@@ -43,10 +54,21 @@ async def ranking_list(
     """
     HTMXによる条件切り替え時のリスト部分のみを返却
     """
-    rank_data = get_rankings(period_type=period, target_type=type)
-    items = rank_data.get(type, [])
+    try:
+        rank_data = get_rankings(period_type=period, target_type=type)
+        items = rank_data.get(type, [])
+    except Exception as e:
+        print(f"ランキングリスト取得エラー: {e}")
+        items = []
 
-    ai_analysis = analyze_ranking_with_ai(items, is_top=(type == "top"))
+    try:
+        if items:
+            ai_analysis = analyze_ranking_with_ai(items, is_top=(type == "top"))
+        else:
+            ai_analysis = "分析対象のデータがありません。"
+    except Exception as e:
+        print(f"ランキングリストAI分析エラー: {e}")
+        ai_analysis = "AI分析の取得に失敗しました。"
 
     return templates.TemplateResponse(
         "ranking/_list.html",

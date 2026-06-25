@@ -130,6 +130,9 @@ class FormattedNewsItem(BaseModel):
     impacted_stocks: List[str] = Field(
         default_factory=list, description="影響銘柄リスト"
     )
+    is_fallback: bool = Field(
+        default=False, description="AI要約に失敗しフォールバックを使用したか"
+    )
 
     @field_validator(
         "title",

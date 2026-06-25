@@ -7,11 +7,14 @@ from typing import Any, Dict
 
 from langgraph.graph import END, START, StateGraph
 
-from services.langgraph.stock_news_nodes import (build_response_node,
-                                                 classify_sentiment_node,
-                                                 fetch_news_node,
-                                                 summarize_news_node)
+from services.langgraph.stock_news_nodes import (
+    build_response_node,
+    classify_sentiment_node,
+    fetch_news_node,
+    summarize_news_node,
+)
 from services.langgraph.stock_news_state import StockNewsState
+
 # LangSmithトレース設定
 from services.langsmith_config import build_trace_config, build_trace_metadata
 
