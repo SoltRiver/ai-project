@@ -1,28 +1,31 @@
 <div class="tab-panel chart-panel">
     <div class="card chart-card">
-        <div class="chart-headline" style="align-items: center;">
-            <div style="display: flex; align-items: center; gap: 1rem; flex: 1;">
-                <!-- Status Badge (Left) -->
-                <div class="trend-pill" title="{{ trend_desc }}">{{ trend_label }}</div>
+        <!-- グラフヘッダー全体の垂直アライメントを上下中央（items-center）に統一（日本語コメント） -->
+        <div class="chart-headline flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+            <div class="flex flex-wrap items-center gap-4 flex-1">
+                <!-- トレンドバッジ（上下中央揃え） -->
+                <div class="trend-pill flex items-center justify-center text-sm" title="{{ trend_desc }}">
+                    {{ trend_label }}
+                </div>
 
-                <!-- Legend Group -->
-                <div>
-                    <div class="chart-sub muted">
+                <!-- 各種数値・凡例グループ（アライメントの統一） -->
+                <div class="flex flex-col justify-center">
+                    <div class="chart-sub muted text-xs sm:text-sm font-medium">
                         始値 {{ chart_summary.open }} / 高値 {{ chart_summary.high }} / 安値 {{ chart_summary.low }} / {{
                         chart_summary.timestamp }}
                     </div>
-                    <div class="sma-legend">
+                    <div class="sma-legend text-xs mt-1">
                         <!-- Populated by JS -->
                     </div>
                 </div>
             </div>
 
-            <!-- Timeframe Selector (Right) -->
-            <div class="chart-controls-inline">
-                <label class="select-wrap" style="margin: 0; display: flex; align-items: center;">
-                    <span class="text-xs font-bold text-gray-400" style="margin-right: 0.5rem;">足種</span>
+            <!-- 足種セレクトボックス（右寄せ・上下中央揃え） -->
+            <div class="chart-controls-inline flex items-center">
+                <label class="select-wrap m-0 flex items-center">
+                    <span class="text-xs font-bold text-gray-400 mr-2">足種</span>
                     <select name="interval" hx-get="/stocks/{{ stock.code }}/tab/chart" hx-target="#tab-content"
-                        hx-trigger="change" hx-swap="innerHTML" style="padding: 4px 8px; font-size: 0.9rem;">
+                        hx-trigger="change" hx-swap="innerHTML" class="rounded border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#16161e] px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                         {% for option in interval_options %}
                         <option value="{{ option.value }}" {% if interval==option.value %}selected{% endif %}>{{
                             option.label }}

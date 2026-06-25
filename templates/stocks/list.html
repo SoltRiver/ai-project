@@ -100,7 +100,8 @@
     <div class="mb-4 flex items-center justify-end">
         <label class="flex items-center gap-2 cursor-pointer group">
             <div class="relative">
-                <input type="checkbox" x-model="filterFavorites" class="sr-only">
+                <!-- 生のチェックボックスを完全に非表示にし、スライドボタンのみを表示（日本語コメント） -->
+                <input type="checkbox" x-model="filterFavorites" style="display: none;">
                 <div class="block w-10 h-6 bg-slate-200 dark:bg-slate-700 rounded-full transition-colors duration-300" :class="{'bg-amber-400 dark:bg-amber-500': filterFavorites}"></div>
                 <div class="dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform duration-300" :class="{'transform translate-x-4': filterFavorites}"></div>
             </div>
@@ -130,7 +131,13 @@
                     <th class="px-4 py-5 text-right">PER</th>
                     <th class="px-4 py-5 text-right">PBR</th>
                     <th class="px-4 py-5 text-right">配当利回り</th>
-                    <th class="px-4 py-5 text-left"><span class="text-green-600 dark:text-green-500">最高値</span> / <span class="text-red-600 dark:text-red-500">最安値</span></th>
+                    <!-- 数値項目として右寄せにし、上の段に最高値、下の段に最安値を配置（日本語コメント） -->
+                    <th class="px-4 py-5 text-right">
+                        <div class="flex flex-col items-end">
+                            <span class="text-green-600 dark:text-green-500">最高値</span>
+                            <span class="text-red-600 dark:text-red-500">最安値</span>
+                        </div>
+                    </th>
                 </tr>
             </thead>
             <tbody id="sortable-tbody" class="divide-y divide-slate-100 dark:divide-slate-800">
@@ -184,18 +191,19 @@
                     <td class="px-4 py-5 text-right text-sm font-mono text-slate-700 dark:text-slate-300">
                         {{ item.dividend_yield | default('-') }}
                     </td>
-                    <td class="px-4 py-5 text-left text-sm font-mono">
-                        <div class="flex items-center gap-3">
-                            <span>
+                    <!-- 数値項目として右寄せにし、上の段に最高値、下の段に最安値を配置（日本語コメント） -->
+                    <td class="px-4 py-5 text-right text-sm font-mono">
+                        <div class="flex items-center justify-end gap-3">
+                            <div class="flex flex-col items-end">
                                 <span class="text-green-600 dark:text-green-500 font-bold">
                                     {{ item.high_val_str | default('-') }}
                                 </span>
-                                <span class="mx-1 text-slate-500 dark:text-slate-400">/</span>
                                 <span class="text-red-600 dark:text-red-500 font-bold">
                                     {{ item.low_val_str | default('-') }}
                                 </span>
-                            </span>
-                            <div class="cursor-grab hover:text-slate-700 dark:hover:text-slate-200 handle ml-auto text-slate-400" title="ドラッグして並び替え">
+                            </div>
+                            <!-- 並び替えドラッグ用ハンドル -->
+                            <div class="cursor-grab hover:text-slate-700 dark:hover:text-slate-200 handle text-slate-400" title="ドラッグして並び替え">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16"></path></svg>
                             </div>
                         </div>
