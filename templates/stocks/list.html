@@ -53,6 +53,23 @@
         });
         document.body.appendChild(form);
         form.submit();
+    },
+    deleteAll() {
+        if (!confirm('ウォッチリストのすべての銘柄を削除しますか？')) return;
+        const allCodes = Array.from(document.querySelectorAll('input[name=selected_stocks]')).map(el => el.value);
+        if (allCodes.length === 0) return;
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '/stocks/delete';
+        allCodes.forEach(code => {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'selected_stocks';
+            input.value = code;
+            form.appendChild(input);
+        });
+        document.body.appendChild(form);
+        form.submit();
     }
 }" class="mb-6 relative z-30">
     <div class="flex flex-col xl:flex-row gap-8 items-end mb-10">
@@ -64,8 +81,7 @@
                     name="code",
                     id="stock-search",
                     placeholder="銘柄コードまたは銘柄名で検索...",
-                    attr='x-model.debounce.300ms="query" @input="fetchSuggestions" @click.outside="showSuggestions =
-                    false" autocomplete="off"'
+                    attr='x-model.debounce.300ms="query" @input="fetchSuggestions" @click.outside="showSuggestions = false" autocomplete="off"'
                     ) }}
 
                     <!-- Autocomplete Suggestions -->
@@ -85,29 +101,45 @@
                 {{ button(label="追加", type="submit", variant="primary", class="w-full md:w-32 h-[46px]") }}
             </div>
         </form>
-
-        <div class="flex-none pb-[1px]">
-            {{ button(
-            label='<span class="text-lg">🗑️</span> 削除',
-            variant="danger",
-            class="w-full md:w-32 h-[46px]",
-            attr='@click="submitDelete" x-show="selectedStocks.length > 0" x-transition'
-            ) }}
-        </div>
     </div>
     
-    <!-- Favorites Filter Toggle -->
-    <div class="mb-4 flex items-center justify-end">
-        <label class="flex items-center gap-2 cursor-pointer group">
-            <div class="relative">
-                <!-- 生のチェックボックスを完全に非表示にし、スライドボタンのみを表示（日本語コメント） -->
+    <!-- Actions & Favorites Filter Toggle -->
+    <div class="mb-4 flex flex-wrap items-center justify-between gap-4">
+        <!-- 左側：削除関連ボタン（選択削除は動的、すべて削除は常時表示）（日本語コメント） -->
+        <div class="flex items-center flex-wrap gap-3">
+            <button type="button" @click="submitDelete"
+                x-show="selectedStocks.length > 0"
+                x-transition:enter="transition ease-out duration-300"
+                x-transition:enter-start="opacity-0 scale-90"
+                x-transition:enter-end="opacity-100 scale-100"
+                x-transition:leave="transition ease-in duration-200"
+                x-transition:leave-start="opacity-100 scale-100"
+                x-transition:leave-end="opacity-0 scale-90"
+                class="px-4 py-2 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white text-sm font-bold rounded-lg shadow-md hover:shadow-lg active:scale-95 transition-all flex items-center gap-2">
+                <span>🗑️</span> 選択した銘柄を削除 (<span x-text="selectedStocks.length"></span>)
+            </button>
+            
+            <button type="button" @click="deleteAll"
+                class="px-4 py-2 bg-slate-100 hover:bg-red-50 dark:bg-slate-800 dark:hover:bg-red-950/20 text-red-600 dark:text-red-400 text-sm font-bold rounded-lg border border-red-200 dark:border-red-900/40 shadow-sm hover:shadow active:scale-95 transition-all flex items-center gap-2"
+                title="ウォッチリストのすべての銘柄を削除します">
+                <span>⚠️</span> すべて削除する
+            </button>
+        </div>
+        
+        <!-- 右側：お気に入りのみ表示トグル（CSSクラスによる状態制御とアニメーションに修正） -->
+        <label class="flex items-center gap-3 cursor-pointer group">
+            <div class="relative w-10 h-6">
+                <!-- 生のチェックボックスを完全に非表示にし、スライドボタンのみを表示 -->
                 <input type="checkbox" x-model="filterFavorites" style="display: none;">
-                <div class="block w-10 h-6 bg-slate-200 dark:bg-slate-700 rounded-full transition-colors duration-300" :class="{'bg-amber-400 dark:bg-amber-500': filterFavorites}"></div>
-                <div class="dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform duration-300" :class="{'transform translate-x-4': filterFavorites}"></div>
+                <div class="w-full h-full rounded-full transition-colors duration-300" 
+                     :class="filterFavorites ? 'bg-yellow-400 dark:bg-yellow-500' : 'bg-slate-200 dark:bg-slate-700'"></div>
+                <!-- CSSのtransformクラスで右スライド（translate-x-4 = 16px）＆滑らかなアニメーション（日本語コメント） -->
+                <div class="absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform duration-300 ease-in-out" 
+                     :class="filterFavorites ? 'translate-x-4' : 'translate-x-0'"></div>
             </div>
-            <span class="text-sm font-bold text-slate-700 dark:text-slate-300 group-hover:text-amber-500 transition-colors">
+            <span class="text-sm font-bold text-slate-700 dark:text-slate-300 group-hover:text-yellow-500 transition-colors select-none">
                 <span x-show="!filterFavorites">⭐ お気に入りのみ表示</span>
-                <span x-show="filterFavorites" class="text-amber-500">⭐ お気に入りのみ表示中</span>
+                <span x-show="filterFavorites" class="text-yellow-500 font-extrabold">⭐ お気に入りのみ表示中</span>
             </span>
         </label>
     </div>
@@ -118,26 +150,17 @@
             <thead>
                 <tr
                     class="text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider font-bold border-b border-slate-100 dark:border-slate-800">
-                    <th class="px-4 py-5 w-12 text-left">
-                        <input type="checkbox"
-                            @change='selectedStocks = $event.target.checked ? {{ stocks | map(attribute="code") | list | tojson }} : []'
-                            class="rounded border-slate-300 text-blue-600 focus:ring-blue-500">
-                    </th>
-                    <th class="px-2 py-5 w-10 text-center">⭐</th>
+                    <th class="px-4 py-5 w-16 text-left">削除</th>
+                    <th class="px-2 py-5 w-24 text-center">お気に入り</th>
                     <th class="px-4 py-5 text-left">銘柄名（コード）</th>
                     <th class="px-4 py-5 text-right">現在値</th>
-                    <th class="px-4 py-5 text-left">前日比</th>
+                    <th class="px-4 py-5 text-right">前日比</th>
                     <th class="px-4 py-5 text-right">出来高</th>
                     <th class="px-4 py-5 text-right">PER</th>
                     <th class="px-4 py-5 text-right">PBR</th>
                     <th class="px-4 py-5 text-right">配当利回り</th>
-                    <!-- 数値項目として右寄せにし、上の段に最高値、下の段に最安値を配置（日本語コメント） -->
-                    <th class="px-4 py-5 text-right">
-                        <div class="flex flex-col items-end">
-                            <span class="text-green-600 dark:text-green-500">最高値</span>
-                            <span class="text-red-600 dark:text-red-500">最安値</span>
-                        </div>
-                    </th>
+                    <th class="px-4 py-5 text-right whitespace-nowrap">最高値 / 最安値</th>
+                    <th class="px-4 py-5 text-center w-24">並べ替え</th>
                 </tr>
             </thead>
             <tbody id="sortable-tbody" class="divide-y divide-slate-100 dark:divide-slate-800">
@@ -149,10 +172,19 @@
                             class="rounded border-slate-300 text-blue-600 focus:ring-blue-500 shadow-sm">
                     </td>
                     <td class="px-2 py-5 text-center">
+                        <!-- OSの絵文字レンダリングを回避するためSVGアイコンを使用し、確実に黄色系になるよう改善（日本語コメント） -->
                         <button type="button" @click="toggleFavorite('{{ item.code }}')" 
-                            class="text-xl transition-transform hover:scale-125 focus:outline-none"
-                            :class="favorites.includes('{{ item.code }}') ? 'text-amber-400 drop-shadow-md' : 'text-slate-300 dark:text-slate-600 hover:text-amber-300'">
-                            <span x-text="favorites.includes('{{ item.code }}') ? '★' : '☆'"></span>
+                            class="transition-all duration-200 hover:scale-110 focus:outline-none"
+                            :class="favorites.includes('{{ item.code }}') ? 'text-yellow-400' : 'text-slate-300 dark:text-slate-600 hover:text-yellow-300'"
+                            :style="favorites.includes('{{ item.code }}') ? 'filter: drop-shadow(0px 2px 2px rgba(234, 179, 8, 0.4));' : ''">
+                            <!-- ON: Solid Star (確実に黄色にするため直接fill指定) -->
+                            <svg x-show="favorites.includes('{{ item.code }}')" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#facc15" class="w-6 h-6 inline-block" style="display: none;">
+                              <path fill-rule="evenodd" d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.007 5.404.433c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.433 2.082-5.006z" clip-rule="evenodd" />
+                            </svg>
+                            <!-- OFF: Outline Star -->
+                            <svg x-show="!favorites.includes('{{ item.code }}')" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6 inline-block" style="display: none;">
+                              <path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />
+                            </svg>
                         </button>
                     </td>
                     <td class="px-4 py-5 text-left">
@@ -164,16 +196,19 @@
                     <td class="px-4 py-5 text-right font-mono font-semibold {% if item.change_direction == 'up' %}text-green-600 dark:text-green-500{% elif item.change_direction == 'down' %}text-red-600 dark:text-red-500{% else %}text-slate-900 dark:text-white{% endif %}">
                         {{ item.current_price }}
                     </td>
-                    <td class="px-4 py-5 text-left">
-                        {% set badge_color = 'green' if item.change_direction == 'up' else 'red' if
-                        item.change_direction == 'down' else 'gray' %}
-                        {{ badge(
-                        text='<span
-                            class="' ~ ('animate-bounce inline-block rotate-0' if item.change_direction == 'up' else 'animate-bounce inline-block rotate-180' if item.change_direction == 'down' else '') ~ '">'
-                            ~ item.change_icon ~ '</span> ' ~ item.change_text,
-                        color=badge_color,
-                        class="px-3 py-1 text-sm"
-                        ) }}
+                    <!-- 前日比を右寄せにしてバッジ表示に改善（日本語コメント） -->
+                    <td class="px-4 py-5 text-right">
+                        <div class="flex items-center justify-end">
+                            {% set badge_color = 'green' if item.change_direction == 'up' else 'red' if
+                            item.change_direction == 'down' else 'gray' %}
+                            {{ badge(
+                            text='<span
+                                class="' ~ ('animate-bounce inline-block rotate-0' if item.change_direction == 'up' else 'animate-bounce inline-block rotate-180' if item.change_direction == 'down' else '') ~ '">'
+                                ~ item.change_icon ~ '</span> ' ~ item.change_text,
+                            color=badge_color,
+                            class="px-3 py-1 text-sm font-semibold inline-flex items-center"
+                            ) }}
+                        </div>
                     </td>
                     <!-- 出来高 -->
                     <td class="px-4 py-5 text-right text-sm font-mono text-slate-700 dark:text-slate-300">
@@ -191,18 +226,19 @@
                     <td class="px-4 py-5 text-right text-sm font-mono text-slate-700 dark:text-slate-300">
                         {{ item.dividend_yield | default('-') }}
                     </td>
-                    <!-- 数値項目として右寄せにし、上の段に最高値、下の段に最安値を配置（日本語コメント） -->
-                    <td class="px-4 py-5 text-right text-sm font-mono">
-                        <div class="flex items-center justify-end gap-3">
-                            <div class="flex flex-col items-end">
-                                <span class="text-green-600 dark:text-green-500 font-bold">
-                                    {{ item.high_val_str | default('-') }}
-                                </span>
-                                <span class="text-red-600 dark:text-red-500 font-bold">
-                                    {{ item.low_val_str | default('-') }}
-                                </span>
-                            </div>
-                            <!-- 並び替えドラッグ用ハンドル -->
+                    <!-- 最高値 / 最安値を / 区切りの1行で表示するように改善（日本語コメント） -->
+                    <td class="px-4 py-5 text-right text-sm font-mono whitespace-nowrap">
+                        <span class="text-green-600 dark:text-green-500 font-bold">
+                            {{ item.high_val_str | default('-') }}
+                        </span>
+                        <span class="text-slate-400 dark:text-slate-600 mx-1">/</span>
+                        <span class="text-red-600 dark:text-red-500 font-bold">
+                            {{ item.low_val_str | default('-') }}
+                        </span>
+                    </td>
+                    <!-- 独立した並べ替え列（日本語コメント） -->
+                    <td class="px-4 py-5 text-center">
+                        <div class="flex items-center justify-center">
                             <div class="cursor-grab hover:text-slate-700 dark:hover:text-slate-200 handle text-slate-400" title="ドラッグして並び替え">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16"></path></svg>
                             </div>

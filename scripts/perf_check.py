@@ -17,7 +17,7 @@ ENDPOINTS = [
     ("/api/stocks/search?q=7203", "JSON API"),
 ]
 
-BASE_URL = "http://127.0.0.1:8001"
+BASE_URL = "http://127.0.0.1:8000"
 
 print(f"{'Endpoint':<45} | {'Category':<15} | {'Status':<6} | {'Time (ms)'}")
 print("-" * 80)

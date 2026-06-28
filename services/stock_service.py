@@ -15,32 +15,20 @@ import pandas as pd
 
 from data.stock_name_mapper import STOCK_NAME_MAP
 from data.terms_data import TERMS_DATA
-from services.data_fetcher import (
-    fetch_dividend_details,
-    fetch_dividends,
-    fetch_realtime_data,
-    fetch_stock_data,
-    fetch_stock_info,
-    format_symbol_for_yfinance,
-)
+from services.data_fetcher import (fetch_dividend_details, fetch_dividends,
+                                   fetch_realtime_data, fetch_stock_data,
+                                   fetch_stock_info,
+                                   format_symbol_for_yfinance)
 from services.financial_analyzer import FinancialAnalyzer
-from services.fundamental_fetcher import (
-    build_company_scores,
-    format_date,
-    format_fundamental_value,
-    get_event_info,
-    get_fundamental_statuses,
-    get_key_fundamentals,
-)
+from services.fundamental_fetcher import (build_company_scores, format_date,
+                                          format_fundamental_value,
+                                          get_event_info,
+                                          get_fundamental_statuses,
+                                          get_key_fundamentals)
 from services.jquants_client import client as jquants_client
-from utils.analyzer import (
-    add_technical_indicators,
-    analyze_candlestick,
-    calculate_trendline,
-    detect_dead_cross,
-    detect_golden_cross,
-    get_direction_label,
-)
+from utils.analyzer import (add_technical_indicators, analyze_candlestick,
+                            calculate_trendline, detect_dead_cross,
+                            detect_golden_cross, get_direction_label)
 from utils.candle_classify import get_candle_info
 
 # アナライザーの初期化
@@ -1480,7 +1468,11 @@ def get_stock_list(db: Session) -> List[Dict[str, Any]]:
         raw_div = info.get("dividend_yield")
         if raw_div is not None:
             try:
-                div_str = f"{float(raw_div) * 100:.2f}%"
+                val = float(raw_div)
+                if val > 0.5:  # すでにパーセント値 (例: 3.61)
+                    div_str = f"{val:.2f}%"
+                else:  # 小数表記 (例: 0.0361)
+                    div_str = f"{val * 100:.2f}%"
             except (TypeError, ValueError):
                 div_str = "-"
         else:
@@ -1640,7 +1632,8 @@ def get_ai_assist(code: str, interval: str = "1d") -> Dict[str, Any]:
     AI予測セクション（信頼度・確率・期待値・矛盾）のデータを取得する。
     htmxによる部分更新用。
     """
-    from services.data_fetcher import fetch_stock_data, format_symbol_for_yfinance
+    from services.data_fetcher import (fetch_stock_data,
+                                       format_symbol_for_yfinance)
 
     symbol = format_symbol_for_yfinance(code)
     df = fetch_stock_data(symbol, period="2y", interval=interval)
