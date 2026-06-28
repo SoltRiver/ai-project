@@ -763,3 +763,17 @@ ews_service.py compared an offset-aware datetime (published_at) with an offset-n
 - **Action**: 文字の星マークからTailwind (Heroicons) の SVGアイコン（画像データ）に置き換え、アクティブ時の色を確実に黄色にするため `fill="#facc15"` を直接指定した。ドロップシャドウもSVGに適合する `filter: drop-shadow(...)` に変更した。
 - **再発防止策**: 色を厳密に制御する必要があるアイコン（特に星やハート等の絵文字化されやすい記号）には、Unicode文字ではなくSVGアイコンを使用し、絵文字フォントによるレンダリングジャックを回避する。
 - **Verification**: `browser_subagent` によるスクリーンショット検証を実施し、キャッシュクリア後（`?bust=123`）にきれいな黄色のSVG星マークが表示されることを確認した。
+
+
+## Date: 2026-06-29
+
+### Review Session 53 (株価リストヘッダーのUI改善)
+- **Status**: **Success** (Executed 2026-06-29)
+- **Scope**: 	emplates/stocks/list.html
+- **Findings**: 株価リストのテーブルヘッダーのアライメントが不揃いであり、また「配当利回り」列が改行されてしまっていた。
+- **Action**: 
+    - すべての <th> 要素に 	ext-center クラスを適用し、中央寄せに統一した。
+    - 「配当利回り」列に whitespace-nowrap を追加し、改行を防止した。
+- **再発防止策**: テーブルヘッダーのアライメントは統一感を持たせ、項目名が長い場合は whitespace-nowrap で改行を防ぐことで視認性を高める。
+- **Verification**: rowser_subagent によるスクリーンショットでヘッダーが中央寄せになり、改行が防止されていることを確認した。
+
