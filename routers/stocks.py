@@ -54,6 +54,7 @@ async def stock_detail(code: str, request: Request):
         {"name": "margin", "label": "需給", "icon": "⚖️"},
         {"name": "shareholder", "label": "株主優待", "icon": "🎁"},
         {"name": "event", "label": "イベント", "icon": "📅"},
+        {"name": "news", "label": "ニュース", "icon": "📰"},
     ]
 
     # ページ初期ロード時にチャートデータを直接取得してテンプレートに渡す
@@ -125,6 +126,10 @@ async def stock_tab(
     elif tab_name == "event":
         data = {}
         template = "stocks/partials/_tab_event.html"
+    elif tab_name == "news":
+        # ニュースタブ: AIニュース要約 + AI分析カードを統合表示
+        data = {}
+        template = "stocks/partials/_tab_news.html"
     else:
         raise HTTPException(status_code=404, detail="タブが見つかりません")
 

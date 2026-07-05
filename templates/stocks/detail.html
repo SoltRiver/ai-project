@@ -70,45 +70,4 @@
     </div>
 </div>
 
-<!-- AIニュース要約 -->
-<div class="mb-8">
-    <div class="flex items-center justify-between mb-4">
-        <h3 class="font-bold text-xl text-slate-900 dark:text-white flex items-center gap-2">
-            <span class="text-blue-500">📰</span> AIニュース要約
-        </h3>
-        {{ button(
-            label='<i class="icon">🤖</i> AIでニュースを要約',
-            variant='primary',
-            attr='hx-get="/stocks/' ~ stock.code ~ '/ai/news-summary" hx-target="#ai-news-summary" hx-swap="innerHTML" hx-indicator="#ai-news-loading"'
-        ) }}
-    </div>
-    
-    <div class="relative min-h-[100px]">
-        <!-- ローディングインジケーター -->
-        <div id="ai-news-loading" class="htmx-indicator absolute inset-0 z-10 flex items-center justify-center bg-white/60 dark:bg-[#1a1b26]/60 backdrop-blur-[2px] rounded-2xl transition-opacity duration-300">
-            <div class="animate-spin rounded-full h-8 w-8 border-4 border-blue-500 border-t-transparent shadow-lg"></div>
-        </div>
-        
-        <!-- 結果表示エリア -->
-        <div id="ai-news-summary" class="transition-all duration-300">
-            <div class="p-8 text-center text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-[#1a1b26] rounded-2xl border border-slate-200 dark:border-slate-800 border-dashed">
-                上のボタンを押すと、最新ニュースを取得してAIが要約します。
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- AI分析カード（SWRスナップショット）: タブとは独立して遅延ロード -->
-<div class="mb-8 space-y-4">
-    <!-- デイリー分析 -->
-    <div id="analysis-card-daily-container" hx-get="/partials/analysis/{{ stock.code }}?type=ai_assist_daily"
-        hx-trigger="load" hx-swap="innerHTML">
-        <div class="card animate-pulse h-40 bg-white dark:bg-slate-900 rounded-2xl"></div>
-    </div>
-    <!-- イントラデイ分析 -->
-    <div id="analysis-card-intraday-container" hx-get="/partials/analysis/{{ stock.code }}?type=ai_assist_intraday"
-        hx-trigger="load" hx-swap="innerHTML">
-        <div class="card animate-pulse h-28 bg-white dark:bg-slate-900 rounded-2xl"></div>
-    </div>
-</div>
 {% endblock %}
